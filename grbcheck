@@ -1,0 +1,7 @@
+local gerber = require 'gerber'
+
+for _,filename in ipairs{...} do
+	assert(gerber.parse(filename))
+end
+
+-- vi: ft=lua
