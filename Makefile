@@ -61,8 +61,14 @@ GERBERS= \
 	../boards/gerber/panel.toollist.drl \
 	../boards/gerber/panel.txt
 
+.PHONY:all
+all:check test
+
+.PHONY:check
+check:
+	grbcheck $(GERBERS)
+
 .PHONY:test
 test:
-	grbcheck $(GERBERS)
 	lua test.lua
 
