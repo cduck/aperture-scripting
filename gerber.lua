@@ -263,61 +263,121 @@ local function directive(image, block)
 	end
 end
 
+local function parsefs(block)
+	local zeroes,mode,xi,xd,yi,yd = block:match('^FS(.)(.)X(%d)(%d)Y(%d)(%d)$')
+	assert(zeroes and (zeroes=='L' or zeroes=='T' or zeroes=='D'))
+	assert(mode=='A', "only files with absolute coordinates are supported")
+	assert(xi and xd and yi and yd)
+	assert(xi==yi and xd==yd)
+	return {
+		name = block,
+		zeroes = zeroes,
+		integer = tonumber(xi),
+		decimal = tonumber(xd),
+	}
+end
+
+local function _tonumber(s, format)
+	local sign,base = s:match('^([+-]?)(%d+)$')
+	assert(sign and base)
+	local size = format.integer + format.decimal
+	if #base < size then
+		if format.zeroes == 'L' then
+			base = string.rep('0', size - #s) .. base
+		elseif format.zeroes == 'T' then
+			base = base .. string.rep('0', size - #s)
+		elseif format.zeroes == 'D' then
+			error("unexpected number "..s.." in format "..format.name)
+		end
+	end
+	return (sign=='-' and -1 or 1) * tonumber(base) / 10 ^ format.decimal
+end
+
+local function save_number(n, format, long)
+	local sign
+	if n < 0 then
+		sign = '-'
+		n = -n
+	else
+		sign = ''
+	end
+	n = n * 10 ^ format.decimal
+	local i = math.floor(n + 0.5)
+	assert(n - i < 1e-8, "rounding error")
+	n = i
+	local size = format.integer + format.decimal
+	n = string.format('%0'..size..'d', n)
+	assert(#n == size)
+	if not long then
+		if format.zeroes == 'L' then
+			n = n:match('^0*(.*.)$')
+		elseif format=='T' then
+			n = n:match('^(..-)0*$')
+		end
+	end
+	return sign..n
+end
+
+local function save_directive(self, long)
+	local G = self.G and string.format('G%02d', self.G) or ''
+	local X = self.X and 'X'..save_number(self.X, self.format, long) or ''
+	local Y = self.Y and 'Y'..save_number(self.Y, self.format, long) or ''
+	local I = self.I and 'I'..save_number(self.I, self.format, long) or ''
+	local J = self.J and 'J'..save_number(self.J, self.format, long) or ''
+	local D = self.D and string.format('D%02d', self.D) or ''
+	local M = self.M and string.format('M%02d', self.M) or ''
+	local comment = self.comment or ''
+	return G..X..Y..I..J..D..M..comment
+end
+
+local directive_mt = {}
+
+function directive_mt:__tostring()
+	return save_directive(self)
+end
+
 function _M.parse(filename)
 	local file = assert(io.open(filename, 'rb'))
 	local content = assert(file:read('*all'))
 	assert(file:close())
-	content = content:gsub('[%s%%]', '')
+	content = content:gsub('([%%*])%s*', '%1')
 	
-	local images = { current }
-	local current
+	local data = {}
+	local format
 	
-	for block in content:gmatch('([^*]*)%*') do
-		if not current then
-			current = image(filename, #images + 1)
-			table.insert(images, current)
-		end
-		local parameter = block:match('^[A-Z][A-Z]')
-		parameter = parameters[parameter]
-		if parameter then
-			parameter(current, block)
-		elseif block:match('^[GXYIJD][%d.-]') then
-			directive(current, block)
-		elseif block:match('^D%d') then
-			local dcode = block:match('^D(%d+)')
-			assert(dcode)
-			dcode = tonumber(dcode)
-			assert(dcode >= 10 and dcode <= 999 and math.floor(dcode)==dcode)
-			current.state.aperture = block
-		elseif block:match('^G%d') then
-			local gcode,param = block:match('^G(%d+)(.*)$')
-			assert(gcode)
-			gcode = tonumber(gcode)
-		--	error("unsupported G-code "..gcode)
-		elseif block:match('^M%d') then
-			local mcode = block:match('^M(%d%d)$')
-			assert(mcode)
-			mcode = tonumber(mcode)
-			if mcode==0 then -- program stop
-				-- ignore
-			elseif mcode==1 then -- optional stop
-				-- ignore
-			elseif mcode==2 then -- image stop
-				-- discard the parsing state
-				current.state = nil
-				current = nil
-			else
-				error("unsupported mcode "..tostring(mcode))
+	for parameters,directives in content:gmatch('%%([^%%]*)%%([^%%]*)') do
+		local pdata = {type='parameters'}
+		for block in parameters:gmatch('([^*]*)%*') do
+			table.insert(pdata, block)
+			if block:match('^FS') then
+				format = parsefs(block)
 			end
-		elseif block:match('^%d') then
-			-- aperture macro parameter
-		else
-			error("block "..block.." not supported")
+		end
+		if #pdata >= 1 then
+			table.insert(data, pdata)
+		end
+		for block in directives:gmatch('([^*]*)%*') do
+			local directive = setmetatable({type='directive'}, directive_mt)
+			if block:match('^G04') then
+				directive.G = '04'
+				directive.comment = block:sub(4)
+			else
+				for letter,number in block:gmatch('(%a)([0-9+-]+)') do
+					if letter:match('[XYIJ]') then
+						directive.format = assert(format)
+						directive[letter] = _tonumber(number, format)
+					else
+						assert(number:match('^%d%d%d?$'))
+						directive[letter] = tonumber(number)
+					end
+				end
+			end
+			assert(block == tostring(directive) or block == save_directive(directive, true), "block '"..block.."' has been converted to '"..tostring(directive).."'")
+			table.insert(data, directive)
 		end
 	end
-	assert(current == nil) -- all files should end in M02
 	
-	return images
+	return data
 end
 
 return _M
