@@ -1,6 +1,7 @@
 local gerber = require 'gerber'
 
 for _,filename in ipairs{...} do
+	print(filename)
 	assert(gerber.parse(filename))
 end
 
