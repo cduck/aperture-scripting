@@ -263,18 +263,71 @@ local function directive(image, block)
 	end
 end
 
-local function parsefs(block)
+local parameter_mt = {}
+
+function parameter_mt:__tostring()
+	return self.name
+end
+
+local function load_parameter(block)
+	local parameter = setmetatable({type='parameter'}, parameter_mt)
+	assert(type(block)=='string')
+	parameter.name = block
+	return parameter
+end
+
+local format_mt = {}
+
+function format_mt:__tostring()
+	return self.name
+end
+
+local function load_format(block)
 	local zeroes,mode,xi,xd,yi,yd = block:match('^FS(.)(.)X(%d)(%d)Y(%d)(%d)$')
 	assert(zeroes and (zeroes=='L' or zeroes=='T' or zeroes=='D'))
 	assert(mode=='A', "only files with absolute coordinates are supported")
 	assert(xi and xd and yi and yd)
 	assert(xi==yi and xd==yd)
-	return {
-		name = block,
-		zeroes = zeroes,
-		integer = tonumber(xi),
-		decimal = tonumber(xd),
-	}
+	local format = setmetatable({type='format'}, format_mt)
+	format.name = block
+	format.zeroes = zeroes
+	format.integer = tonumber(xi)
+	format.decimal = tonumber(xd)
+	return format
+end
+
+local macro_mt = {}
+
+function macro_mt:__tostring()
+	return self.name..'*\n'..table.concat(self, '*\n')
+end
+
+local function load_macro(block, apertures)
+	local name = block:match('^AM(.*)$')
+	assert(name and name:match('^[A-Z]'))
+	local macro = setmetatable({type='macro'}, macro_mt)
+	macro.name = block
+	for _,aperture in ipairs(apertures) do
+		table.insert(macro, aperture)
+	end
+	return macro
+end
+
+local aperture_mt = {}
+
+function aperture_mt:__tostring()
+	return 'ADD'..string.format('%02d', self.dcode)..self.definition
+end
+
+local function load_aperture(block)
+	local dcode,definition = block:match('^ADD(%d+)(.*)$')
+	assert(dcode and definition)
+	dcode = tonumber(dcode)
+	assert(dcode and dcode >= 10 and dcode <= 999)
+	local aperture = setmetatable({type='aperture'}, aperture_mt)
+	aperture.dcode = dcode
+	aperture.definition = definition
+	return aperture
 end
 
 local function _tonumber(s, format)
@@ -336,6 +389,26 @@ function directive_mt:__tostring()
 	return save_directive(self)
 end
 
+local function load_directive(block, format)
+	local directive = setmetatable({type='directive'}, directive_mt)
+	if block:match('^G04') then
+		directive.G = '04'
+		directive.comment = block:sub(4)
+	else
+		for letter,number in block:gmatch('(%a)([0-9+-]+)') do
+			if letter:match('[XYIJ]') then
+				directive.format = assert(format)
+				directive[letter] = _tonumber(number, format)
+			else
+				assert(number:match('^%d%d%d?$'))
+				directive[letter] = tonumber(number)
+			end
+		end
+	end
+	assert(block == tostring(directive) or block == save_directive(directive, true), "block '"..block.."' has been converted to '"..tostring(directive).."'")
+	return directive
+end
+
 function _M.parse(filename)
 	local file = assert(io.open(filename, 'rb'))
 	local content = assert(file:read('*all'))
@@ -346,34 +419,32 @@ function _M.parse(filename)
 	local format
 	
 	for parameters,directives in content:gmatch('%%([^%%]*)%%([^%%]*)') do
-		local pdata = {type='parameters'}
+		local pdata = {}
 		for block in parameters:gmatch('([^*]*)%*') do
 			table.insert(pdata, block)
-			if block:match('^FS') then
-				format = parsefs(block)
-			end
 		end
-		if #pdata >= 1 then
-			table.insert(data, pdata)
+		local i = 1
+		while i <= #pdata do
+			local block = pdata[i]
+			if block:match('^FS') then
+				format = load_format(block)
+				table.insert(data, format)
+			elseif block:match('^AD') then
+				table.insert(data, load_aperture(block))
+			elseif block:match('^AM') then
+				local apertures = {}
+				while i < #pdata and pdata[i+1]:match('^%d') do
+					table.insert(apertures, pdata[i+1])
+					i = i + 1
+				end
+				table.insert(data, load_macro(block, apertures))
+			else
+				table.insert(data, load_parameter(block))
+			end
+			i = i + 1
 		end
 		for block in directives:gmatch('([^*]*)%*') do
-			local directive = setmetatable({type='directive'}, directive_mt)
-			if block:match('^G04') then
-				directive.G = '04'
-				directive.comment = block:sub(4)
-			else
-				for letter,number in block:gmatch('(%a)([0-9+-]+)') do
-					if letter:match('[XYIJ]') then
-						directive.format = assert(format)
-						directive[letter] = _tonumber(number, format)
-					else
-						assert(number:match('^%d%d%d?$'))
-						directive[letter] = tonumber(number)
-					end
-				end
-			end
-			assert(block == tostring(directive) or block == save_directive(directive, true), "block '"..block.."' has been converted to '"..tostring(directive).."'")
-			table.insert(data, directive)
+			table.insert(data, load_directive(block, format))
 		end
 	end
 	

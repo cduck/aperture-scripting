@@ -3,20 +3,11 @@ local gerber = require 'gerber'
 local data = assert(gerber.parse('example2.ger'))
 
 local file = io.open("tmp.ger", "wb")
-for _,group in ipairs(data) do
-	if group.type=='parameters' then
-		file:write('%')
-		for i,block in ipairs(group) do
-			file:write(block..'*')
-			if i==#group then
-				file:write('%')
-			end
-			file:write('\r\n')
-		end
-	elseif group.type=='directive' then
-		file:write(tostring(group)..'*\r\n')
+for _,block in ipairs(data) do
+	if block.type=='directive' then
+		file:write(tostring(block)..'*\r\n')
 	else
-		error("unexpected group of type "..tostring(group.type))
+		file:write('%'..tostring(block):gsub('\n', '\r\n')..'*%\r\n')
 	end
 end
 file:close()
