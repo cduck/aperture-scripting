@@ -178,7 +178,7 @@ function _M.parse(filename)
 	assert(file:close())
 	content = content:gsub('([%%*])%s*', '%1')
 	
-	local data = {}
+	local data = { image_parameters = {}, macros = {}, apertures = {} }
 	local format
 	
 	for parameters,directives in content:gmatch('%%([^%%]*)%%([^%%]*)') do
@@ -193,14 +193,20 @@ function _M.parse(filename)
 				format = load_format(block)
 				table.insert(data, format)
 			elseif block:match('^AD') then
-				table.insert(data, load_aperture(block))
+				local aperture = load_aperture(block)
+				assert(data.apertures[aperture.dcode] == nil)
+				data.apertures[aperture.dcode] = aperture
+				table.insert(data, aperture)
 			elseif block:match('^AM') then
 				local apertures = {}
 				while i < #pdata and pdata[i+1]:match('^%d') do
 					table.insert(apertures, pdata[i+1])
 					i = i + 1
 				end
-				table.insert(data, load_macro(block, apertures))
+				local macro = load_macro(block, apertures)
+				assert(data.macros[macro.name] == nil)
+				data.macros[macro.name] = macro
+				table.insert(data, macro)
 			else
 				table.insert(data, load_parameter(block))
 			end
