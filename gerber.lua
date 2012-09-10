@@ -175,7 +175,7 @@ end
 local function load_directive(block, format)
 	local directive = setmetatable({type='directive'}, directive_mt)
 	if block:match('^G04') then
-		directive.G = '04'
+		directive.G = 4
 		directive.comment = block:sub(4)
 	else
 		for letter,number in block:gmatch('(%a)([0-9+-]+)') do
