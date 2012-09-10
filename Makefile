@@ -46,20 +46,7 @@ GERBERS= \
 	../boards/gerber/sensor.gtl \
 	../boards/gerber/sensor.gto \
 	../boards/gerber/sensor.gts \
-	../boards/gerber/sensor.txt \
-	../boards/gerber/panel.fab \
-	../boards/gerber/panel.gbl \
-	../boards/gerber/panel.gbo \
-	../boards/gerber/panel.gbs \
-	../boards/gerber/panel.gml \
-	../boards/gerber/panel.gtl \
-	../boards/gerber/panel.gto \
-	../boards/gerber/panel.gts \
-	../boards/gerber/panel.oln \
-	../boards/gerber/panel.placement.txt \
-	../boards/gerber/panel.sco \
-	../boards/gerber/panel.toollist.drl \
-	../boards/gerber/panel.txt
+	../boards/gerber/sensor.txt
 
 .PHONY:all
 all:check merge test
