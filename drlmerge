@@ -106,22 +106,6 @@ for _,file in ipairs(files) do
 	end
 end
 
---[===[
-
--- rename layers
-for ifile,file in ipairs(files) do
-	for _,block in ipairs(file.gerber) do
-		if block.type=='parameter' and block.name=='LN' then
-			local layer = block.block:match('^LN(.*)$')
-			assert(layer)
-			layer = "FILE"..ifile.."_"..layer
-			block.block = 'LN'..layer
-		end
-	end
-end
-
---]===]
-
 -- merge file
 local data = { headers = {} }
 
