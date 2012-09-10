@@ -62,11 +62,16 @@ GERBERS= \
 	../boards/gerber/panel.txt
 
 .PHONY:all
-all:check test
+all:check merge test
 
 .PHONY:check
 check:
 	grbcheck $(GERBERS)
+
+.PHONY:merge
+merge:
+#	grbmerge -offset +0+0 example2.ger -offset +10+0 example2.ger merged.ger
+	grbmerge -offset +0+0 ../boards/gerber/motor7.gtl -offset +0.82677+0 ../boards/gerber/motor7.gtl panel.gtl
 
 .PHONY:test
 test:

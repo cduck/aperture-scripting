@@ -1,0 +1,134 @@
+local gerber = require 'gerber'
+
+local files = {}
+
+local offset = { x = 0, y = 0 }
+
+local args = {...}
+local i = 1
+while i <= #args do
+	local arg = args[i]
+	if arg=='-offset' then
+		i = i + 1
+		assert(i <= #args, "-offset need an argument")
+		local sx,x,sy,y = args[i]:match('^([+-])([%d.]+)([+-])([%d.]+)$')
+		assert(sx and x and sy and y)
+		x,y = tonumber(x),tonumber(y)
+		assert(x and y)
+		if sx=='-' then x = -x end
+		if sy=='-' then y = -y end
+		offset = { x = x, y = y }
+	elseif arg:match('^%-') then
+		error("unknown option "..arg)
+	else
+		table.insert(files, {filename=arg, offset=offset})
+	end
+	i = i + 1
+end
+
+local output = files[#files].filename
+files[#files] = nil
+
+assert(#files >= 1)
+
+-- load files
+for _,file in ipairs(files) do
+	file.gerber = assert(gerber.parse(file.filename))
+end
+
+-- reference gerber to make sure all merged files are similar enough
+local reference = files[1].gerber
+
+-- check they are simple enough to merge
+for _,file in ipairs(files) do
+	-- check format
+	assert(file.gerber.format.block == reference.format.block)
+	-- check all the file directive parameters are in the reference
+	for name,parameter in pairs(file.gerber.parameters) do
+		assert(reference.parameters[name])
+		assert(reference.parameters[name].block == parameter.block)
+	end
+	-- check all the reference directive parameters are in the file
+	for name in pairs(reference.parameters) do
+		assert(file.gerber.parameters[name])
+	end
+	-- check all the file image parameters are in the reference
+	for name,parameter in pairs(file.gerber.image) do
+		assert(reference.image[name])
+		assert(reference.image[name].block == parameter.block)
+	end
+	-- check all the reference image parameters are in the file
+	for name in pairs(reference.image) do
+		assert(file.gerber.image[name])
+	end
+end
+
+-- check they use the same macros and apertures definitions
+-- :TODO: merge macros and aperture definitions
+for _,file in ipairs(files) do
+	-- check all the file macros are in the reference
+	for name,macro in pairs(file.gerber.macros) do
+		assert(reference.macros[name])
+		assert(#reference.macros[name] == #macro)
+		for i=1,#macro do
+			assert(reference.macros[name][i] == macro[i])
+		end
+	end
+	-- check all the reference macros are in the file
+	for name in pairs(reference.macros) do
+		assert(file.gerber.macros[name])
+	end
+	-- check all the file apertures are in the reference
+	for dcode,aperture in pairs(file.gerber.apertures) do
+		assert(reference.apertures[dcode])
+		assert(reference.apertures[dcode].definition == aperture.definition)
+	end
+	-- check all the reference apertures are in the file
+	for dcode in pairs(reference.apertures) do
+		assert(file.gerber.apertures[dcode])
+	end
+end
+
+-- apply offsets
+for _,file in ipairs(files) do
+	for _,block in ipairs(file.gerber) do
+		if block.type=='directive' then
+			if block.X then
+				block.X = block.X + file.offset.x
+			end
+			if block.Y then
+				block.Y = block.Y + file.offset.y
+			end
+		end
+	end
+end
+
+-- rename layers
+for ifile,file in ipairs(files) do
+	for _,block in ipairs(file.gerber) do
+		if block.type=='parameter' and block.name=='LN' then
+			local layer = block.block:match('^LN(.*)$')
+			assert(layer)
+			layer = "FILE"..ifile.."_"..layer
+			block.block = 'LN'..layer
+		end
+	end
+end
+
+output = assert(io.open(output, 'wb'))
+for ifile,file in ipairs(files) do
+	for _,block in ipairs(file.gerber) do
+		if block.type=='directive' then
+			if block.M ~= 2 then
+				output:write(tostring(block)..'*\r\n')
+			end
+		else
+			if block.scope == 'layer' or ifile == 1 then
+				output:write('%'..tostring(block):gsub('\n', '\r\n')..'*%\r\n')
+			end
+		end
+	end
+end
+assert(output:close())
+
+-- vi: ft=lua
