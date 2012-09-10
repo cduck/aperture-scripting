@@ -192,7 +192,7 @@ local function load_directive(block, format)
 	return directive
 end
 
-function _M.parse(filename)
+function _M.load(filename)
 	local file = assert(io.open(filename, 'rb'))
 	local content = assert(file:read('*all'))
 	assert(file:close())
@@ -252,6 +252,19 @@ function _M.parse(filename)
 	end
 	
 	return data
+end
+
+function _M.save(data, filename)
+	local file = assert(io.open(filename, "wb"))
+	for _,block in ipairs(data) do
+		if block.type=='directive' then
+			assert(file:write(tostring(block):gsub('\n', '\r\n')..'*\r\n'))
+		else
+			assert(file:write('%'..tostring(block):gsub('\n', '\r\n')..'*%\r\n'))
+		end
+	end
+	assert(file:close())
+	return true
 end
 
 return _M

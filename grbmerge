@@ -33,7 +33,7 @@ assert(#files >= 1)
 
 -- load files
 for _,file in ipairs(files) do
-	file.gerber = assert(gerber.parse(file.filename))
+	file.gerber = assert(gerber.load(file.filename))
 end
 
 -- reference gerber to make sure all merged files are similar enough
@@ -115,20 +115,24 @@ for ifile,file in ipairs(files) do
 	end
 end
 
-output = assert(io.open(output, 'wb'))
+-- merge file
+local data = {}
+
 for ifile,file in ipairs(files) do
 	for _,block in ipairs(file.gerber) do
 		if block.type=='directive' then
 			if block.M ~= 2 then
-				output:write(tostring(block)..'*\r\n')
+				table.insert(data, block)
 			end
 		else
 			if block.scope == 'layer' or ifile == 1 then
-				output:write('%'..tostring(block):gsub('\n', '\r\n')..'*%\r\n')
+				table.insert(data, block)
 			end
 		end
 	end
 end
-assert(output:close())
+
+-- save output file
+assert(gerber.save(data, output))
 
 -- vi: ft=lua
