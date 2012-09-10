@@ -129,6 +129,7 @@ for ifile,file in ipairs(files) do
 		end
 	end
 end
+table.insert(data, 'M30')
 
 -- save output file
 assert(excellon.save(data, output))
