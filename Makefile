@@ -73,6 +73,10 @@ merge:
 #	grbmerge -offset +0+0 example2.ger -offset +10+0 example2.ger merged.ger
 	grbmerge -offset +0+0 ../boards/gerber/motor7.gtl -offset +0.82677+0 ../boards/gerber/motor7.gtl panel.gtl
 
+.PHONY:copy
+copy:
+	grbcopy ../boards/gerber/motor7.gtl motor7.gtl
+
 .PHONY:test
 test:
 	lua test.lua
