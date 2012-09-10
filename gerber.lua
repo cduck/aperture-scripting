@@ -29,20 +29,20 @@ local layer_polarities = {
 local parameter_mt = {}
 
 function parameter_mt:__tostring()
-	return self.name
+	return self.block
 end
 
 local function load_parameter(block)
 	local parameter = setmetatable({type='parameter'}, parameter_mt)
 	assert(type(block)=='string')
-	parameter.name = block
+	parameter.block = block
 	return parameter
 end
 
 local format_mt = {}
 
 function format_mt:__tostring()
-	return self.name
+	return self.block
 end
 
 local function load_format(block)
@@ -52,7 +52,7 @@ local function load_format(block)
 	assert(xi and xd and yi and yd)
 	assert(xi==yi and xd==yd)
 	local format = setmetatable({type='format'}, format_mt)
-	format.name = block
+	format.block = block
 	format.zeroes = zeroes
 	format.integer = tonumber(xi)
 	format.decimal = tonumber(xd)
@@ -62,14 +62,14 @@ end
 local macro_mt = {}
 
 function macro_mt:__tostring()
-	return self.name..'*\n'..table.concat(self, '*\n')
+	return 'AM'..self.name..'*\n'..table.concat(self, '*\n')
 end
 
 local function load_macro(block, apertures)
 	local name = block:match('^AM(.*)$')
 	assert(name and name:match('^[A-Z]'))
 	local macro = setmetatable({type='macro'}, macro_mt)
-	macro.name = block
+	macro.name = name
 	for _,aperture in ipairs(apertures) do
 		table.insert(macro, aperture)
 	end
@@ -103,7 +103,7 @@ local function _tonumber(s, format)
 		elseif format.zeroes == 'T' then
 			base = base .. string.rep('0', size - #s)
 		elseif format.zeroes == 'D' then
-			error("unexpected number "..s.." in format "..format.name)
+			error("unexpected number "..s.." in format "..format.block)
 		end
 	end
 	return (sign=='-' and -1 or 1) * tonumber(base) / 10 ^ format.decimal
