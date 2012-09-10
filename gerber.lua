@@ -26,6 +26,22 @@ local layer_polarities = {
 	C = 'clear',
 }
 
+local parameter_scopes = {
+	AS = 'directive',
+	FS = 'directive',
+	MI = 'directive',
+	MO = 'directive',
+	OF = 'directive',
+	SF = 'directive',
+	IP = 'image',
+	IR = 'image',
+	IJ = 'image',
+	LN = 'layer',
+	LP = 'layer',
+	SR = 'layer',
+	KO = 'layer',
+}
+
 local parameter_mt = {}
 
 function parameter_mt:__tostring()
@@ -33,9 +49,13 @@ function parameter_mt:__tostring()
 end
 
 local function load_parameter(block)
+	local name = block:match('^(%u%u)')
+	assert(name)
 	local parameter = setmetatable({type='parameter'}, parameter_mt)
 	assert(type(block)=='string')
 	parameter.block = block
+	parameter.name = name
+	parameter.scope = assert(parameter_scopes[name], "unknown parameter "..name)
 	return parameter
 end
 
@@ -178,8 +198,7 @@ function _M.parse(filename)
 	assert(file:close())
 	content = content:gsub('([%%*])%s*', '%1')
 	
-	local data = { image_parameters = {}, macros = {}, apertures = {} }
-	local format
+	local data = { parameters = {}, macros = {}, apertures = {} }
 	
 	for parameters,directives in content:gmatch('%%([^%%]*)%%([^%%]*)') do
 		local pdata = {}
@@ -190,8 +209,8 @@ function _M.parse(filename)
 		while i <= #pdata do
 			local block = pdata[i]
 			if block:match('^FS') then
-				format = load_format(block)
-				table.insert(data, format)
+				data.format = load_format(block)
+				table.insert(data, data.format)
 			elseif block:match('^AD') then
 				local aperture = load_aperture(block)
 				assert(data.apertures[aperture.dcode] == nil)
@@ -208,12 +227,17 @@ function _M.parse(filename)
 				data.macros[macro.name] = macro
 				table.insert(data, macro)
 			else
-				table.insert(data, load_parameter(block))
+				local parameter = load_parameter(block)
+				if parameter.scope == 'image' then
+					assert(data.parameters[parameter.name] == nil)
+					data.parameters[parameter.name] = parameter
+				end
+				table.insert(data, parameter)
 			end
 			i = i + 1
 		end
 		for block in directives:gmatch('([^*]*)%*') do
-			table.insert(data, load_directive(block, format))
+			table.insert(data, load_directive(block, data.format))
 		end
 	end
 	
