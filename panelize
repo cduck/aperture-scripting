@@ -1,0 +1,73 @@
+
+local cfgfile = ...
+assert(cfgfile)
+
+------------------------------------------------------------------------------
+
+local function grbextents(filename)
+	local extents = assert(assert(io.popen('grbinfo -extents '..filename, 'rb')):read('*all'))
+	extents = extents:gsub('\r', '')
+	local minx,maxx,miny,maxy = extents:match('^[^\n]*\nX:\t(%S*)\t(%S*)\nY:\t(%S*)\t(%S*)\n')
+	assert(minx and maxx and miny and maxy)
+	return { left=minx, width=maxx-minx, bottom=miny, height=maxy-miny }
+end
+
+------------------------------------------------------------------------------
+
+print("loading config")
+
+local config = {}
+
+local chunk = assert(loadfile(cfgfile))
+setfenv(chunk, config)
+chunk()
+assert(config.images[config.outline] == 'gerber')
+
+local boards = {}
+for _,row in ipairs(config.panel) do
+	for _,board in ipairs(row) do
+		boards[board] = true
+	end
+end
+
+local extents = {}
+
+for board in pairs(boards) do
+	extents[board] = grbextents(config.directory..board..'.'..config.outline)
+end
+
+for _,row in ipairs(config.panel) do
+	local minh = 0
+	for _,board in ipairs(row) do
+		minh = math.max(minh, extents[board].height)
+	end
+	row.height = minh
+end
+
+local commands = {
+	gerber = "grbmerge",
+	excellon = "drlmerge",
+}
+
+for extension,format in pairs(config.images) do
+	local command = commands[format]
+	
+	local y = 0
+	for _,row in ipairs(config.panel) do
+		local x = 0
+		for _,board in ipairs(row) do
+			local ox = math.floor((x - extents[board].left) * 1e4 + 0.5) * 1e-4
+			local oy = math.floor((y - extents[board].bottom) * 1e4 + 0.5) * 1e-4
+			command = command..string.format(" -offset %+f%+f %s", ox, oy, config.directory..board.."."..extension)
+			x = x + extents[board].width + config.spacing
+		end
+		y = y + row.height + config.spacing
+	end
+	
+	print("generating "..config.output.."."..extension)
+	command = command.." "..config.directory..config.output.."."..extension
+	
+	os.execute(command)
+end
+
+-- vi: ft=lua
