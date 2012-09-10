@@ -192,6 +192,13 @@ local function load_directive(block, format)
 	return directive
 end
 
+function _M.comment(comment)
+	local directive = setmetatable({type='directive'}, directive_mt)
+	directive.G = 4
+	directive.comment = " "..comment:gsub('%*', '')
+	return directive
+end
+
 function _M.load(filename)
 	local file = assert(io.open(filename, 'rb'))
 	local content = assert(file:read('*all'))
