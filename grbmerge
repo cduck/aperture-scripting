@@ -104,7 +104,7 @@ for _,file in ipairs(files) do
 			end
 			amapping[dcode] = dcode2
 			apertures[dcode2] = aperture
-			rapertures[data] = aperture
+			rapertures[data] = dcode2
 		else
 			apertures[dcode] = aperture
 			rapertures[data] = dcode
