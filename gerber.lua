@@ -198,7 +198,7 @@ function _M.parse(filename)
 	assert(file:close())
 	content = content:gsub('([%%*])%s*', '%1')
 	
-	local data = { parameters = {}, macros = {}, apertures = {} }
+	local data = { parameters = {}, image = {}, macros = {}, apertures = {} }
 	
 	for parameters,directives in content:gmatch('%%([^%%]*)%%([^%%]*)') do
 		local pdata = {}
@@ -228,9 +228,12 @@ function _M.parse(filename)
 				table.insert(data, macro)
 			else
 				local parameter = load_parameter(block)
-				if parameter.scope == 'image' then
+				if parameter.scope == 'directive' then
 					assert(data.parameters[parameter.name] == nil)
 					data.parameters[parameter.name] = parameter
+				elseif parameter.scope == 'image' then
+					assert(data.image[parameter.name] == nil)
+					data.image[parameter.name] = parameter
 				end
 				table.insert(data, parameter)
 			end
