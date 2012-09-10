@@ -1,0 +1,9 @@
+local excellon = require 'excellon'
+
+local input,output = ...
+
+local data = assert(excellon.load(input))
+
+excellon.save(data, output)
+
+-- vi: ft=lua

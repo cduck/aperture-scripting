@@ -113,7 +113,7 @@ local function load_aperture(block)
 	return aperture
 end
 
-local function _tonumber(s, format)
+function _M.load_number(s, format)
 	local sign,base = s:match('^([+-]?)(%d+)$')
 	assert(sign and base)
 	local size = format.integer + format.decimal
@@ -129,7 +129,7 @@ local function _tonumber(s, format)
 	return (sign=='-' and -1 or 1) * tonumber(base) / 10 ^ format.decimal
 end
 
-local function save_number(n, format, long)
+function _M.save_number(n, format, long)
 	local sign
 	if n < 0 then
 		sign = '-'
@@ -156,10 +156,10 @@ end
 
 local function save_directive(self, long)
 	local G = self.G and string.format('G%02d', self.G) or ''
-	local X = self.X and 'X'..save_number(self.X, self.format, long) or ''
-	local Y = self.Y and 'Y'..save_number(self.Y, self.format, long) or ''
-	local I = self.I and 'I'..save_number(self.I, self.format, long) or ''
-	local J = self.J and 'J'..save_number(self.J, self.format, long) or ''
+	local X = self.X and 'X'.._M.save_number(self.X, self.format, long) or ''
+	local Y = self.Y and 'Y'.._M.save_number(self.Y, self.format, long) or ''
+	local I = self.I and 'I'.._M.save_number(self.I, self.format, long) or ''
+	local J = self.J and 'J'.._M.save_number(self.J, self.format, long) or ''
 	local D = self.D and string.format('D%02d', self.D) or ''
 	local M = self.M and string.format('M%02d', self.M) or ''
 	local comment = self.comment or ''
@@ -181,7 +181,7 @@ local function load_directive(block, format)
 		for letter,number in block:gmatch('(%a)([0-9+-]+)') do
 			if letter:match('[XYIJ]') then
 				directive.format = assert(format)
-				directive[letter] = _tonumber(number, format)
+				directive[letter] = _M.load_number(number, format)
 			else
 				assert(number:match('^%d%d%d?$'))
 				directive[letter] = tonumber(number)
