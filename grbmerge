@@ -63,29 +63,60 @@ for _,file in ipairs(files) do
 	end
 end
 
--- check they use the same macros and apertures definitions
--- :TODO: merge macros and aperture definitions
+-- merge macros and aperture definitions
+local macros = {}
+local rmacros = {}
+local apertures = {}
+local rapertures = {}
 for _,file in ipairs(files) do
-	-- check all the file macros are in the reference
+	-- add each macro to the merged list
 	for name,macro in pairs(file.gerber.macros) do
-		assert(reference.macros[name])
-		assert(#reference.macros[name] == #macro)
-		for i=1,#macro do
-			assert(reference.macros[name][i] == macro[i])
+		local data = table.concat(macro, '\0')
+		local existing = rmacros[data]
+		if existing then
+			if existing ~= name then
+				-- :TODO: change every aperture of this file using <name> to <existing>
+				error("merging of identical macros is not yet supported")
+			end
+		elseif macros[name] then
+			-- :TODO: rename macro
+			error("renaming of conflicting macros is not yet supported")
+		else
+			macros[name] = macro
+			rmacros[data] = name
 		end
 	end
-	-- check all the reference macros are in the file
-	for name in pairs(reference.macros) do
-		assert(file.gerber.macros[name])
-	end
-	-- check all the file apertures are in the reference
+	-- add each aperture to the merged list
+	local amapping = {}
 	for dcode,aperture in pairs(file.gerber.apertures) do
-		assert(reference.apertures[dcode])
-		assert(reference.apertures[dcode].definition == aperture.definition)
+		local data = aperture.definition
+		local existing = rapertures[data]
+		if existing then
+			if existing ~= dcode then
+				-- change every directive of this file using <dcode> to <existing>
+				amapping[dcode] = existing
+			end
+		elseif apertures[dcode] then
+			-- rename aperture
+			local dcode2 = dcode + 1
+			while apertures[dcode2] do
+				dcode2 = dcode2 + 1
+			end
+			amapping[dcode] = dcode2
+			apertures[dcode2] = aperture
+			rapertures[data] = aperture
+		else
+			apertures[dcode] = aperture
+			rapertures[data] = dcode
+		end
 	end
-	-- check all the reference apertures are in the file
-	for dcode in pairs(reference.apertures) do
-		assert(file.gerber.apertures[dcode])
+	-- apply aperture mergings
+	for _,block in ipairs(file.gerber) do
+		if block.type=='directive' and amapping[block.D] then
+			block.D = amapping[block.D]
+		elseif block.type=='aperture' and amapping[block.dcode] then
+			block.dcode = amapping[block.dcode]
+		end
 	end
 end
 
@@ -118,7 +149,9 @@ end
 -- merge file
 local data = {}
 
+local merged = false
 for ifile,file in ipairs(files) do
+	table.insert(data, gerber.comment("data from file "..file.filename))
 	for _,block in ipairs(file.gerber) do
 		if block.type=='directive' then
 			if block.M ~= 2 then
@@ -126,7 +159,21 @@ for ifile,file in ipairs(files) do
 			end
 		else
 			if block.scope == 'layer' or ifile == 1 then
-				table.insert(data, block)
+				-- replace the first aperture or macro by the merged lists
+				if block.type=='aperture' or block.type=='macro' then
+					-- ignore subsequent aperture/macro blocks
+					if not merged then
+						for _,macro in pairs(macros) do
+							table.insert(data, macro)
+						end
+						for _,aperture in pairs(apertures) do
+							table.insert(data, aperture)
+						end
+						merged = true
+					end
+				else
+					table.insert(data, block)
+				end
 			end
 		end
 	end
