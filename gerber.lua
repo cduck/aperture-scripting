@@ -200,6 +200,13 @@ function _M.parse(filename)
 	
 	local data = { parameters = {}, image = {}, macros = {}, apertures = {} }
 	
+	-- directives may appear before the first parameter
+	local directives = content:match('^([^%%]*)%%')
+	for block in directives:gmatch('([^*]*)%*') do
+		local directive = load_directive(block, data.format)
+		table.insert(data, directive)
+	end
+	-- parse alternating parameter/directive blocks
 	for parameters,directives in content:gmatch('%%([^%%]*)%%([^%%]*)') do
 		local pdata = {}
 		for block in parameters:gmatch('([^*]*)%*') do
