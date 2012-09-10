@@ -1,0 +1,49 @@
+local gerber = require 'gerber'
+
+local filenames = {}
+local infos = {}
+
+local display = {}
+
+function display.extents(data)
+	local minx,miny,maxx,maxy = math.huge,math.huge,-math.huge,-math.huge
+	for _,block in ipairs(data) do
+		if block.type=='directive' then
+			if block.X then
+				if block.X < minx then minx = block.X end
+				if block.X > maxx then maxx = block.X end
+			end
+			if block.Y then
+				if block.Y < miny then miny = block.Y end
+				if block.Y > maxy then maxy = block.Y end
+			end
+		end
+	end
+	print("X:", minx, maxx)
+	print("Y:", miny, maxy)
+end
+
+local args = {...}
+for iarg,arg in ipairs(args) do
+	if arg=='--' then
+		for i=iarg+1,#args do
+			table.insert(filenames, args[i])
+		end
+		break
+	elseif arg:match('^%-') then
+		local info = arg:match('^%-(.*)$')
+		table.insert(infos, (assert(display[info], "no display routine for '"..info.."'")))
+	else
+		table.insert(filenames, arg)
+	end
+end
+
+for _,filename in ipairs(filenames) do
+	print(filename)
+	local data = assert(gerber.load(filename))
+	for _,info in ipairs(infos) do
+		info(data)
+	end
+end
+
+-- vi: ft=lua
