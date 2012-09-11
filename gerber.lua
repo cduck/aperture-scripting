@@ -209,7 +209,7 @@ end
 function _M.comment(comment)
 	local directive = setmetatable({type='directive'}, directive_mt)
 	directive.G = 4
-	directive.comment = " "..comment:gsub('%*', '')
+	directive.comment = comment:gsub('%*', '')
 	return directive
 end
 

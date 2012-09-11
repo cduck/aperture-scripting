@@ -161,7 +161,7 @@ local data = {}
 
 local merged = false
 for ifile,file in ipairs(files) do
-	table.insert(data, gerber.comment("data from file "..file.filename))
+	table.insert(data, gerber.comment(" data from file "..file.filename))
 	for _,block in ipairs(file.gerber) do
 		if block.type=='directive' then
 			if block.M ~= 2 then
