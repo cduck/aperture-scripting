@@ -209,9 +209,11 @@ function _M.load(filename)
 	
 	-- directives may appear before the first parameter
 	local directives = content:match('^([^%%]*)%%')
-	for block in directives:gmatch('([^*]*)%*') do
-		local directive = load_directive(block, data.format)
-		table.insert(data, directive)
+	if directives then
+		for block in directives:gmatch('([^*]*)%*') do
+			local directive = load_directive(block, data.format)
+			table.insert(data, directive)
+		end
 	end
 	-- parse alternating parameter/directive blocks
 	for parameters,directives in content:gmatch('%%([^%%]*)%%([^%%]*)') do
