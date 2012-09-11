@@ -1,3 +1,4 @@
+local gerber = require 'gerber'
 
 local cfgfile = ...
 assert(cfgfile)
@@ -49,6 +50,13 @@ local commands = {
 	excellon = "drlmerge",
 }
 
+if config.vscore then
+	print("generating vscore file")
+	local data = {}
+	-- :TODO: fill in that data
+	gerber.save(data, config.directory..config.output..".vscore")
+end
+
 for extension,format in pairs(config.images) do
 	local command = commands[format]
 	
@@ -62,6 +70,10 @@ for extension,format in pairs(config.images) do
 			x = x + extents[board].width + config.spacing
 		end
 		y = y + row.height + config.spacing
+	end
+	
+	if config.vscore and config.vscore[extension] then
+		command = command.." "..config.directory..config.output..".vscore"
 	end
 	
 	print("generating "..config.output.."."..extension)
