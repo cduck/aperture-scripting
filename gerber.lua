@@ -186,31 +186,43 @@ function directive_mt:__tostring()
 	return save_directive(self)
 end
 
-local function load_directive(block, format)
+function _M.directive(data, format)
 	local directive = setmetatable({type='directive'}, directive_mt)
+	if data.X or data.Y or data.I or data.J then
+		directive.format = assert(format)
+	end
+	for k,v in pairs(data) do
+		directive[k] = v
+	end
+	return directive
+end
+
+local function load_directive(block, format)
+	local directive
 	if block:match('^G04') then
-		directive.G = 4
-		directive.comment = block:sub(4)
+		directive = _M.directive{ G = 4, comment = block:sub(4) }
 	else
+		local data = {}
 		for letter,number in block:gmatch('(%a)([0-9+-]+)') do
 			if letter:match('[XYIJ]') then
-				directive.format = assert(format)
-				directive[letter] = _M.load_number(number, format)
+				data[letter] = _M.load_number(number, assert(format))
 			else
 				assert(number:match('^%d%d%d?$'))
-				directive[letter] = tonumber(number)
+				data[letter] = tonumber(number)
 			end
 		end
+		directive = _M.directive(data, format)
 	end
 	assert(block == tostring(directive) or block == save_directive(directive, true), "block '"..block.."' has been converted to '"..tostring(directive).."'")
 	return directive
 end
 
 function _M.comment(comment)
-	local directive = setmetatable({type='directive'}, directive_mt)
-	directive.G = 4
-	directive.comment = comment:gsub('%*', '')
-	return directive
+	return _M.directive{ G = 4, comment = comment:gsub('%*', '') }
+end
+
+function _M.eof()
+	return _M.directive{ M = 2 }
 end
 
 function _M.load(filename)
