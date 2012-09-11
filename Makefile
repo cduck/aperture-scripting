@@ -9,16 +9,16 @@ test-check:
 .PHONY:test-copy
 test-copy:
 	grbcopy test/example2.grb test/copy.grb
-	diff -q test/copy.grb test/copy.grb.expected
+	diff -durN test/copy.grb.expected test/copy.grb
 	drlcopy test/example.drl test/copy.drl
-	diff -q test/copy.drl test/copy.drl.expected
+	diff -durN test/copy.drl.expected test/copy.drl
 
 .PHONY:test-merge
 test-merge:
 	grbmerge -offset +0+0 test/example2.grb -offset +10+0 test/example2.grb test/merged.grb
-	diff -q test/merged.grb test/merged.grb.expected
+	diff -durN test/merged.grb.expected test/merged.grb
 	drlmerge -offset +0+0 test/example.drl -offset +10+0 test/example.drl test/merged.drl
-	diff -q test/merged.drl test/merged.drl.expected
+	diff -durN test/merged.drl.expected test/merged.drl
 
 .PHONY:test-misc
 test-misc:
