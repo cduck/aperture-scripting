@@ -153,7 +153,7 @@ function _M.save_number(n, format, long)
 	end
 	n = n * 10 ^ format.decimal
 	local i = math.floor(n + 0.5)
-	assert(n - i < 1e-8, "rounding error")
+	assert(math.abs(n - i) < 1e-8, "rounding error")
 	n = i
 	local size = format.integer + format.decimal
 	n = string.format('%0'..size..'d', n)
