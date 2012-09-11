@@ -78,7 +78,7 @@ if config.vscore then
 	table.insert(data, gerber.aperture(10, 'C', {round(config.spacing, d)}))
 	table.insert(data, gerber.directive{D=10})
 	
-	-- :TODO: fill in that data
+	-- generate some lines between the boards
 	local y = -config.spacing / 2
 	for j,row in ipairs(config.panel) do
 		local x = -config.spacing / 2
