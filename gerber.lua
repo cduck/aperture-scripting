@@ -107,24 +107,53 @@ local function load_macro(block, apertures)
 end
 
 local aperture_mt = {}
+local aperture_getters = {}
 
-function aperture_mt:__tostring()
-	return 'ADD'..string.format('%02d', self.dcode)..self.definition
+function aperture_mt:__index(k)
+	local getter = aperture_getters[k]
+	if getter then
+		return getter(self)
+	end
+	return nil
 end
 
-function _M.aperture(dcode, definition)
+function aperture_getters:definition()
+	local shape = self.shape
+	local parameters = self.parameters and ","..table.concat(self.parameters, "X") or ""
+	return shape..parameters
+end
+
+function aperture_mt:__tostring()
+	return string.format('ADD%02d%s', self.dcode, self.definition)
+end
+
+function _M.aperture(dcode, shape, parameters)
 	local aperture = setmetatable({type='aperture'}, aperture_mt)
 	aperture.dcode = dcode
-	aperture.definition = definition
+	aperture.shape = shape
+	aperture.parameters = parameters
 	return aperture
 end
 
 local function load_aperture(block)
-	local dcode,definition = block:match('^ADD(%d+)(.*)$')
-	assert(dcode and definition)
+	local dcode,shape,parameters = block:match('^ADD(%d+)([^,]*)(.*)$')
+	assert(dcode and shape and parameters)
 	dcode = tonumber(dcode)
 	assert(dcode and dcode >= 10 and dcode <= 999)
-	return _M.aperture(dcode, definition)
+	if parameters == "" then
+		parameters = nil
+	else
+		assert(parameters:sub(1,1) == ",")
+		parameters = parameters:sub(2)
+		assert(parameters ~= "")
+		local t = {}
+		for parameter in parameters:gmatch('[^X]+') do
+			parameter = assert(tonumber(parameter))
+			table.insert(t, parameter)
+		end
+		parameters = t
+	end
+	return _M.aperture(dcode, shape, parameters)
 end
 
 function _M.load_number(s, format)
