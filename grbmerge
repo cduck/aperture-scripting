@@ -29,12 +29,22 @@ end
 local output = files[#files].filename
 files[#files] = nil
 
-assert(#files >= 1)
-
 -- load files
 for _,file in ipairs(files) do
 	file.gerber = assert(gerber.load(file.filename))
 end
+
+-- ignore empty files
+local i = #files
+while i >= 1 do
+	if #files[i].gerber == 0 then
+		files[i] = files[#files]
+		files[#files] = nil
+	end
+	i = i - 1
+end
+
+assert(#files >= 1)
 
 -- reference gerber to make sure all merged files are similar enough
 local reference = files[1].gerber
