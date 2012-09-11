@@ -74,8 +74,8 @@ if config.vscore then
 	table.insert(data, gerber.parameter('OF', 'A0B0'))
 	table.insert(data, gerber.parameter('IP', 'POS'))
 	table.insert(data, gerber.parameter('LP', 'D'))
---	table.insert(data, gerber.aperture(10, 'R,'..round(config.spacing, d)..'X'..round(config.spacing, d)))
-	table.insert(data, gerber.aperture(10, 'C,'..round(config.spacing, d)))
+--	table.insert(data, gerber.aperture(10, 'R', {round(config.spacing, d), round(config.spacing, d)}))
+	table.insert(data, gerber.aperture(10, 'C', {round(config.spacing, d)}))
 	table.insert(data, gerber.directive{D=10})
 	
 	-- :TODO: fill in that data

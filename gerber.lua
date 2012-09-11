@@ -128,6 +128,7 @@ function aperture_mt:__tostring()
 end
 
 function _M.aperture(dcode, shape, parameters)
+	assert(not shape:match(','))
 	local aperture = setmetatable({type='aperture'}, aperture_mt)
 	aperture.dcode = dcode
 	aperture.shape = shape
