@@ -52,11 +52,11 @@ local reference = files[1].gerber
 -- check they are simple enough to merge
 for _,file in ipairs(files) do
 	-- check format
-	assert(file.gerber.format.block == reference.format.block)
+	assert(tostring(file.gerber.format) == tostring(reference.format))
 	-- check all the file directive parameters are in the reference
 	for name,parameter in pairs(file.gerber.parameters) do
 		assert(reference.parameters[name])
-		assert(reference.parameters[name].block == parameter.block)
+		assert(tostring(reference.parameters[name]) == tostring(parameter))
 	end
 	-- check all the reference directive parameters are in the file
 	for name in pairs(reference.parameters) do
@@ -65,7 +65,7 @@ for _,file in ipairs(files) do
 	-- check all the file image parameters are in the reference
 	for name,parameter in pairs(file.gerber.image) do
 		assert(reference.image[name])
-		assert(reference.image[name].block == parameter.block)
+		assert(tostring(reference.image[name]) == tostring(parameter))
 	end
 	-- check all the reference image parameters are in the file
 	for name in pairs(reference.image) do
@@ -148,10 +148,10 @@ end
 for ifile,file in ipairs(files) do
 	for _,block in ipairs(file.gerber) do
 		if block.type=='parameter' and block.name=='LN' then
-			local layer = block.block:match('^LN(.*)$')
+			local layer = block.value
 			assert(layer)
 			layer = "FILE"..ifile.."_"..layer
-			block.block = 'LN'..layer
+			block.value = layer
 		end
 	end
 end

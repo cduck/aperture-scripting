@@ -45,24 +45,35 @@ local parameter_scopes = {
 local parameter_mt = {}
 
 function parameter_mt:__tostring()
-	return self.block
+	return self.name..self.value
+end
+
+function _M.parameter(name, value)
+	local parameter = setmetatable({type='parameter'}, parameter_mt)
+	parameter.scope = assert(parameter_scopes[name], "unknown parameter "..name)
+	parameter.name = name
+	parameter.value = value
+	return parameter
 end
 
 local function load_parameter(block)
-	local name = block:match('^(%u%u)')
-	assert(name)
-	local parameter = setmetatable({type='parameter'}, parameter_mt)
-	assert(type(block)=='string')
-	parameter.block = block
-	parameter.name = name
-	parameter.scope = assert(parameter_scopes[name], "unknown parameter "..name)
-	return parameter
+	local name,value = block:match('^(%u%u)(.*)$')
+	assert(name and value)
+	return _M.parameter(name, value)
 end
 
 local format_mt = {}
 
 function format_mt:__tostring()
-	return self.block
+	return 'FS'..self.zeroes..'AX'..self.integer..self.decimal..'Y'..self.integer..self.decimal
+end
+
+function _M.format(zeroes, integer, decimal)
+	local format = setmetatable({type='format'}, format_mt)
+	format.zeroes = zeroes
+	format.integer = integer
+	format.decimal = decimal
+	return format
 end
 
 local function load_format(block)
@@ -71,12 +82,7 @@ local function load_format(block)
 	assert(mode=='A', "only files with absolute coordinates are supported")
 	assert(xi and xd and yi and yd)
 	assert(xi==yi and xd==yd)
-	local format = setmetatable({type='format'}, format_mt)
-	format.block = block
-	format.zeroes = zeroes
-	format.integer = tonumber(xi)
-	format.decimal = tonumber(xd)
-	return format
+	return _M.format(zeroes, tonumber(xi), tonumber(xd))
 end
 
 local macro_mt = {}
@@ -85,9 +91,7 @@ function macro_mt:__tostring()
 	return 'AM'..self.name..'*\n'..table.concat(self, '*\n')
 end
 
-local function load_macro(block, apertures)
-	local name = block:match('^AM(.*)$')
-	assert(name and name:match('^[A-Z]'))
+function _M.macro(name, apertures)
 	local macro = setmetatable({type='macro'}, macro_mt)
 	macro.name = name
 	for _,aperture in ipairs(apertures) do
@@ -96,10 +100,23 @@ local function load_macro(block, apertures)
 	return macro
 end
 
+local function load_macro(block, apertures)
+	local name = block:match('^AM(.*)$')
+	assert(name and name:match('^[A-Z]'))
+	return _M.macro(name, apertures)
+end
+
 local aperture_mt = {}
 
 function aperture_mt:__tostring()
 	return 'ADD'..string.format('%02d', self.dcode)..self.definition
+end
+
+function _M.aperture(dcode, definition)
+	local aperture = setmetatable({type='aperture'}, aperture_mt)
+	aperture.dcode = dcode
+	aperture.definition = definition
+	return aperture
 end
 
 local function load_aperture(block)
@@ -107,10 +124,7 @@ local function load_aperture(block)
 	assert(dcode and definition)
 	dcode = tonumber(dcode)
 	assert(dcode and dcode >= 10 and dcode <= 999)
-	local aperture = setmetatable({type='aperture'}, aperture_mt)
-	aperture.dcode = dcode
-	aperture.definition = definition
-	return aperture
+	return _M.aperture(dcode, definition)
 end
 
 function _M.load_number(s, format)
@@ -123,7 +137,7 @@ function _M.load_number(s, format)
 		elseif format.zeroes == 'T' then
 			base = base .. string.rep('0', size - #s)
 		elseif format.zeroes == 'D' then
-			error("unexpected number "..s.." in format "..format.block)
+			error("unexpected number "..s.." in format "..tostring(format))
 		end
 	end
 	return (sign=='-' and -1 or 1) * tonumber(base) / 10 ^ format.decimal
