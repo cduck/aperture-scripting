@@ -2,6 +2,7 @@ local gerber = require 'gerber'
 
 local files = {}
 
+local scale = 1
 local offset = { x = 0, y = 0 }
 
 local args = {...}
@@ -18,10 +19,16 @@ while i <= #args do
 		if sx=='-' then x = -x end
 		if sy=='-' then y = -y end
 		offset = { x = x, y = y }
+	elseif arg=='-scale' then
+		i = i + 1
+		assert(i <= #args, "-scale need an argument")
+		local s = tonumber(args[i])
+		assert(s)
+		scale = s
 	elseif arg:match('^%-') then
 		error("unknown option "..arg)
 	else
-		table.insert(files, {filename=arg, offset=offset})
+		table.insert(files, {filename=arg, scale=scale, offset=offset})
 	end
 	i = i + 1
 end
@@ -71,6 +78,21 @@ for _,file in ipairs(files) do
 	for name in pairs(reference.image) do
 		assert(file.gerber.image[name])
 	end
+end
+
+-- apply scale and offset
+for _,file in ipairs(files) do
+	for _,block in ipairs(file.gerber) do
+		if block.type=='directive' then
+			if block.X then
+				block.X = block.X * file.scale + file.offset.x
+			end
+			if block.Y then
+				block.Y = block.Y * file.scale + file.offset.y
+			end
+		end
+	end
+	-- :TODO: scale macros and apertures
 end
 
 -- merge macros and aperture definitions
@@ -126,20 +148,6 @@ for _,file in ipairs(files) do
 			block.D = amapping[block.D]
 		elseif block.type=='aperture' and amapping[block.dcode] then
 			block.dcode = amapping[block.dcode]
-		end
-	end
-end
-
--- apply offsets
-for _,file in ipairs(files) do
-	for _,block in ipairs(file.gerber) do
-		if block.type=='directive' then
-			if block.X then
-				block.X = block.X + file.offset.x
-			end
-			if block.Y then
-				block.Y = block.Y + file.offset.y
-			end
 		end
 	end
 end
