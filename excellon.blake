@@ -1,0 +1,9 @@
+return {
+	type = 'lua_module';
+	files = {
+		dirs = {source="."},
+		"excellon.lua",
+	};
+}
+
+-- vi: filetype=lua
