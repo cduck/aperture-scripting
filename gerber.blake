@@ -1,0 +1,9 @@
+return {
+	type = 'lua_module';
+	files = {
+		dirs = {source="."},
+		"gerber.lua",
+	};
+}
+
+-- vi: filetype=lua
