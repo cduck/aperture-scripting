@@ -1,5 +1,7 @@
 local _M = {}
 
+------------------------------------------------------------------------------
+
 local zero_omissions = {
 	L = 'leading_zeros',
 	T = 'trailing_zeros',
@@ -25,6 +27,8 @@ local layer_polarities = {
 	D = 'dark',
 	C = 'clear',
 }
+
+------------------------------------------------------------------------------
 
 local parameter_scopes = {
 	AS = 'directive',
@@ -62,6 +66,8 @@ local function load_parameter(block)
 	return _M.parameter(name, value)
 end
 
+------------------------------------------------------------------------------
+
 local format_mt = {}
 
 function format_mt:__tostring()
@@ -85,6 +91,8 @@ local function load_format(block)
 	return _M.format(zeroes, tonumber(xi), tonumber(xd))
 end
 
+------------------------------------------------------------------------------
+
 local macro_mt = {}
 
 function macro_mt:__tostring()
@@ -105,6 +113,8 @@ local function load_macro(block, apertures)
 	assert(name and name:match('^[A-Z]'))
 	return _M.macro(name, apertures)
 end
+
+------------------------------------------------------------------------------
 
 local aperture_mt = {}
 local aperture_getters = {}
@@ -157,6 +167,8 @@ local function load_aperture(block)
 	return _M.aperture(dcode, shape, parameters)
 end
 
+------------------------------------------------------------------------------
+
 function _M.load_number(s, format)
 	local sign,base = s:match('^([+-]?)(%d+)$')
 	assert(sign and base)
@@ -197,6 +209,8 @@ function _M.save_number(n, format, long)
 	end
 	return sign..n
 end
+
+------------------------------------------------------------------------------
 
 local function save_directive(self, long)
 	local G = self.G and string.format('G%02d', self.G) or ''
@@ -247,13 +261,19 @@ local function load_directive(block, format)
 	return directive
 end
 
+------------------------------------------------------------------------------
+
 function _M.comment(comment)
 	return _M.directive{ G = 4, comment = comment:gsub('%*', '') }
 end
 
+------------------------------------------------------------------------------
+
 function _M.eof()
 	return _M.directive{ M = 2 }
 end
+
+------------------------------------------------------------------------------
 
 function _M.load(filename)
 	local file = assert(io.open(filename, 'rb'))
@@ -331,5 +351,7 @@ function _M.save(data, filename)
 	assert(file:close())
 	return true
 end
+
+------------------------------------------------------------------------------
 
 return _M
