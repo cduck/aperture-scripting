@@ -2,7 +2,7 @@ local gerber = require 'gerber'
 
 local files = {}
 
-local scale = 1
+local scale = { x = 1, y = 1 }
 local offset = { x = 0, y = 0 }
 
 local args = {...}
@@ -22,9 +22,13 @@ while i <= #args do
 	elseif arg=='-scale' then
 		i = i + 1
 		assert(i <= #args, "-scale need an argument")
-		local s = tonumber(args[i])
-		assert(s)
-		scale = s
+		local sx,x,sy,y = args[i]:match('^([+-])([%d.]+)([+-])([%d.]+)$')
+		assert(sx and x and sy and y)
+		x,y = tonumber(x),tonumber(y)
+		assert(x and y)
+		if sx=='-' then x = -x end
+		if sy=='-' then y = -y end
+		scale = { x = x, y = y }
 	elseif arg:match('^%-') then
 		error("unknown option "..arg)
 	else
@@ -85,10 +89,10 @@ for _,file in ipairs(files) do
 	for _,block in ipairs(file.gerber) do
 		if block.type=='directive' then
 			if block.X then
-				block.X = block.X * file.scale + file.offset.x
+				block.X = block.X * file.scale.x + file.offset.x
 			end
 			if block.Y then
-				block.Y = block.Y * file.scale + file.offset.y
+				block.Y = block.Y * file.scale.y + file.offset.y
 			end
 		end
 	end
