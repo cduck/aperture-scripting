@@ -5,17 +5,21 @@ local _M = {}
 local tool_mt = {}
 
 function tool_mt:__tostring()
-	return string.format('T%02d%s', self.tcode, self.definition)
+	return string.format('T%02d%s%s', self.tcode, self.shape, table.concat(self.parameters, 'X'))
 end
 
 local function load_tool(block)
 	-- may be a tool definition (in header) or a tool selection (in program)
-	local tcode,definition = block:match('^T(%d+)(.*)$')
-	assert(tcode and definition)
+	local tcode,shape,parameters = block:match('^T(%d+)(.)(.*)$')
+	assert(tcode and shape and parameters)
 	tcode = tonumber(tcode)
 	local tool = setmetatable({type='tool'}, tool_mt)
 	tool.tcode = tcode
-	tool.definition = definition
+	tool.shape = shape
+	tool.parameters = {}
+	for n in string.gmatch('X'..parameters, 'X([%d%.-]+)') do
+		table.insert(tool.parameters, tonumber(n))
+	end
 	return tool
 end
 
