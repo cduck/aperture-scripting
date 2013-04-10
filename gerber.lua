@@ -93,25 +93,130 @@ end
 
 ------------------------------------------------------------------------------
 
+local macro_comment_mt = {}
+
+function macro_comment_mt:__tostring()
+	return '0'..self.text
+end
+
+function _M.macro_comment(text)
+	local macro_comment = setmetatable({type='comment'}, macro_comment_mt)
+	macro_comment.text = text
+	return macro_comment
+end
+
+local function load_macro_comment(block)
+	local text = block:match('^0(.*)$')
+	return _M.macro_comment(text)
+end
+
+------------------------------------------------------------------------------
+
+local shapes = {}
+for name,code in pairs{
+	circle = 1,
+	line = 2,
+	outline = 4,
+	polygon = 5,
+	['moiré'] = 6,
+	thermal = 7,
+	rectangle_ends = 20,
+	rectangle_center = 21,
+	rectangle_corner = 22,
+} do
+	shapes[name] = code
+	shapes[code] = name
+end
+
+local macro_primitive_mt = {}
+
+function macro_primitive_mt:__tostring()
+	return assert(shapes[self.shape])..','..table.concat(self.parameters, ',')
+end
+
+function _M.macro_primitive(shape, parameters)
+	local macro_primitive = setmetatable({type='primitive'}, macro_primitive_mt)
+	macro_primitive.shape = shape
+	macro_primitive.parameters = parameters
+	return macro_primitive
+end
+
+local function load_macro_primitive(block)
+	local sshape,sparameters = block:match('^(%d+)(.*)$')
+	assert(sshape and sparameters)
+	local shape = assert(shapes[tonumber(sshape)], "invalid shape "..sshape)
+	local parameters = {}
+	for expression in sparameters:gmatch(',([^,]*)') do
+		if expression:match('^([%d.]+)$') then
+			local constant = tonumber(expression)
+			assert(tostring(constant)==expression)
+			expression = constant
+		end
+		table.insert(parameters, expression)
+	end
+	assert(','..table.concat(parameters, ',')==sparameters)
+	return _M.macro_primitive(shape, parameters)
+end
+
+------------------------------------------------------------------------------
+
+local macro_variable_mt = {}
+
+function macro_variable_mt:__tostring()
+	return '$'..self.name..'='..self.expression
+end
+
+function _M.macro_variable(name, expression)
+	local macro_variable = setmetatable({type='variable'}, macro_variable_mt)
+	macro_variable.name = name
+	macro_variable.expression = expression
+	return macro_variable
+end
+
+local function load_macro_variable(block)
+	local name,expression = block:match('^%$([^=]+)=(.*)$')
+	assert(name and expression)
+	return _M.macro_variable(name, expression)
+end
+
+------------------------------------------------------------------------------
+
+local function load_macro_instruction(block)
+	local char = block:sub(1,1)
+	if char=='0' then
+		return load_macro_comment(block)
+	elseif char=='$' then
+		return load_macro_variable(block)
+	else
+		return load_macro_primitive(block)
+	end
+end
+
+------------------------------------------------------------------------------
+
 local macro_mt = {}
 
 function macro_mt:__tostring()
-	return 'AM'..self.name..'*\n'..table.concat(self, '*\n')
+	local script = {}
+	for i,instruction in ipairs(self.script) do script[i] = tostring(instruction) end
+	return 'AM'..self.name..'*\n'..table.concat(script, '*\n')
 end
 
-function _M.macro(name, apertures)
+function _M.macro(name, script)
 	local macro = setmetatable({type='macro'}, macro_mt)
 	macro.name = name
-	for _,aperture in ipairs(apertures) do
-		table.insert(macro, aperture)
+	macro.script = {}
+	for _,block in ipairs(script) do
+		local instruction = load_macro_instruction(block)
+		table.insert(macro.script, instruction)
 	end
 	return macro
 end
 
-local function load_macro(block, apertures)
+local function load_macro(block, script)
 	local name = block:match('^AM(.*)$')
 	assert(name and name:match('^[A-Z]'))
-	return _M.macro(name, apertures)
+	return _M.macro(name, script)
 end
 
 ------------------------------------------------------------------------------
@@ -309,12 +414,12 @@ function _M.load(filename)
 				data.apertures[aperture.dcode] = aperture
 				table.insert(data, aperture)
 			elseif block:match('^AM') then
-				local apertures = {}
-				while i < #pdata and pdata[i+1]:match('^%d') do
-					table.insert(apertures, pdata[i+1])
+				local script = {}
+				while i < #pdata and pdata[i+1]:match('^[%d$]') do
+					table.insert(script, pdata[i+1])
 					i = i + 1
 				end
-				local macro = load_macro(block, apertures)
+				local macro = load_macro(block, script)
 				assert(data.macros[macro.name] == nil)
 				data.macros[macro.name] = macro
 				table.insert(data, macro)
