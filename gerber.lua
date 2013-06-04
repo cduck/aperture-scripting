@@ -148,13 +148,11 @@ local function load_macro_primitive(block)
 	local parameters = {}
 	for expression in sparameters:gmatch(',([^,]*)') do
 		if expression:match('^([%d.]+)$') then
-			local constant = tonumber(expression)
-			assert(tostring(constant)==expression)
-			expression = constant
+			expression = assert(tonumber(expression), "expression '"..expression.."' doesn't parse as a number")
 		end
 		table.insert(parameters, expression)
 	end
-	assert(','..table.concat(parameters, ',')==sparameters)
+--	assert(','..table.concat(parameters, ',')==sparameters)
 	return _M.macro_primitive(shape, parameters)
 end
 
