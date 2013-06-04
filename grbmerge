@@ -107,7 +107,7 @@ local rapertures = {}
 for _,file in ipairs(files) do
 	-- add each macro to the merged list
 	for name,macro in pairs(file.gerber.macros) do
-		local data = table.concat(macro, '\0')
+		local data = tostring(macro):match('^[^\n]*\n(.*)$')
 		local existing = rmacros[data]
 		if existing then
 			if existing ~= name then

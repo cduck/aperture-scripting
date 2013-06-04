@@ -58,7 +58,7 @@ for _,file in ipairs(files) do
 	-- add each tool to the merged list
 	local tmapping = {}
 	for tcode,tool in pairs(file.excellon.tools) do
-		local data = tool.definition
+		local data = tostring(tool):match('^T%d+(.*)$')
 		local existing = rtools[data]
 		if existing then
 			if existing ~= tcode then
