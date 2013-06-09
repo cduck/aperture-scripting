@@ -40,7 +40,7 @@ end
 
 for _,filename in ipairs(filenames) do
 	print(filename)
-	local data = assert(gerber.load(filename))
+	local data = assert(gerber.load_blocks(filename))
 	for _,info in ipairs(infos) do
 		info(data)
 	end

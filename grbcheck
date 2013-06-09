@@ -2,7 +2,7 @@ local gerber = require 'gerber'
 
 for _,filename in ipairs{...} do
 	print(filename)
-	assert(gerber.load(filename))
+	assert(gerber.load_blocks(filename))
 end
 
 -- vi: ft=lua

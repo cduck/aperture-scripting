@@ -42,7 +42,7 @@ files[#files] = nil
 
 -- load files
 for _,file in ipairs(files) do
-	file.gerber = assert(gerber.load(file.filename))
+	file.gerber = assert(gerber.load_blocks(file.filename))
 end
 
 -- ignore empty files
@@ -202,6 +202,6 @@ for ifile,file in ipairs(files) do
 end
 
 -- save output file
-assert(gerber.save(data, output))
+assert(gerber.save_blocks(data, output))
 
 -- vi: ft=lua

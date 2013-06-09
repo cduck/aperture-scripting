@@ -378,7 +378,7 @@ end
 
 ------------------------------------------------------------------------------
 
-function _M.load(filename)
+function _M.load_blocks(filename)
 	local file = assert(io.open(filename, 'rb'))
 	local content = assert(file:read('*all'))
 	assert(file:close())
@@ -442,7 +442,7 @@ function _M.load(filename)
 	return data
 end
 
-function _M.save(data, filename)
+function _M.save_blocks(data, filename)
 	local file = assert(io.open(filename, "wb"))
 	for _,block in ipairs(data) do
 		if block.type=='directive' then
