@@ -118,7 +118,7 @@ for name,code in pairs{
 	line = 2,
 	outline = 4,
 	polygon = 5,
-	['moiré'] = 6,
+	moire = 6,
 	thermal = 7,
 	rectangle_ends = 20,
 	rectangle_center = 21,
