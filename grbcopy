@@ -1,9 +1,9 @@
-local gerber = require 'gerber'
+local gerber = require 'gerber.blocks'
 
 local input,output = ...
 
-local data = assert(gerber.load_blocks(input))
+local data = assert(gerber.load(input))
 
-gerber.save_blocks(data, output)
+gerber.save(data, output)
 
 -- vi: ft=lua

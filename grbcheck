@@ -1,8 +1,8 @@
-local gerber = require 'gerber'
+local gerber = require 'gerber.blocks'
 
 for _,filename in ipairs{...} do
 	print(filename)
-	assert(gerber.load_blocks(filename))
+	assert(gerber.load(filename))
 end
 
 -- vi: ft=lua
