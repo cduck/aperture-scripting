@@ -1,4 +1,4 @@
-local gerber = require 'gerber'
+local gerber = require 'gerber.blocks'
 
 local _M = {}
 
