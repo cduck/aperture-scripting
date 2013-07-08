@@ -1,8 +1,11 @@
+local pathlib = require 'blake.path'
+local P = pathlib.split
+
 return {
 	type = 'lua_module';
 	files = {
-		dirs = {source="."},
-		"gerber.lua",
+		dirs = {source=P'gerber', build=P'gerber', install=P'gerber'},
+		"blocks.lua",
 	};
 }
 
