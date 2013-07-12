@@ -195,9 +195,10 @@ end
 local macro_mt = {}
 
 function macro_mt:__tostring()
+	local name = self.save_name or self.name
 	local script = {}
 	for i,instruction in ipairs(self.script) do script[i] = tostring(instruction) end
-	return 'AM'..self.name..'*\n'..table.concat(script, '*\n')
+	return 'AM'..name..'*\n'..table.concat(script, '*\n')
 end
 
 function _M.macro(name, script)
@@ -231,7 +232,12 @@ function aperture_mt:__index(k)
 end
 
 function aperture_getters:definition()
-	local shape = self.shape
+	local shape
+	if self.macro then
+		shape = self.macro.save_name or self.macro.name
+	else
+		shape = self.shape
+	end
 	local parameters = self.parameters and ","..table.concat(self.parameters, "X") or ""
 	return shape..parameters
 end
