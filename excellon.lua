@@ -1,6 +1,9 @@
-local gerber = require 'gerber.blocks'
-
 local _M = {}
+
+local io = require 'io'
+local table = require 'table'
+local string = require 'string'
+local gerber = require 'gerber.blocks'
 
 local tool_mt = {}
 

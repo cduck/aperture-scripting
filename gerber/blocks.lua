@@ -1,5 +1,10 @@
 local _M = {}
 
+local io = require 'io'
+local math = require 'math'
+local table = require 'table'
+local string = require 'string'
+
 ------------------------------------------------------------------------------
 
 local zero_omissions = {
