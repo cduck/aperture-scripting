@@ -205,6 +205,9 @@ function _M.load(filename)
 		elseif tb=='directive' then
 			if block.D and block.D >= 10 then
 				assert(not block.X and not block.Y and not block.I and not block.J and (not block.G or block.G==54) and not block.M)
+				-- terminate current path if any
+				path = nil
+				-- select new aperture
 				aperture = assert(apertures[block.D])
 			elseif block.D or block.X or block.Y then
 				local scale = assert(scales[unit], "unsupported directive unit "..tostring(unit))
