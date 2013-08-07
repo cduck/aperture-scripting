@@ -233,6 +233,10 @@ function _M.load(filename)
 					if not path then
 						assert(region or aperture, "no aperture selected while stroking")
 						path = {aperture=not region and aperture or nil, unit=unit, {x=x, y=y}}
+						if not layer then
+							layer = { polarity = 'D' }
+							table.insert(image, layer)
+						end
 						table.insert(layer, path)
 					end
 					if block.X then
@@ -271,6 +275,10 @@ function _M.load(filename)
 					end
 					if block.Y then
 						y = block.Y * scale
+					end
+					if not layer then
+						layer = { polarity = 'D' }
+						table.insert(image, layer)
 					end
 					table.insert(layer, {aperture=aperture, unit=unit, {x=x, y=y}})
 				elseif block.D then
