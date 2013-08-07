@@ -8,20 +8,24 @@ local gerber = require 'gerber.blocks'
 local tool_mt = {}
 
 function tool_mt:__tostring()
-	return string.format('T%02d%s%s', self.tcode, self.shape, table.concat(self.parameters, 'X'))
+	local parameters = {}
+	for _,name in ipairs(self.parameters) do
+		table.insert(parameters, name..self.parameters[name])
+	end
+	return string.format('T%02d%s', self.tcode, table.concat(parameters))
 end
 
 local function load_tool(block)
 	-- may be a tool definition (in header) or a tool selection (in program)
-	local tcode,shape,parameters = block:match('^T(%d+)(.)(.*)$')
-	assert(tcode and shape and parameters)
+	local tcode,parameters = block:match('^T(%d+)(.*)$')
+	assert(tcode and parameters)
 	tcode = tonumber(tcode)
 	local tool = setmetatable({type='tool'}, tool_mt)
 	tool.tcode = tcode
-	tool.shape = shape
 	tool.parameters = {}
-	for n in string.gmatch('X'..parameters, 'X([%d%.-]+)') do
-		table.insert(tool.parameters, tonumber(n))
+	for name,value in string.gmatch(parameters, '(%a)([%d%.-]+)') do
+		tool.parameters[name] = tonumber(value)
+		table.insert(tool.parameters, name) -- for order
 	end
 	return tool
 end
@@ -56,7 +60,8 @@ local function load_directive(block, format)
 			directive[letter] = tonumber(number)
 		end
 	end
-	assert(block == tostring(directive) or block == save_directive(directive, true), "block '"..block.."' has been converted to '"..tostring(directive).."'")
+	local short,long = tostring(directive),save_directive(directive, true)
+	assert(block == short or block == long, "block '"..block.."' has been converted to '"..short.."' or '"..long.."'")
 	return directive
 end
 
@@ -67,7 +72,7 @@ function _M.load(filename)
 	
 	content = content:gsub('\r', '')
 
-	local data = { headers = {}, tools = {}, parameters = {} }
+	local data = { headers = {}, tools = {} }
 	-- :FIXME: find out how excellon files declare their format
 	local format = { integer = 2, decimal = 4, zeroes = 'L' }
 	local header = nil
@@ -80,9 +85,22 @@ function _M.load(filename)
 					local tool = load_tool(block)
 					data.tools[tool.tcode] = tool
 					table.insert(data.headers, tool)
+				elseif block:match('^;FILE_FORMAT=') then
+					local i,d = block:match('^;FILE_FORMAT=(%d+):(%d+)$')
+					format.integer = tonumber(i)
+					format.decimal = tonumber(d)
+					table.insert(data.headers, load_header(block))
+				elseif block=='INCH,LZ' or block=='INCH,TZ' or block=='METRIC,LZ' or block=='METRIC,TZ' then
+					local unit,zeroes = block:match('^(.*),(.*)$')
+					assert(unit=='INCH', "metric Excellon files are not yet supported")
+					if zeroes == 'LZ' then -- header is what is present
+						format.zeroes = 'T' -- format is what we omit
+					elseif zeroes == 'TZ' then
+						format.zeroes = 'L'
+					end
+					table.insert(data.headers, load_header(block))
 				else
 					-- this is a very basic parameter parsing
-					data.parameters[block] = true
 					table.insert(data.headers, load_header(block))
 				end
 			end
