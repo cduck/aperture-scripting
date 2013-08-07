@@ -317,7 +317,7 @@ function _M.save_number(n, format, long)
 	if not long then
 		if format.zeroes == 'L' then
 			n = n:match('^0*(.*.)$')
-		elseif format=='T' then
+		elseif format.zeroes=='T' then
 			n = n:match('^(..-)0*$')
 		end
 	end
