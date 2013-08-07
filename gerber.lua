@@ -286,6 +286,12 @@ function _M.load(filename)
 				else
 					error("no D block and no previous movement defined")
 				end
+			elseif block.G==1 then
+				interpolation = 'linear'
+			elseif block.G==2 then
+				interpolation = 'clockwise'
+			elseif block.G==3 then
+				interpolation = 'counterclockwise'
 			elseif block.G==70 then
 				unit = 'IN'
 			elseif block.G==71 then
