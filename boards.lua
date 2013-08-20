@@ -144,12 +144,11 @@ local function compile_expression(expression)
 end
 assert(compile_expression("1.08239X$1")=="1.08239*_VARS[1]")
 
-local function load_macro(data, unit)
-	local macro = {}
-	macro.name = data.name
-	assert(#data.script==1 and data.script[1].type=='primitive', "only macros with 1 primitive are supported")
+local function complete_macro(macro)
+	local unit = macro.unit
+	assert(#macro.script==1 and macro.script[1].type=='primitive', "only macros with 1 primitive are supported")
 	local source = "local _VARS = {...}\n"
-	for _,instruction in ipairs(data.script) do
+	for _,instruction in ipairs(macro.script) do
 		if instruction.type=='comment' then
 			-- ignore
 		elseif instruction.type=='variable' then
@@ -194,16 +193,16 @@ local function load_macro(data, unit)
 		assert(#paths==1, "macro scripts must generate a single path")
 		return paths[1]
 	end
-	return macro
 end
 
-local function load_aperture(data, macros, unit)
-	local dcode = data.dcode
-	local shape = data.shape
+local function complete_aperture(aperture, macros)
+	local dcode = aperture.dcode
+	local shape = aperture.shape
+	local unit = aperture.unit
 	local scale = assert(scales[unit], "unsupported aperture unit "..tostring(unit))
 	local extents,path
 	if shape=='C' then
-		local d,hx,hy = unpack(data.parameters)
+		local d,hx,hy = unpack(aperture.parameters)
 		assert(d, "circle apertures require at least 1 parameter")
 		assert(not hx and not hy, "circle apertures with holes are not yet supported")
 		extents = {
@@ -222,7 +221,7 @@ local function load_aperture(data, macros, unit)
 			end
 		end
 	elseif shape=='R' then
-		local x,y,hx,hy = unpack(data.parameters)
+		local x,y,hx,hy = unpack(aperture.parameters)
 		assert(x and y, "rectangle apertures require at least 2 parameters")
 		assert(not hx and not hy, "rectangle apertures with holes are not yet supported")
 		extents = {
@@ -241,7 +240,7 @@ local function load_aperture(data, macros, unit)
 		}
 	elseif shape=='O' then
 		assert(circle_steps % 2 == 0, "obround apertures are only supported when circle_steps is even")
-		local x,y,hx,hy = unpack(data.parameters)
+		local x,y,hx,hy = unpack(aperture.parameters)
 		assert(x and y, "obround apertures require at least 2 parameters")
 		assert(not hx and not hy, "obround apertures with holes are not yet supported")
 		extents = {
@@ -279,7 +278,7 @@ local function load_aperture(data, macros, unit)
 			table.insert(path, {x=straight/2, y=-r})
 		end
 	elseif shape=='P' then
-		local d,steps,angle,hx,hy = unpack(data.parameters)
+		local d,steps,angle,hx,hy = unpack(aperture.parameters)
 		assert(d and steps, "polygon apertures require at least 2 parameter")
 		angle = angle or 0
 		assert(not hx and not hy, "polygon apertures with holes are not yet supported")
@@ -298,9 +297,9 @@ local function load_aperture(data, macros, unit)
 				table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
 			end
 		end
-	elseif data.macro or macros and macros[shape] then
-		local macro = data.macro or macros[shape]
-		path = macro.chunk(unpack(data.parameters or {}))
+	elseif aperture.macro then
+		local macro = aperture.macro
+		path = macro.chunk(unpack(aperture.parameters or {}))
 		extents = {
 			left = math.huge,
 			right = -math.huge,
@@ -319,41 +318,28 @@ local function load_aperture(data, macros, unit)
 		error("unsupported aperture shape "..tostring(shape))
 	end
 	
-	local aperture = {
-		id = dcode,
-		extents = extents,
-		path = path,
-	}
-	
-	return aperture
+	aperture.extents = extents
+	aperture.path = path
 end
 
 local function load_gerber(file_path)
 	-- load the high level gerber data
 	local layers = gerber.load(file_path)
 	
-	-- adjust the apertures and macros
-	local macros = {}
+	-- adjust the apertures and macros (generate paths and extents)
 	local apertures = {}
 	for _,layer in ipairs(layers) do
 		for _,path in ipairs(layer) do
 			local aperture = path.aperture
-			if aperture then
-				local aperture2 = apertures[aperture]
-				if not aperture2 then
-					local macro = aperture.macro
-					if macro then
-						local macro2 = macros[macro]
-						if not macro2 then
-							macro2 = load_macro(macro, macro.unit)
-							macros[macro] = macro2
-						end
-						aperture.macro = macro2
+			if aperture and not aperture.path then
+				local macro = aperture.macro
+				if macro then
+					if not macro.chunk then
+						complete_macro(macro)
 					end
-					aperture2 = load_aperture(aperture, nil, aperture.unit)
-					apertures[aperture] = aperture2
 				end
-				path.aperture = aperture2
+				complete_aperture(aperture)
+				table.insert(apertures, aperture)
 			end
 		end
 	end
