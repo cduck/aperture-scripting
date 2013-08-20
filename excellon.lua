@@ -15,19 +15,26 @@ function tool_mt:__tostring()
 	return string.format('T%02d%s', self.tcode, table.concat(parameters))
 end
 
+function _M.tool(tcode, parameters)
+	local data = {
+		type = 'tool',
+		tcode = tcode,
+		parameters = parameters,
+	}
+	return setmetatable(data, tool_mt)
+end
+
 local function load_tool(block)
 	-- may be a tool definition (in header) or a tool selection (in program)
-	local tcode,parameters = block:match('^T(%d+)(.*)$')
-	assert(tcode and parameters)
+	local tcode,sparameters = block:match('^T(%d+)(.*)$')
+	assert(tcode and sparameters)
 	tcode = tonumber(tcode)
-	local tool = setmetatable({type='tool'}, tool_mt)
-	tool.tcode = tcode
-	tool.parameters = {}
-	for name,value in string.gmatch(parameters, '(%a)([%d%.-]+)') do
-		tool.parameters[name] = tonumber(value)
-		table.insert(tool.parameters, name) -- for order
+	local parameters = {}
+	for name,value in string.gmatch(sparameters, '(%a)([%d%.-]+)') do
+		parameters[name] = tonumber(value)
+		table.insert(parameters, name) -- for order
 	end
-	return tool
+	return _M.tool(tcode, parameters)
 end
 
 local function load_header(block)
