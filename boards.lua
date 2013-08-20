@@ -691,6 +691,7 @@ function _M.load(path, options)
 	
 	-- locate files
 	local paths = {}
+	local extensions = {}
 	if type(path)=='table' then
 		for _,path in ipairs(path) do
 			path = pathlib.split(path)
@@ -698,6 +699,7 @@ function _M.load(path, options)
 			local type = layer_guess[extension]
 			if type then
 				paths[type] = path
+				extensions[type] = extension
 			else
 				print("cannot guess type of file "..tostring(path))
 			end
@@ -714,6 +716,7 @@ function _M.load(path, options)
 				local type = layer_guess[extension]
 				if type then
 					paths[type] = path
+					extensions[type] = extension
 				else
 					print("cannot guess type of file "..tostring(path))
 				end
@@ -723,6 +726,7 @@ function _M.load(path, options)
 	if next(paths)==nil then
 		return nil,"no image found"
 	end
+	board.extensions = extensions
 	
 	-- create cache directory
 	if options.cache_directory then
