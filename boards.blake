@@ -1,0 +1,8 @@
+return {
+	type = 'lua_module',
+	files = {
+		"boards.lua",
+	},
+}
+
+-- vi: ft=lua
