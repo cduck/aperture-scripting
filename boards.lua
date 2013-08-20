@@ -148,25 +148,25 @@ local function load_macro(data, unit)
 	local macro = {}
 	macro.name = data.name
 	assert(#data.script==1 and data.script[1].type=='primitive', "only macros with 1 primitive are supported")
-	local script = "local _VARS = {...}\n"
+	local source = "local _VARS = {...}\n"
 	for _,instruction in ipairs(data.script) do
 		if instruction.type=='comment' then
 			-- ignore
 		elseif instruction.type=='variable' then
-			script = script.."_VARS['"..instruction.name.."'] = "..compile_expression(instruction.expression).."\n"
+			source = source.."_VARS['"..instruction.name.."'] = "..compile_expression(instruction.expression).."\n"
 		elseif instruction.type=='primitive' then
-			script = script..instruction.shape.."("
+			source = source..instruction.shape.."("
 			for i,expression in ipairs(instruction.parameters) do
-				if i > 1 then script = script..", " end
-				script = script..compile_expression(expression)
+				if i > 1 then source = source..", " end
+				source = source..compile_expression(expression)
 			end
-			script = script..")\n"
+			source = source..")\n"
 		else
 			error("unsupported macro instruction type "..tostring(instruction.type))
 		end
 	end
 --	print("========================================")
---	print(script)
+--	print(source)
 --	print("========================================")
 	local paths
 	local env = setmetatable({}, {
@@ -183,12 +183,12 @@ local function load_macro(data, unit)
 	})
 	local chunk
 	if _VERSION == 'Lua 5.2' then
-		chunk = assert(load(script, nil, 't', env))
+		chunk = assert(load(source, nil, 't', env))
 	elseif _VERSION == 'Lua 5.1' then
-		chunk = assert(loadstring(script))
+		chunk = assert(loadstring(source))
 		setfenv(chunk, env)
 	end
-	macro.script = function(...)
+	macro.chunk = function(...)
 		paths = {}
 		chunk(...)
 		assert(#paths==1, "macro scripts must generate a single path")
@@ -300,7 +300,7 @@ local function load_aperture(data, macros, unit)
 		end
 	elseif data.macro or macros and macros[shape] then
 		local macro = data.macro or macros[shape]
-		path = macro.script(unpack(data.parameters or {}))
+		path = macro.chunk(unpack(data.parameters or {}))
 		extents = {
 			left = math.huge,
 			right = -math.huge,
