@@ -566,23 +566,6 @@ end
 
 ------------------------------------------------------------------------------
 
-local layer_guess = {
-	gtl = 'top_copper',
-	gts = 'top_soldermask',
-	gto = 'top_silkscreen',
-	gtp = 'top_paste',
-	gbl = 'bottom_copper',
-	gbs = 'bottom_soldermask',
-	gbo = 'bottom_silkscreen',
-	gbp = 'bottom_paste',
-	gml = 'milling',
-	gm1 = 'milling',
-	oln = 'outline',
-	out = 'outline',
-	drd = 'drill',
-	txt = 'drill',
-}
-
 local function exterior(path)
 	local total = 0
 	for i=1,#path-1 do
@@ -681,6 +664,25 @@ local function load_image(path, type)
 	end
 	return image
 end
+
+------------------------------------------------------------------------------
+
+local layer_guess = {
+	gtl = 'top_copper',
+	gts = 'top_soldermask',
+	gto = 'top_silkscreen',
+	gtp = 'top_paste',
+	gbl = 'bottom_copper',
+	gbs = 'bottom_soldermask',
+	gbo = 'bottom_silkscreen',
+	gbp = 'bottom_paste',
+	gml = 'milling',
+	gm1 = 'milling',
+	oln = 'outline',
+	out = 'outline',
+	drd = 'drill',
+	txt = 'drill',
+}
 
 local function save_metadata(cache_directory, hash, image)
 	local metadata = {}
