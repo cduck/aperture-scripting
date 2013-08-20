@@ -697,6 +697,8 @@ local function save_metadata(cache_directory, hash, image)
 end
 
 function _M.load(path, options)
+	if not options then options = {} end
+	
 	local board = {}
 	
 	-- locate files
