@@ -6,7 +6,7 @@ local table = require 'table'
 local lfs = require 'lfs'
 local pathlib = require 'path'
 local gerber = require 'gerber'
-local excellon = require 'excellon'
+local excellon = require 'excellon.blocks'
 local dump = require 'dump'
 local crypto = require 'crypto'
 
