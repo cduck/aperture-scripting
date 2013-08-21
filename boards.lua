@@ -415,6 +415,10 @@ local function load_gerber(file_path)
 	return image
 end
 
+local function save_gerber(image, file_path)
+	return gerber.save(image.layers, file_path)
+end
+
 ------------------------------------------------------------------------------
 
 local function load_tool(data, macros, unit)
@@ -550,6 +554,13 @@ local function load_excellon(file_path)
 	return image
 end
 
+local function save_excellon(image, path)
+	assert(#image.layers == 1)
+	local data = {headers={}}
+--	data.headers
+	return excellon.save(data, path)
+end
+
 ------------------------------------------------------------------------------
 
 local function exterior(path)
@@ -649,6 +660,28 @@ local function load_image(path, type)
 		end
 	end
 	return image
+end
+
+local function save_image(image, path, type)
+	print("saving "..tostring(path))
+	if type=='drill' then
+		return save_excellon(image, path)
+	else
+		return save_gerber(image, path)
+	end
+	--[[
+	if not ignore_outline[type] then
+		local outline,ilayer,ipath = find_outline(image)
+		if outline then
+			print("outline found")
+			image.outline = outline
+			table.remove(image.layers[ilayer], ipath)
+			if #image.layers[ilayer] == 0 then
+				table.remove(image.layers, ilayer)
+			end
+		end
+	end
+	--]]
 end
 
 ------------------------------------------------------------------------------
@@ -843,6 +876,20 @@ function _M.load_layers(board, image)
 		for k in pairs(metadata) do metadata[k] = nil end
 		for k,v in pairs(image) do metadata[k] = v end
 	end
+end
+
+function _M.save(board, path)
+	if pathlib.type(path) ~= 'path' then
+		path = pathlib.split(path)
+	end
+--	print("not saving board to '"..tostring(path).."'")
+	for type,image in pairs(board.images) do
+		local extension = assert(board.extensions[type])
+		local path = path.dir / (path.file..'.'..extension)
+		local success,msg = save_image(image, path, type)
+		if not success then return nil,msg end
+	end
+	return true
 end
 
 ------------------------------------------------------------------------------
