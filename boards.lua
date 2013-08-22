@@ -6,7 +6,7 @@ local table = require 'table'
 local lfs = require 'lfs'
 local pathlib = require 'path'
 local gerber = require 'gerber'
-local excellon = require 'excellon.blocks'
+local excellon = require 'excellon'
 local dump = require 'dump'
 local crypto = require 'crypto'
 
@@ -421,11 +421,12 @@ end
 
 ------------------------------------------------------------------------------
 
-local function load_tool(data, macros, unit)
-	local tcode = data.tcode
-	local shape = data.shape
+local function complete_tool(tool)
+	local tcode = tool.tcode
+	local shape = tool.shape
+	local unit = tool.unit
 	local scale = assert(scales[unit], "unsupported tool unit "..tostring(unit))
-	local d = data.parameters.C
+	local d = tool.parameters.C
 	assert(d, "tools require at least a diameter (C parameter)")
 	local extents = {
 		left = -d / 2 * scale,
@@ -442,78 +443,62 @@ local function load_tool(data, macros, unit)
 	-- :KLUDGE: sin(2*pi) is not zero, but an epsilon, so we force it
 	table.insert(path, {x=r, y=0})
 	
-	local aperture = {
-		id = tcode,
-		extents = extents,
-		path = path,
-	}
-	
-	return aperture
+	tool.extents = extents
+	tool.path = path
 end
 
 local function load_excellon(file_path)
-	local data = excellon.load(file_path)
+	-- load the high level excellon data
+	local layers = excellon.load(file_path)
 	
-	-- parse the data blocks
-	local macros = {}
-	local tools = {}
-	local layer = {}
-	local layers = {layer}
-	local unit,tool
-	local x,y = 0,0
-	for _,header in ipairs(data.headers) do
-		local th = header.type or type(header)
-		if th=='tool' then
-			local tool = load_tool(header, macros, unit)
-			tools[tool.id] = tool
-		elseif th=='string' then
-			if header=='M72' then
-				unit = 'IN'
-			elseif header:match('^;') then
-				-- ignore
-			elseif header=='INCH,LZ' then
-				unit = 'IN'
-			else
-				error("unsupported header "..header)
+	-- adjust the apertures and macros (generate paths and extents)
+	local apertures = {}
+	for _,layer in ipairs(layers) do
+		for _,path in ipairs(layer) do
+			local aperture = path.aperture
+			if aperture and not aperture.path then
+				local macro = aperture.macro
+				if macro then
+					if not macro.chunk then
+						complete_macro(macro)
+					end
+				end
+				complete_tool(aperture)
+				table.insert(apertures, aperture)
 			end
-		else
-			error("unsupported header type "..tostring(header.type))
 		end
 	end
-	for _,block in ipairs(data) do
-		local tb = block.type
-		if tb=='directive' then
-			if block.T then
-				assert(not block.X and not block.Y and not block.M)
-				tool = tools[block.T]
-			elseif block.M==72 then
-				unit = 'IN'
-			elseif block.M==71 then
-				unit = 'MM'
-			elseif block.M==30 then
-				-- end of program, ignore
-			elseif block.X or block.Y then
-				-- drill
-				assert(not block.T and not block.M)
-				assert(tool, "no tool selected while drilling")
-				local scale = assert(scales[unit], "unsupported drill unit "..tostring(unit))
-				if block.X then
-					x = block.X * scale
-				end
-				if block.Y then
-					y = block.Y * scale
-				end
-				table.insert(layer, {
-					aperture = tool,
-					center_extents = { left = x, right = x, bottom = y, top = y },
-					extents = { left = x + tool.extents.left, right = x + tool.extents.right, bottom = y + tool.extents.bottom, top = y + tool.extents.top },
-					{ x = x, y = y },
-				})
-			else
-				error("unsupported directive ("..tostring(block)..")")
+	
+	-- compute paths extents
+	for _,layer in ipairs(layers) do
+		for _,path in ipairs(layer) do
+			local center_extents = {
+				left = math.huge,
+				right = -math.huge,
+				bottom = math.huge,
+				top = -math.huge,
+			}
+			for _,point in ipairs(path) do
+				center_extents.left = math.min(center_extents.left, point.x)
+				center_extents.right = math.max(center_extents.right, point.x)
+				center_extents.bottom = math.min(center_extents.bottom, point.y)
+				center_extents.top = math.max(center_extents.top, point.y)
 			end
-		else
-			error("unsupported block type "..tostring(block.type))
+			path.center_extents = center_extents
+			local extents = {
+				left = center_extents.left,
+				right = center_extents.right,
+				bottom = center_extents.bottom,
+				top = center_extents.top,
+			}
+			local aperture = path.aperture
+			if aperture then
+				extents.left = extents.left + aperture.extents.left
+				extents.right = extents.right + aperture.extents.right
+				extents.bottom = extents.bottom + aperture.extents.bottom
+				extents.top = extents.top + aperture.extents.top
+			end
+			path.extents = extents
 		end
 	end
 	
@@ -547,18 +532,15 @@ local function load_excellon(file_path)
 		file_path = file_path,
 		center_extents = center_extents,
 		extents = extents,
-		apertures = tools,
+		apertures = apertures,
 		layers = layers,
 	}
 	
 	return image
 end
 
-local function save_excellon(image, path)
-	assert(#image.layers == 1)
-	local data = {headers={}}
---	data.headers
-	return excellon.save(data, path)
+local function save_excellon(image, file_path)
+	return excellon.save(image.layers, file_path)
 end
 
 ------------------------------------------------------------------------------

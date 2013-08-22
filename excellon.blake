@@ -2,7 +2,7 @@ return {
 	type = 'lua_module';
 	files = {
 		dirs = {source="."},
-	--	"excellon.lua",
+		"excellon.lua",
 		{
 			dirs = {source=P'excellon', build=P'excellon', install=P'excellon'},
 			"blocks.lua",
