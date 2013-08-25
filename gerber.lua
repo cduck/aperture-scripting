@@ -20,6 +20,8 @@ local function copy(v)
 	end
 end
 
+local unpack = unpack or table.unpack
+
 ------------------------------------------------------------------------------
 
 local scales = {
@@ -220,17 +222,111 @@ local built_in_shapes = {
 }
 
 local function load_aperture(data, macros, unit)
-	local aperture = data
---	aperture.dcode = data.dcode
-	aperture.dcode = nil
-	aperture.unit = unit
-	if not built_in_shapes[aperture.shape] then
-		aperture.macro = assert(macros[aperture.shape], "no macro with name "..tostring(aperture.shape))
-		assert(aperture.macro.unit == aperture.unit, "aperture and macro units don't match")
-		aperture.shape = nil
+	local dcode = data.dcode
+	local shape,macro = data.shape,nil
+	local parameters = data.parameters
+	local scale = assert(scales[unit], "unsupported aperture unit "..tostring(unit))
+	
+	if not built_in_shapes[shape] then
+		macro = assert(macros[shape], "no macro with name "..tostring(shape))
+		assert(macro.unit == unit, "aperture and macro units don't match")
+		shape = nil
 	end
-	return aperture
+	
+	local path
+	if shape=='C' then
+		local d,hx,hy = unpack(parameters)
+		assert(d, "circle apertures require at least 1 parameter")
+		assert(not hx and not hy, "circle apertures with holes are not yet supported")
+		path = {concave=true}
+		if d ~= 0 then
+			local r = d / 2 * scale
+			for i=0,circle_steps do
+				if i==circle_steps then i = 0 end -- :KLUDGE: sin(2*pi) is not zero, but an epsilon, so we force it
+				local a = math.pi * 2 * (i / circle_steps)
+				table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
+			end
+		end
+	elseif shape=='R' then
+		local x,y,hx,hy = unpack(parameters)
+		assert(x and y, "rectangle apertures require at least 2 parameters")
+		assert(not hx and not hy, "rectangle apertures with holes are not yet supported")
+		path = {
+			concave=true,
+			{x=-x/2*scale, y=-y/2*scale},
+			{x= x/2*scale, y=-y/2*scale},
+			{x= x/2*scale, y= y/2*scale},
+			{x=-x/2*scale, y= y/2*scale},
+			{x=-x/2*scale, y=-y/2*scale},
+		}
+	elseif shape=='O' then
+		assert(circle_steps % 2 == 0, "obround apertures are only supported when circle_steps is even")
+		local x,y,hx,hy = unpack(parameters)
+		assert(x and y, "obround apertures require at least 2 parameters")
+		assert(not hx and not hy, "obround apertures with holes are not yet supported")
+		path = {concave=true}
+		if y > x then
+			local straight = (y - x) * scale
+			local r = x / 2 * scale
+			for i=0,circle_steps/2 do
+				local a = math.pi * 2 * (i / circle_steps)
+				table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)+straight/2})
+			end
+			for i=circle_steps/2,circle_steps do
+				if i==circle_steps then i = 0 end -- :KLUDGE: sin(2*pi) is not zero, but an epsilon, so we force it
+				local a = math.pi * 2 * (i / circle_steps)
+				table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)-straight/2})
+			end
+			table.insert(path, {x=r, y=straight/2})
+		else
+			local straight = (x - y) * scale
+			local r = y / 2 * scale
+			for i=0,circle_steps/2 do
+				local a = math.pi * 2 * (i / circle_steps)
+				table.insert(path, {x=r*math.sin(a)+straight/2, y=-r*math.cos(a)})
+			end
+			for i=circle_steps/2,circle_steps do
+				if i==circle_steps then i = 0 end -- :KLUDGE: sin(2*pi) is not zero, but an epsilon, so we force it
+				local a = math.pi * 2 * (i / circle_steps)
+				table.insert(path, {x=r*math.sin(a)-straight/2, y=-r*math.cos(a)})
+			end
+			table.insert(path, {x=straight/2, y=-r})
+		end
+	elseif shape=='P' then
+		local d,steps,angle,hx,hy = unpack(parameters)
+		assert(d and steps, "polygon apertures require at least 2 parameter")
+		angle = angle or 0
+		assert(not hx and not hy, "polygon apertures with holes are not yet supported")
+		path = {concave=true}
+		if d ~= 0 then
+			local r = d / 2 * scale
+			for i=0,steps do
+				if i==steps then i = 0 end -- :KLUDGE: sin(2*pi) is not zero, but an epsilon, so we force it
+				local a = math.pi * 2 * (i / steps) + math.rad(angle)
+				table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
+			end
+		end
+	elseif macro then
+		path = macro.chunk(unpack(parameters or {}))
+		for _,point in ipairs(path) do
+			point.x = point.x * scale
+			point.y = point.y * scale
+		end
+	else
+		error("unsupported aperture shape "..tostring(shape))
+	end
+	
+	return {
+		name = dcode,
+		unit = unit,
+		shape = shape,
+		macro = macro,
+		parameters = parameters,
+		path = path,
+	}
 end
+
+------------------------------------------------------------------------------
 
 local function interpolate(path, point)
 	local interpolation = point.interpolation
