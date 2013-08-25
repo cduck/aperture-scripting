@@ -201,17 +201,11 @@ local function complete_aperture(aperture, macros)
 	local shape = aperture.shape
 	local unit = aperture.unit
 	local scale = assert(scales[unit], "unsupported aperture unit "..tostring(unit))
-	local extents,path
+	local path
 	if shape=='C' then
 		local d,hx,hy = unpack(aperture.parameters)
 		assert(d, "circle apertures require at least 1 parameter")
 		assert(not hx and not hy, "circle apertures with holes are not yet supported")
-		extents = region{
-			left = -d / 2 * scale,
-			right = d / 2 * scale,
-			bottom = -d / 2 * scale,
-			top = d / 2 * scale,
-		}
 		path = {concave=true}
 		if d ~= 0 then
 			local r = d / 2 * scale
@@ -225,12 +219,6 @@ local function complete_aperture(aperture, macros)
 		local x,y,hx,hy = unpack(aperture.parameters)
 		assert(x and y, "rectangle apertures require at least 2 parameters")
 		assert(not hx and not hy, "rectangle apertures with holes are not yet supported")
-		extents = region{
-			left = -x / 2 * scale,
-			right = x / 2 * scale,
-			bottom = -y / 2 * scale,
-			top = y / 2 * scale,
-		}
 		path = {
 			concave=true,
 			{x=-x/2*scale, y=-y/2*scale},
@@ -244,12 +232,6 @@ local function complete_aperture(aperture, macros)
 		local x,y,hx,hy = unpack(aperture.parameters)
 		assert(x and y, "obround apertures require at least 2 parameters")
 		assert(not hx and not hy, "obround apertures with holes are not yet supported")
-		extents = region{
-			left = -x / 2 * scale,
-			right = x / 2 * scale,
-			bottom = -y / 2 * scale,
-			top = y / 2 * scale,
-		}
 		path = {concave=true}
 		if y > x then
 			local straight = (y - x) * scale
@@ -283,12 +265,6 @@ local function complete_aperture(aperture, macros)
 		assert(d and steps, "polygon apertures require at least 2 parameter")
 		angle = angle or 0
 		assert(not hx and not hy, "polygon apertures with holes are not yet supported")
-		extents = region{
-			left = -d / 2 * scale,
-			right = d / 2 * scale,
-			bottom = -d / 2 * scale,
-			top = d / 2 * scale,
-		}
 		path = {concave=true}
 		if d ~= 0 then
 			local r = d / 2 * scale
@@ -301,22 +277,14 @@ local function complete_aperture(aperture, macros)
 	elseif aperture.macro then
 		local macro = aperture.macro
 		path = macro.chunk(unpack(aperture.parameters or {}))
-		extents = region{
-			left = math.huge,
-			right = -math.huge,
-			bottom = math.huge,
-			top = -math.huge,
-		}
 		for _,point in ipairs(path) do
 			point.x = point.x * scale
 			point.y = point.y * scale
-			extents = extents + point
 		end
 	else
 		error("unsupported aperture shape "..tostring(shape))
 	end
 	
-	aperture.extents = extents
 	aperture.path = path
 end
 
@@ -325,7 +293,6 @@ local function load_gerber(file_path)
 	local layers = gerber.load(file_path)
 	
 	-- adjust the apertures and macros (generate paths and extents)
-	local apertures = {}
 	for _,layer in ipairs(layers) do
 		for _,path in ipairs(layer) do
 			local aperture = path.aperture
@@ -337,7 +304,6 @@ local function load_gerber(file_path)
 					end
 				end
 				complete_aperture(aperture)
-				table.insert(apertures, aperture)
 			end
 		end
 	end
@@ -345,7 +311,6 @@ local function load_gerber(file_path)
 	-- generate image
 	local image = {
 		file_path = file_path,
-		apertures = apertures,
 		layers = layers,
 	}
 	
@@ -365,12 +330,6 @@ local function complete_tool(tool)
 	local scale = assert(scales[unit], "unsupported tool unit "..tostring(unit))
 	local d = tool.parameters.C
 	assert(d, "tools require at least a diameter (C parameter)")
-	local extents = region{
-		left = -d / 2 * scale,
-		right = d / 2 * scale,
-		bottom = -d / 2 * scale,
-		top = d / 2 * scale,
-	}
 	local path = {concave=true}
 	local r = d / 2 * scale
 	for i=0,circle_steps-1 do
@@ -380,7 +339,6 @@ local function complete_tool(tool)
 	-- :KLUDGE: sin(2*pi) is not zero, but an epsilon, so we force it
 	table.insert(path, {x=r, y=0})
 	
-	tool.extents = extents
 	tool.path = path
 end
 
@@ -389,7 +347,6 @@ local function load_excellon(file_path)
 	local layers = excellon.load(file_path)
 	
 	-- adjust the apertures and macros (generate paths and extents)
-	local apertures = {}
 	for _,layer in ipairs(layers) do
 		for _,path in ipairs(layer) do
 			local aperture = path.aperture
@@ -401,14 +358,12 @@ local function load_excellon(file_path)
 					end
 				end
 				complete_tool(aperture)
-				table.insert(apertures, aperture)
 			end
 		end
 	end
 	
 	local image = {
 		file_path = file_path,
-		apertures = apertures,
 		layers = layers,
 	}
 	
@@ -507,7 +462,28 @@ local function load_image(path, type)
 		image = load_gerber(path)
 	end
 	
+	-- collect apertures
+	local apertures = {}
+	image.apertures = {}
+	for _,layer in ipairs(image.layers) do
+		for _,path in ipairs(layer) do
+			local aperture = path.aperture
+			if aperture and not apertures[aperture] then
+				table.insert(image.apertures, aperture)
+				apertures[aperture] = true
+			end
+		end
+	end
+	
 	-- compute extents
+	for _,aperture in ipairs(image.apertures) do
+		if not aperture.extents then
+			aperture.extents = region()
+			for	_,point in ipairs(aperture.path) do
+				aperture.extents = aperture.extents + point
+			end
+		end
+	end
 	image.center_extents = region()
 	image.extents = region()
 	for _,layer in ipairs(image.layers) do
@@ -518,7 +494,7 @@ local function load_image(path, type)
 			end
 			path.extents = region(path.center_extents)
 			local aperture = path.aperture
-			if aperture then
+			if aperture and not aperture.extents.empty then
 				path.extents = path.extents * aperture.extents
 			end
 			image.center_extents = image.center_extents + path.center_extents
