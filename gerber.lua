@@ -27,7 +27,7 @@ local scales = {
 	MM = 1,
 }
 
-local function load_macro2(data, unit)
+local function load_macro(data, unit)
 	local macro = data
 --	macro.name = data.name
 	macro.unit = unit
@@ -41,7 +41,7 @@ local built_in_shapes = {
 	P = true,
 }
 
-local function load_aperture2(data, macros, unit)
+local function load_aperture(data, macros, unit)
 	local aperture = data
 --	aperture.dcode = data.dcode
 	aperture.dcode = nil
@@ -161,12 +161,12 @@ function _M.load(file_path)
 		elseif tb=='macro' then
 			-- ignore
 			local name = block.name
-			local macro = load_macro2(block, unit)
+			local macro = load_macro(block, unit)
 			macros[name] = macro
 		elseif tb=='aperture' then
 			-- :NOTE: defining an aperture makes it current
 			local name = block.dcode
-			aperture = load_aperture2(block, macros, unit)
+			aperture = load_aperture(block, macros, unit)
 			apertures[name] = aperture
 		elseif tb=='parameter' then
 			local tp = block.name
