@@ -136,10 +136,6 @@ local function load_gerber(file_path)
 	return image
 end
 
-local function save_gerber(image, file_path)
-	return gerber.save(image.layers, file_path)
-end
-
 ------------------------------------------------------------------------------
 
 local function exterior(path)
@@ -287,7 +283,7 @@ local function save_image(image, path, type)
 	if type=='drill' then
 		return excellon.save(image, path)
 	else
-		return save_gerber(image, path)
+		return gerber.save(image, path)
 	end
 	--[[
 	if not ignore_outline[type] then
