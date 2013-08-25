@@ -290,10 +290,10 @@ end
 
 local function load_gerber(file_path)
 	-- load the high level gerber data
-	local layers = gerber.load(file_path)
+	local image = gerber.load(file_path)
 	
 	-- adjust the apertures and macros (generate paths and extents)
-	for _,layer in ipairs(layers) do
+	for _,layer in ipairs(image.layers) do
 		for _,path in ipairs(layer) do
 			local aperture = path.aperture
 			if aperture and not aperture.path then
@@ -307,12 +307,6 @@ local function load_gerber(file_path)
 			end
 		end
 	end
-	
-	-- generate image
-	local image = {
-		file_path = file_path,
-		layers = layers,
-	}
 	
 	return image
 end

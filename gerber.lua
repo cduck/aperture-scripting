@@ -136,12 +136,12 @@ local function interpolate(path, point)
 	table.insert(path, point)
 end
 
-function _M.load(filename)
-	local data,err = _M.blocks.load(filename)
+function _M.load(file_path)
+	local data,err = _M.blocks.load(file_path)
 	if not data then return nil,err end
 	
 	-- parse the data blocks
-	local image = {}
+	local layers = {}
 	local layer
 	local layer_name
 	local macros = {}
@@ -189,7 +189,7 @@ function _M.load(filename)
 				layer.polarity = block.value
 				layer.name = layer_name
 				layer_name = nil
-				table.insert(image, layer)
+				table.insert(layers, layer)
 			elseif tp=='MO' then
 				assert(scales[block.value], "unsupported unit "..tostring(block.value))
 				unit = block.value
@@ -235,7 +235,7 @@ function _M.load(filename)
 						path = {aperture=not region and aperture or nil, unit=unit, {x=x, y=y}}
 						if not layer then
 							layer = { polarity = 'D' }
-							table.insert(image, layer)
+							table.insert(layers, layer)
 						end
 						table.insert(layer, path)
 					end
@@ -278,7 +278,7 @@ function _M.load(filename)
 					end
 					if not layer then
 						layer = { polarity = 'D' }
-						table.insert(image, layer)
+						table.insert(layers, layer)
 					end
 					table.insert(layer, {aperture=aperture, unit=unit, {x=x, y=y}})
 				elseif block.D then
@@ -318,14 +318,18 @@ function _M.load(filename)
 		end
 	end
 	
-	image.format = format
+	local image = {
+		file_path = file_path,
+		format = format,
+		layers = layers,
+	}
 	
 	return image
 end
 
 function _M.decouple_apertures(image)
 	-- decouple the apertures and macros
-	for _,layer in ipairs(image) do
+	for _,layer in ipairs(image.layers) do
 		for _,path in ipairs(layer) do
 			path.aperture = copy(path.aperture)
 		end
@@ -336,7 +340,7 @@ function _M.merge_apertures(image)
 	-- list apertures
 	local apertures = {}
 	local aperture_order = {}
-	for _,layer in ipairs(image) do
+	for _,layer in ipairs(image.layers) do
 		for _,path in ipairs(layer) do
 			local aperture = path.aperture
 			local s = dump.tostring(aperture)
@@ -373,11 +377,11 @@ function _M.merge_apertures(image)
 	end
 end
 
-function _M.save(image, filename)
+function _M.save(image, file_path)
 	-- list apertures
 	local apertures = {}
 	local aperture_order = {}
-	for _,layer in ipairs(image) do
+	for _,layer in ipairs(image.layers) do
 		for _,path in ipairs(layer) do
 			local aperture = path.aperture
 			if aperture and not apertures[aperture] then
@@ -429,7 +433,7 @@ function _M.save(image, filename)
 	local region = false
 	local unit,quadrant,aperture,path
 	
-	for _,layer in ipairs(image) do
+	for _,layer in ipairs(image.layers) do
 		for _,path in ipairs(layer) do
 			if not unit then
 				unit = path.unit
@@ -463,7 +467,7 @@ function _M.save(image, filename)
 		table.insert(data, aperture)
 	end
 	
-	for _,layer in ipairs(image) do
+	for _,layer in ipairs(image.layers) do
 		if layer.name then
 			table.insert(data, _M.blocks.parameter('LN', layer.name))
 		end
@@ -523,7 +527,7 @@ function _M.save(image, filename)
 	end
 	table.insert(data, _M.blocks.eof())
 	
-	local success,err = _M.blocks.save(data, filename)
+	local success,err = _M.blocks.save(data, file_path)
 	
 	-- clear macro save names
 	for _,macro in ipairs(macro_order) do
