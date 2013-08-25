@@ -16,53 +16,69 @@ local unpack = unpack or table.unpack
 
 ------------------------------------------------------------------------------
 
-local default_extents = {
+local default_region = {
 	left = math.huge,
 	right = -math.huge,
 	bottom = math.huge,
 	top = -math.huge,
 }
 
-local extents = {}
+local region_mt = {}
+local region_getters = {}
+local region_methods = {}
 
-function extents.new(orig)
-	if not orig then orig = default_extents end
-	return {
+local function region(orig)
+	if not orig then orig = default_region end
+	return setmetatable({
 		left = orig.left,
 		right = orig.right,
 		bottom = orig.bottom,
 		top = orig.top,
-	}
+	}, region_mt)
 end
 
-function extents.empty(extents)
-	return extents.right <= extents.left or extents.top <= extents.bottom
+function region_mt.__index(self, k)
+	local getter = region_getters[k]
+	if getter then
+		return getter(self)
+	end
+	return region_methods[k]
 end
 
-function extents.include(extents, extension)
+function region_getters:empty()
+	return self.right <= self.left or self.top <= self.bottom
+end
+
+function region_mt.__add(self, extension)
 	if extension.x and extension.y then
-		extents.left = math.min(extents.left, extension.x)
-		extents.right = math.max(extents.right, extension.x)
-		extents.bottom = math.min(extents.bottom, extension.y)
-		extents.top = math.max(extents.top, extension.y)
+		return region{
+			left = math.min(self.left, extension.x),
+			right = math.max(self.right, extension.x),
+			bottom = math.min(self.bottom, extension.y),
+			top = math.max(self.top, extension.y),
+		}
 	elseif extension.left and extension.right and extension.bottom and extension.top then
-		extents.left = math.min(extents.left, extension.left)
-		extents.right = math.max(extents.right, extension.right)
-		extents.bottom = math.min(extents.bottom, extension.bottom)
-		extents.top = math.max(extents.top, extension.top)
+		return region{
+			left = math.min(self.left, extension.left),
+			right = math.max(self.right, extension.right),
+			bottom = math.min(self.bottom, extension.bottom),
+			top = math.max(self.top, extension.top),
+		}
 	else
-		error("invalid extents extension")
+		error("only points or other regions can be added to a region")
 	end
 end
 
-function extents.grow(extents, extension)
-	if extension.left and extension.right and extension.bottom and extension.top then
-		extents.left = extents.left + extension.left
-		extents.right = extents.right + extension.right
-		extents.bottom = extents.bottom + extension.bottom
-		extents.top = extents.top + extension.top
+function region_mt.__mul(a, b)
+	if a.left and a.right and a.bottom and a.top and b.left and b.right and b.bottom and b.top then
+		return region{
+			left = a.left + b.left,
+			right = a.right + b.right,
+			bottom = a.bottom + b.bottom,
+			top = a.top + b.top,
+		}
 	else
-		error("invalid extents extension")
+		error("regions can only be multiplied with other regions")
 	end
 end
 
@@ -257,7 +273,7 @@ local function complete_aperture(aperture, macros)
 		local d,hx,hy = unpack(aperture.parameters)
 		assert(d, "circle apertures require at least 1 parameter")
 		assert(not hx and not hy, "circle apertures with holes are not yet supported")
-		extents = {
+		extents = region{
 			left = -d / 2 * scale,
 			right = d / 2 * scale,
 			bottom = -d / 2 * scale,
@@ -276,7 +292,7 @@ local function complete_aperture(aperture, macros)
 		local x,y,hx,hy = unpack(aperture.parameters)
 		assert(x and y, "rectangle apertures require at least 2 parameters")
 		assert(not hx and not hy, "rectangle apertures with holes are not yet supported")
-		extents = {
+		extents = region{
 			left = -x / 2 * scale,
 			right = x / 2 * scale,
 			bottom = -y / 2 * scale,
@@ -295,7 +311,7 @@ local function complete_aperture(aperture, macros)
 		local x,y,hx,hy = unpack(aperture.parameters)
 		assert(x and y, "obround apertures require at least 2 parameters")
 		assert(not hx and not hy, "obround apertures with holes are not yet supported")
-		extents = {
+		extents = region{
 			left = -x / 2 * scale,
 			right = x / 2 * scale,
 			bottom = -y / 2 * scale,
@@ -334,7 +350,7 @@ local function complete_aperture(aperture, macros)
 		assert(d and steps, "polygon apertures require at least 2 parameter")
 		angle = angle or 0
 		assert(not hx and not hy, "polygon apertures with holes are not yet supported")
-		extents = {
+		extents = region{
 			left = -d / 2 * scale,
 			right = d / 2 * scale,
 			bottom = -d / 2 * scale,
@@ -352,7 +368,7 @@ local function complete_aperture(aperture, macros)
 	elseif aperture.macro then
 		local macro = aperture.macro
 		path = macro.chunk(unpack(aperture.parameters or {}))
-		extents = {
+		extents = region{
 			left = math.huge,
 			right = -math.huge,
 			bottom = math.huge,
@@ -361,10 +377,7 @@ local function complete_aperture(aperture, macros)
 		for _,point in ipairs(path) do
 			point.x = point.x * scale
 			point.y = point.y * scale
-			extents.left = math.min(extents.left, point.x)
-			extents.right = math.max(extents.right, point.x)
-			extents.bottom = math.min(extents.bottom, point.y)
-			extents.top = math.max(extents.top, point.y)
+			extents = extents + point
 		end
 	else
 		error("unsupported aperture shape "..tostring(shape))
@@ -419,7 +432,7 @@ local function complete_tool(tool)
 	local scale = assert(scales[unit], "unsupported tool unit "..tostring(unit))
 	local d = tool.parameters.C
 	assert(d, "tools require at least a diameter (C parameter)")
-	local extents = {
+	local extents = region{
 		left = -d / 2 * scale,
 		right = d / 2 * scale,
 		bottom = -d / 2 * scale,
@@ -595,21 +608,21 @@ local function load_image(path, type)
 	end
 	
 	-- compute extents
-	image.center_extents = extents.new()
-	image.extents = extents.new()
+	image.center_extents = region()
+	image.extents = region()
 	for _,layer in ipairs(image.layers) do
 		for _,path in ipairs(layer) do
-			path.center_extents = extents.new()
+			path.center_extents = region()
 			for _,point in ipairs(path) do
-				extents.include(path.center_extents, point)
+				path.center_extents = path.center_extents + point
 			end
-			path.extents = extents.new(path.center_extents)
+			path.extents = region(path.center_extents)
 			local aperture = path.aperture
 			if aperture then
-				extents.grow(path.extents, aperture.extents)
+				path.extents = path.extents * aperture.extents
 			end
-			extents.include(image.center_extents, path.center_extents)
-			extents.include(image.extents, path.extents)
+			image.center_extents = image.center_extents + path.center_extents
+			image.extents = image.extents + path.extents
 		end
 	end
 	
@@ -670,16 +683,29 @@ local layer_guess = {
 
 local function save_metadata(cache_directory, hash, image)
 	local metadata = {}
---	for k,v in pairs(image) do
---		metadata[k] = v
---	end
---	metadata.layers = nil
 	metadata.center_extents = image.center_extents
 	metadata.extents = image.extents
 	if image.outline then
 		metadata.outline = true
 	end
 	dump.tofile(metadata, tostring(cache_directory / (hash..'.lua')))
+end
+
+local function load_metadata(cache_directory, hash, path, type)
+	local metapath = cache_directory / (hash..'.lua')
+	if lfs.attributes(metapath, 'mode') then
+		local metadata = dofile(metapath)
+		return {
+			path = path,
+			type = type,
+			hash = hash,
+			extents = region(metadata.extents),
+			center_extents = region(metadata.center_extents),
+			outline = metadata.outline,
+		}
+	else
+		return nil
+	end
 end
 
 function _M.load(path, options)
@@ -751,14 +777,7 @@ function _M.load(path, options)
 		local hash = hashes[type]
 		local image
 		if board.cache_directory then
-			local metapath = board.cache_directory / (hash..'.lua')
-			if lfs.attributes(metapath, 'mode') then
-				local metadata = dofile(metapath)
-				metadata.path = path
-				metadata.type = type
-				metadata.hash = hash
-				image = metadata
-			end
+			image = load_metadata(board.cache_directory, hash, path, type)
 		end
 		if not image then
 			image = load_image(path, type)
@@ -771,18 +790,18 @@ function _M.load(path, options)
 	board.images = images
 	
 	-- compute board extents
-	board.extents = extents.new()
+	board.extents = region()
 	for type,image in pairs(images) do
 		if type=='milling' or type=='drill' then
 			-- only extend to the points centers
-			extents.include(board.extents, image.center_extents)
+			board.extents = board.extents + image.center_extents
 		elseif (type=='top_silkscreen' or type=='bottom_silkscreen') and not options.silkscreen_extends_board then
 			-- don't extend with these
 		else
-			extents.include(board.extents, image.extents)
+			board.extents = board.extents + image.extents
 		end
 	end
-	if extents.empty(board.extents) then
+	if board.extents.empty then
 		return nil,"board is empty"
 	end
 	
