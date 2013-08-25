@@ -323,59 +323,6 @@ end
 
 ------------------------------------------------------------------------------
 
-local function complete_tool(tool)
-	local tcode = tool.tcode
-	local shape = tool.shape
-	local unit = tool.unit
-	local scale = assert(scales[unit], "unsupported tool unit "..tostring(unit))
-	local d = tool.parameters.C
-	assert(d, "tools require at least a diameter (C parameter)")
-	local path = {concave=true}
-	local r = d / 2 * scale
-	for i=0,circle_steps-1 do
-		local a = i * math.pi * 2 / circle_steps
-		table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
-	end
-	-- :KLUDGE: sin(2*pi) is not zero, but an epsilon, so we force it
-	table.insert(path, {x=r, y=0})
-	
-	tool.path = path
-end
-
-local function load_excellon(file_path)
-	-- load the high level excellon data
-	local layers = excellon.load(file_path)
-	
-	-- adjust the apertures and macros (generate paths and extents)
-	for _,layer in ipairs(layers) do
-		for _,path in ipairs(layer) do
-			local aperture = path.aperture
-			if aperture and not aperture.path then
-				local macro = aperture.macro
-				if macro then
-					if not macro.chunk then
-						complete_macro(macro)
-					end
-				end
-				complete_tool(aperture)
-			end
-		end
-	end
-	
-	local image = {
-		file_path = file_path,
-		layers = layers,
-	}
-	
-	return image
-end
-
-local function save_excellon(image, file_path)
-	return excellon.save(image.layers, file_path)
-end
-
-------------------------------------------------------------------------------
-
 local function exterior(path)
 	local total = 0
 	for i=1,#path-1 do
@@ -457,7 +404,7 @@ local function load_image(path, type)
 	print("loading "..tostring(path))
 	local image
 	if type=='drill' then
-		image = load_excellon(path)
+		image = excellon.load(path)
 	else
 		image = load_gerber(path)
 	end
@@ -519,7 +466,7 @@ end
 local function save_image(image, path, type)
 	print("saving "..tostring(path))
 	if type=='drill' then
-		return save_excellon(image, path)
+		return excellon.save(image, path)
 	else
 		return save_gerber(image, path)
 	end

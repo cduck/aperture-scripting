@@ -12,20 +12,35 @@ local scales = {
 	MM = 1,
 }
 
+local circle_steps = 64
+
 local function load_tool(data, unit)
-	local tool = data
-	tool.tcode = nil
-	tool.unit = unit
-	return tool
+	local tcode = data.tcode
+	local scale = assert(scales[unit], "unsupported tool unit "..tostring(unit))
+	local d = data.parameters.C
+	assert(d, "tools require at least a diameter (C parameter)")
+	local path = {concave=true}
+	local r = d / 2 * scale
+	for i=0,circle_steps-1 do
+		local a = i * math.pi * 2 / circle_steps
+		table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
+	end
+	-- :KLUDGE: sin(2*pi) is not zero, but an epsilon, so we force it
+	table.insert(path, {x=r, y=0})
+	return {
+		name = tcode,
+		unit = unit,
+		path = path,
+	}
 end
 
-function _M.load(filename)
-	local data = _M.blocks.load(filename)
+function _M.load(file_path)
+	local data = _M.blocks.load(file_path)
 	
 	-- parse the data blocks
 	local tools = {}
 	local layer = {}
-	local image = {layer}
+	local layers = {layer}
 	local unit,tool
 	local x,y = 0,0
 	for _,header in ipairs(data.headers) do
@@ -83,14 +98,19 @@ function _M.load(filename)
 		end
 	end
 	
+	local image = {
+		file_path = file_path,
+		layers = layers,
+	}
+	
 	return image
 end
 
-function _M.save(image, filename)
-	assert(#image == 1)
+function _M.save(image, file_path)
+	assert(#image.layers == 1)
 	local data = {headers={}}
 --	data.headers
-	return _M.blocks.save(data, filename)
+	return _M.blocks.save(data, file_path)
 end
 
 ------------------------------------------------------------------------------
