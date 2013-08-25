@@ -473,39 +473,6 @@ local function load_excellon(file_path)
 		end
 	end
 	
-	-- compute paths extents
-	for _,layer in ipairs(layers) do
-		for _,path in ipairs(layer) do
-			local center_extents = {
-				left = math.huge,
-				right = -math.huge,
-				bottom = math.huge,
-				top = -math.huge,
-			}
-			for _,point in ipairs(path) do
-				center_extents.left = math.min(center_extents.left, point.x)
-				center_extents.right = math.max(center_extents.right, point.x)
-				center_extents.bottom = math.min(center_extents.bottom, point.y)
-				center_extents.top = math.max(center_extents.top, point.y)
-			end
-			path.center_extents = center_extents
-			local extents = {
-				left = center_extents.left,
-				right = center_extents.right,
-				bottom = center_extents.bottom,
-				top = center_extents.top,
-			}
-			local aperture = path.aperture
-			if aperture then
-				extents.left = extents.left + aperture.extents.left
-				extents.right = extents.right + aperture.extents.right
-				extents.bottom = extents.bottom + aperture.extents.bottom
-				extents.top = extents.top + aperture.extents.top
-			end
-			path.extents = extents
-		end
-	end
-	
 	local image = {
 		file_path = file_path,
 		apertures = apertures,
