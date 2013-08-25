@@ -16,6 +16,58 @@ local unpack = unpack or table.unpack
 
 ------------------------------------------------------------------------------
 
+local default_extents = {
+	left = math.huge,
+	right = -math.huge,
+	bottom = math.huge,
+	top = -math.huge,
+}
+
+local extents = {}
+
+function extents.new(orig)
+	if not orig then orig = default_extents end
+	return {
+		left = orig.left,
+		right = orig.right,
+		bottom = orig.bottom,
+		top = orig.top,
+	}
+end
+
+function extents.empty(extents)
+	return extents.right <= extents.left or extents.top <= extents.bottom
+end
+
+function extents.include(extents, extension)
+	if extension.x and extension.y then
+		extents.left = math.min(extents.left, extension.x)
+		extents.right = math.max(extents.right, extension.x)
+		extents.bottom = math.min(extents.bottom, extension.y)
+		extents.top = math.max(extents.top, extension.y)
+	elseif extension.left and extension.right and extension.bottom and extension.top then
+		extents.left = math.min(extents.left, extension.left)
+		extents.right = math.max(extents.right, extension.right)
+		extents.bottom = math.min(extents.bottom, extension.bottom)
+		extents.top = math.max(extents.top, extension.top)
+	else
+		error("invalid extents extension")
+	end
+end
+
+function extents.grow(extents, extension)
+	if extension.left and extension.right and extension.bottom and extension.top then
+		extents.left = extents.left + extension.left
+		extents.right = extents.right + extension.right
+		extents.bottom = extents.bottom + extension.bottom
+		extents.top = extents.top + extension.top
+	else
+		error("invalid extents extension")
+	end
+end
+
+------------------------------------------------------------------------------
+
 local scales = {
 	IN = 25.4,
 	MM = 1,
@@ -344,70 +396,9 @@ local function load_gerber(file_path)
 		end
 	end
 	
-	-- compute paths extents
-	for _,layer in ipairs(layers) do
-		for _,path in ipairs(layer) do
-			local center_extents = {
-				left = math.huge,
-				right = -math.huge,
-				bottom = math.huge,
-				top = -math.huge,
-			}
-			for _,point in ipairs(path) do
-				center_extents.left = math.min(center_extents.left, point.x)
-				center_extents.right = math.max(center_extents.right, point.x)
-				center_extents.bottom = math.min(center_extents.bottom, point.y)
-				center_extents.top = math.max(center_extents.top, point.y)
-			end
-			path.center_extents = center_extents
-			local extents = {
-				left = center_extents.left,
-				right = center_extents.right,
-				bottom = center_extents.bottom,
-				top = center_extents.top,
-			}
-			local aperture = path.aperture
-			if aperture then
-				extents.left = extents.left + aperture.extents.left
-				extents.right = extents.right + aperture.extents.right
-				extents.bottom = extents.bottom + aperture.extents.bottom
-				extents.top = extents.top + aperture.extents.top
-			end
-			path.extents = extents
-		end
-	end
-	
-	-- compute image extents
-	local center_extents = {
-		left = math.huge,
-		right = -math.huge,
-		bottom = math.huge,
-		top = -math.huge,
-	}
-	local extents = {
-		left = math.huge,
-		right = -math.huge,
-		bottom = math.huge,
-		top = -math.huge,
-	}
-	for _,layer in ipairs(layers) do
-		for _,path in ipairs(layer) do
-			center_extents.left = math.min(center_extents.left, path.center_extents.left)
-			center_extents.right = math.max(center_extents.right, path.center_extents.right)
-			center_extents.bottom = math.min(center_extents.bottom, path.center_extents.bottom)
-			center_extents.top = math.max(center_extents.top, path.center_extents.top)
-			extents.left = math.min(extents.left, path.extents.left)
-			extents.right = math.max(extents.right, path.extents.right)
-			extents.bottom = math.min(extents.bottom, path.extents.bottom)
-			extents.top = math.max(extents.top, path.extents.top)
-		end
-	end
-	
 	-- generate image
 	local image = {
 		file_path = file_path,
-		center_extents = center_extents,
-		extents = extents,
 		apertures = apertures,
 		layers = layers,
 	}
@@ -502,36 +493,8 @@ local function load_excellon(file_path)
 		end
 	end
 	
-	-- compute image extents
-	local center_extents = {
-		left = math.huge,
-		right = -math.huge,
-		bottom = math.huge,
-		top = -math.huge,
-	}
-	local extents = {
-		left = math.huge,
-		right = -math.huge,
-		bottom = math.huge,
-		top = -math.huge,
-	}
-	for _,layer in ipairs(layers) do
-		for _,path in ipairs(layer) do
-			center_extents.left = math.min(center_extents.left, path.center_extents.left)
-			center_extents.right = math.max(center_extents.right, path.center_extents.right)
-			center_extents.bottom = math.min(center_extents.bottom, path.center_extents.bottom)
-			center_extents.top = math.max(center_extents.top, path.center_extents.top)
-			extents.left = math.min(extents.left, path.extents.left)
-			extents.right = math.max(extents.right, path.extents.right)
-			extents.bottom = math.min(extents.bottom, path.extents.bottom)
-			extents.top = math.max(extents.top, path.extents.top)
-		end
-	end
-	
 	local image = {
 		file_path = file_path,
-		center_extents = center_extents,
-		extents = extents,
 		apertures = apertures,
 		layers = layers,
 	}
@@ -630,6 +593,26 @@ local function load_image(path, type)
 	else
 		image = load_gerber(path)
 	end
+	
+	-- compute extents
+	image.center_extents = extents.new()
+	image.extents = extents.new()
+	for _,layer in ipairs(image.layers) do
+		for _,path in ipairs(layer) do
+			path.center_extents = extents.new()
+			for _,point in ipairs(path) do
+				extents.include(path.center_extents, point)
+			end
+			path.extents = extents.new(path.center_extents)
+			local aperture = path.aperture
+			if aperture then
+				extents.grow(path.extents, aperture.extents)
+			end
+			extents.include(image.center_extents, path.center_extents)
+			extents.include(image.extents, path.extents)
+		end
+	end
+	
 	if not ignore_outline[type] then
 		local outline,ilayer,ipath = find_outline(image)
 		if outline then
@@ -788,34 +771,20 @@ function _M.load(path, options)
 	board.images = images
 	
 	-- compute board extents
-	local extents = {
-		left = math.huge,
-		right = -math.huge,
-		bottom = math.huge,
-		top = -math.huge,
-	}
+	board.extents = extents.new()
 	for type,image in pairs(images) do
 		if type=='milling' or type=='drill' then
 			-- only extend to the points centers
-			extents.left = math.min(extents.left, image.center_extents.left)
-			extents.bottom = math.min(extents.bottom, image.center_extents.bottom)
-			extents.right = math.max(extents.right, image.center_extents.right)
-			extents.top = math.max(extents.top, image.center_extents.top)
+			extents.include(board.extents, image.center_extents)
 		elseif (type=='top_silkscreen' or type=='bottom_silkscreen') and not options.silkscreen_extends_board then
 			-- don't extend with these
 		else
-			extents.left = math.min(extents.left, image.extents.left)
-			extents.bottom = math.min(extents.bottom, image.extents.bottom)
-			extents.right = math.max(extents.right, image.extents.right)
-			extents.top = math.max(extents.top, image.extents.top)
+			extents.include(board.extents, image.extents)
 		end
 	end
-	if extents.right <= extents.left or extents.top <= extents.bottom then
+	if extents.empty(board.extents) then
 		return nil,"board is empty"
 	end
-	extents.width = extents.right - extents.left
-	extents.height = extents.top - extents.bottom
-	board.extents = extents
 	
 	-- compute special outline hash
 	local outline_name = {}
