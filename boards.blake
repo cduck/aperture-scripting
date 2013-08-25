@@ -11,6 +11,10 @@ return {
 			"gerber.lua",
 		},
 		{
+			dirs = {source=P'boards', build=P'boards', install=P'boards'},
+			"region.lua",
+		},
+		{
 			dirs = {source=P'gerber', build=P'gerber', install=P'gerber'},
 			"blocks.lua",
 		},
