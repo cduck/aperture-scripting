@@ -1,0 +1,8 @@
+local boards = require 'boards'
+
+for _,filename in ipairs{...} do
+	print(filename)
+	assert(boards.load(filename))
+end
+
+-- vi: ft=lua

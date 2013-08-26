@@ -1,0 +1,9 @@
+local boards = require 'boards'
+
+local input,output = ...
+
+local data = assert(boards.load(input))
+
+boards.save(data, output)
+
+-- vi: ft=lua
