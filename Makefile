@@ -9,8 +9,8 @@ test-check:
 
 .PHONY:test-copy
 test-copy:test/simple.copy
-#	grbcopy test/example2.grb test/copy.grb
-#	diff -durN test/copy.grb.expected test/copy.grb
+	grbcopy test/example2.grb test/copy.grb
+	diff -durN test/copy.grb.expected test/copy.grb
 #	drlcopy test/example.drl test/copy.drl
 #	diff -durN test/copy.drl.expected test/copy.drl
 	brdcopy test/simple/simple test/simple.copy/simple
