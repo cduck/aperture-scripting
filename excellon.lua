@@ -51,10 +51,12 @@ function _M.load(file_path)
 			tools[name] = tool
 		elseif th=='string' then
 			if header=='M72' then
+				assert(not unit or unit=='IN', "excellon files with mixtures of units not supported")
 				unit = 'IN'
 			elseif header:match('^;') then
 				-- ignore
 			elseif header=='INCH,LZ' then
+				assert(not unit or unit=='IN', "excellon files with mixtures of units not supported")
 				unit = 'IN'
 			else
 				error("unsupported header "..header)
@@ -70,8 +72,10 @@ function _M.load(file_path)
 				assert(not block.X and not block.Y and not block.M)
 				tool = tools[block.T]
 			elseif block.M==72 then
+				assert(not unit or unit=='IN', "excellon files with mixtures of units not supported")
 				unit = 'IN'
 			elseif block.M==71 then
+				assert(not unit or unit=='MM', "excellon files with mixtures of units not supported")
 				unit = 'MM'
 			elseif block.M==30 then
 				-- end of program, ignore
@@ -100,6 +104,7 @@ function _M.load(file_path)
 	
 	local image = {
 		file_path = file_path,
+		unit = unit,
 		layers = layers,
 	}
 	
