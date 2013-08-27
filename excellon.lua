@@ -12,27 +12,15 @@ local scales = {
 	MM = 1,
 }
 
-local circle_steps = 64
-
 local function load_tool(data, unit)
 	local tcode = data.tcode
-	local scale = assert(scales[unit], "unsupported tool unit "..tostring(unit))
 	local d = data.parameters.C
 	assert(d, "tools require at least a diameter (C parameter)")
-	local path = {concave=true}
-	local r = d / 2 * scale
-	for i=0,circle_steps-1 do
-		local a = i * math.pi * 2 / circle_steps
-		table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
-	end
-	-- :KLUDGE: sin(2*pi) is not zero, but an epsilon, so we force it
-	table.insert(path, {x=r, y=0})
 	return {
 		name = tcode,
 		unit = unit,
 		shape = 'circle',
 		parameters = { d },
-		path = path,
 	}
 end
 
