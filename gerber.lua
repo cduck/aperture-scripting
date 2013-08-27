@@ -467,7 +467,11 @@ function _M.load(file_path)
 				assert(block.value=='POS', "unsupported image polarity")
 			elseif tp=='LN' then
 				-- layer name
-				layer_name = block.value
+				if layer and not layer.name then
+					layer.name = block.value
+				else
+					layer_name = block.value
+				end
 			elseif tp=='LP' then
 				-- layer polarity
 				-- terminate current path if any
@@ -748,10 +752,10 @@ function _M.save(image, file_path)
 	end
 	
 	for _,layer in ipairs(image.layers) do
+		table.insert(data, _M.blocks.parameter('LP', layer.polarity))
 		if layer.name then
 			table.insert(data, _M.blocks.parameter('LN', layer.name))
 		end
-		table.insert(data, _M.blocks.parameter('LP', layer.polarity))
 		for _,path in ipairs(layer) do
 			if path.aperture then
 				if path.aperture ~= aperture then
