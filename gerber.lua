@@ -778,7 +778,13 @@ function _M.save(image, file_path)
 			local scale = 1 / scales[path.unit]
 			if #path == 1 then
 				local flash = path[1]
-				table.insert(data, _M.blocks.directive({D=3, X=flash.x * scale, Y=flash.y * scale}, image.format))
+				local px,py = flash.x * scale,flash.y * scale
+				table.insert(data, _M.blocks.directive({
+					D = 3,
+					X = px ~= x and px or nil,
+					Y = py ~= y and py or nil,
+				}, image.format))
+				x,y = px,py
 			else
 				assert(#path >= 2)
 				for i,point in ipairs(path) do
