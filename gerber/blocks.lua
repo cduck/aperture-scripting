@@ -42,6 +42,7 @@ local parameter_scopes = {
 	MO = 'directive',
 	OF = 'directive',
 	SF = 'directive',
+	IN = 'image',
 	IP = 'image',
 	IR = 'image',
 	IJ = 'image',

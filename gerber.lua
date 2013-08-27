@@ -434,6 +434,7 @@ function _M.load(file_path)
 	local layers = {}
 	local layer
 	local layer_name
+	local image_name
 	local macros = {}
 	local apertures = {}
 	local x,y = 0,0
@@ -494,6 +495,9 @@ function _M.load(file_path)
 			elseif tp=='SR' then
 				-- step & repeat
 				assert(block.value == 'X1Y1I0J0')
+			elseif tp=='IN' then
+				-- image name
+				image_name = block.value
 			else
 				error("unsupported parameter "..tp)
 			end
@@ -617,6 +621,7 @@ function _M.load(file_path)
 	
 	local image = {
 		file_path = file_path,
+		name = image_name,
 		format = format,
 		unit = unit,
 		layers = layers,
@@ -721,6 +726,7 @@ function _M.save(image, file_path)
 	-- assemble a block array
 	local data = {}
 	
+	local image_name = image.name
 	local x,y = 0,0
 	local layer_name
 	local interpolations = { linear=1, clockwise=2, counterclockwise=3 }
@@ -733,6 +739,9 @@ function _M.save(image, file_path)
 	local unit = image.unit
 	assert(scales[unit])
 	
+	if image_name then
+		table.insert(data, _M.blocks.parameter('IN', image_name))
+	end
 --	table.insert(data, _M.blocks.directive{G=75})
 --	table.insert(data, _M.blocks.directive{G=70})
 	table.insert(data, image.format)
