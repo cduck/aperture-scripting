@@ -221,27 +221,30 @@ end
 
 ------------------------------------------------------------------------------
 
-local built_in_shapes = {
-	C = true,
-	R = true,
-	O = true,
-	P = true,
+local gerber_shapes = {
+	C = 'circle',
+	R = 'rectangle',
+	O = 'obround',
+	P = 'polygon',
 }
+local reverse_gerber_shapes = {}
+for k,v in pairs(gerber_shapes) do reverse_gerber_shapes[v] = k end
 
 local function load_aperture(data, macros, unit)
 	local dcode = data.dcode
-	local shape,macro = data.shape,nil
+	local gerber_shape = data.shape
 	local parameters = data.parameters
 	local scale = assert(scales[unit], "unsupported aperture unit "..tostring(unit))
 	
-	if not built_in_shapes[shape] then
-		macro = assert(macros[shape], "no macro with name "..tostring(shape))
+	local shape,macro = gerber_shapes[gerber_shape]
+	if not shape then
+		macro = assert(macros[gerber_shape], "no macro with name "..tostring(gerber_shape))
 		assert(macro.unit == unit, "aperture and macro units don't match")
 		shape = nil
 	end
 	
 	local path
-	if shape=='C' then
+	if shape=='circle' then
 		local d,hx,hy = unpack(parameters)
 		assert(d, "circle apertures require at least 1 parameter")
 		assert(not hx and not hy, "circle apertures with holes are not yet supported")
@@ -254,7 +257,7 @@ local function load_aperture(data, macros, unit)
 				table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
 			end
 		end
-	elseif shape=='R' then
+	elseif shape=='rectangle' then
 		local x,y,hx,hy = unpack(parameters)
 		assert(x and y, "rectangle apertures require at least 2 parameters")
 		assert(not hx and not hy, "rectangle apertures with holes are not yet supported")
@@ -266,7 +269,7 @@ local function load_aperture(data, macros, unit)
 			{x=-x/2*scale, y= y/2*scale},
 			{x=-x/2*scale, y=-y/2*scale},
 		}
-	elseif shape=='O' then
+	elseif shape=='obround' then
 		assert(circle_steps % 2 == 0, "obround apertures are only supported when circle_steps is even")
 		local x,y,hx,hy = unpack(parameters)
 		assert(x and y, "obround apertures require at least 2 parameters")
@@ -299,7 +302,7 @@ local function load_aperture(data, macros, unit)
 			end
 			table.insert(path, {x=straight/2, y=-r})
 		end
-	elseif shape=='P' then
+	elseif shape=='polygon' then
 		local d,steps,angle,hx,hy = unpack(parameters)
 		assert(d and steps, "polygon apertures require at least 2 parameter")
 		angle = angle or 0
@@ -334,12 +337,13 @@ local function load_aperture(data, macros, unit)
 end
 
 local function save_aperture(aperture)
-	local shape = aperture.shape
-	if not shape then
-		shape = assert(aperture.macro).name
+	local shape
+	if aperture.macro then
+		shape = aperture.macro.name
+	else
+		shape = assert(reverse_gerber_shapes[aperture.shape])
 	end
-	local block = _M.blocks.aperture(aperture.name, shape, aperture.parameters)
-	return block
+	return _M.blocks.aperture(aperture.name, shape, aperture.parameters)
 end
 
 ------------------------------------------------------------------------------

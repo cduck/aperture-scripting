@@ -30,6 +30,8 @@ local function load_tool(data, unit)
 	return {
 		name = tcode,
 		unit = unit,
+		shape = 'circle',
+		parameters = { d },
 		path = path,
 	}
 end
