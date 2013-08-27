@@ -1,4 +1,4 @@
-local gerber = require 'gerber.blocks'
+local gerber = require 'gerber'
 
 for _,filename in ipairs{...} do
 	print(filename)
