@@ -680,7 +680,9 @@ function _M.merge_apertures(image)
 	end
 end
 
-function _M.save(image, file_path)
+function _M.save(image, file_path, verbose)
+	-- default to compact output, which makes use of the current state
+	
 	-- list apertures
 	local apertures = {}
 	local aperture_order = {}
@@ -730,12 +732,9 @@ function _M.save(image, file_path)
 	local x,y = 0,0
 	local layer_name
 	local interpolations = { linear=1, clockwise=2, counterclockwise=3 }
-	local interpolation = 'linear' -- :KLUDGE: official RS274X spec says it's undefined
---	local movements = { 'stroke', 'move', 'flash' }
---	local movement = nil
 	local quadrants = { single=74, multi=75 }
 	local region = false
-	local quadrant,aperture,path
+	local interpolation,quadrant,aperture,path
 	local unit = image.unit
 	assert(scales[unit])
 	
@@ -781,38 +780,44 @@ function _M.save(image, file_path)
 				local px,py = flash.x * scale,flash.y * scale
 				table.insert(data, _M.blocks.directive({
 					D = 3,
-					X = px ~= x and px or nil,
-					Y = py ~= y and py or nil,
+					X = (verbose or px ~= x) and px or nil,
+					Y = (verbose or py ~= y) and py or nil,
 				}, image.format))
 				x,y = px,py
 			else
 				assert(#path >= 2)
 				for i,point in ipairs(path) do
 					if not point.interpolated then
-						local G
-						if i==1 then
-							if interpolation ~= 'linear' then
-								interpolation = 'linear'
-								G = 1
-							end
-						else
-							if point.interpolation ~= interpolation then
-								interpolation = point.interpolation
-								G = interpolations[interpolation]
-							end
-						end
 						if point.quadrant and point.quadrant ~= quadrant then
 							quadrant = point.quadrant
 							table.insert(data, _M.blocks.directive{G=quadrants[quadrant]})
 						end
+						local D = i == 1 and 2 or 1
+						local interpolation_changed = false
+						if D==1 and point.interpolation ~= interpolation then
+							interpolation = point.interpolation
+							interpolation_changed = true
+						end
+						local G
+						if verbose then
+							-- in verbose mode specify G for each stroke command
+							if D == 1 then
+								G = interpolations[interpolation]
+							end
+						else
+							-- in compact mode specifies interpolation on its own when it changes
+							if interpolation_changed then
+								table.insert(data, _M.blocks.directive{G=interpolations[interpolation]})
+							end
+						end
 						local px,py = point.x * scale,point.y * scale
 						table.insert(data, _M.blocks.directive({
 							G = G,
-							D = i==1 and 2 or 1,
-							X = px ~= x and px or nil,
-							Y = py ~= y and py or nil,
-							I = point.i and point.i ~= 0 and point.i * scale or nil,
-							J = point.j and point.j ~= 0 and point.j * scale or nil,
+							D = D,
+							X = (verbose or px ~= x) and px or nil,
+							Y = (verbose or py ~= y) and py or nil,
+							I = point.i and (verbose or point.i ~= 0) and point.i * scale or nil,
+							J = point.j and (verbose or point.j ~= 0) and point.j * scale or nil,
 						}, image.format))
 						x,y = px,py
 					end
