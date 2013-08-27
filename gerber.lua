@@ -465,6 +465,7 @@ function _M.load(file_path)
 				layer_name = nil
 				table.insert(layers, layer)
 			elseif tp=='MO' then
+				assert(not unit, "gerber files with mixtures of units not supported")
 				assert(scales[block.value], "unsupported unit "..tostring(block.value))
 				unit = block.value
 			elseif tp=='IJ' then
@@ -567,8 +568,10 @@ function _M.load(file_path)
 			elseif block.G==3 then
 				interpolation = 'counterclockwise'
 			elseif block.G==70 then
+				assert(not unit, "gerber files with mixtures of units not supported")
 				unit = 'IN'
 			elseif block.G==71 then
+				assert(not unit, "gerber files with mixtures of units not supported")
 				unit = 'MM'
 			elseif block.G==74 then
 				quadrant = 'single'
@@ -595,6 +598,7 @@ function _M.load(file_path)
 	local image = {
 		file_path = file_path,
 		format = format,
+		unit = unit,
 		layers = layers,
 	}
 	
@@ -705,22 +709,8 @@ function _M.save(image, file_path)
 --	local movement = nil
 	local quadrants = { single=74, multi=75 }
 	local region = false
-	local unit,quadrant,aperture,path
-	
-	for _,layer in ipairs(image.layers) do
-		for _,path in ipairs(layer) do
-			if not unit then
-				unit = path.unit
-			end
-			assert(path.unit == unit)
-			if path.aperture then
-				assert(path.aperture.unit == unit)
-				if path.aperture.macro then
-					assert(path.aperture.macro.unit == unit)
-				end
-			end
-		end
-	end
+	local quadrant,aperture,path
+	local unit = image.unit
 	assert(scales[unit])
 	
 --	table.insert(data, _M.blocks.directive{G=75})
