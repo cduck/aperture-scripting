@@ -212,6 +212,13 @@ local function load_macro(data, unit)
 	}
 end
 
+local function save_macro(macro)
+	local name = assert(macro.name)
+	local script = assert(macro.script)
+	assert(#script==1 and script[1].type=='primitive', "only macros with 1 primitive are supported")
+	return _M.blocks.macro(name, script)
+end
+
 ------------------------------------------------------------------------------
 
 local built_in_shapes = {
@@ -324,6 +331,15 @@ local function load_aperture(data, macros, unit)
 		parameters = parameters,
 		path = path,
 	}
+end
+
+local function save_aperture(aperture)
+	local shape = aperture.shape
+	if not shape then
+		shape = assert(aperture.macro).name
+	end
+	local block = _M.blocks.aperture(aperture.name, shape, aperture.parameters)
+	return block
 end
 
 ------------------------------------------------------------------------------
@@ -725,10 +741,10 @@ function _M.save(image, file_path)
 --	end
 	
 	for _,macro in ipairs(macro_order) do
-		table.insert(data, macro)
+		table.insert(data, save_macro(macro))
 	end
 	for _,aperture in ipairs(aperture_order) do
-		table.insert(data, aperture)
+		table.insert(data, save_aperture(aperture))
 	end
 	
 	for _,layer in ipairs(image.layers) do

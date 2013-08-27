@@ -209,18 +209,19 @@ end
 function _M.macro(name, script)
 	local macro = setmetatable({type='macro'}, macro_mt)
 	macro.name = name
-	macro.script = {}
-	for _,block in ipairs(script) do
-		local instruction = load_macro_instruction(block)
-		table.insert(macro.script, instruction)
-	end
+	macro.script = script
 	return macro
 end
 
 local function load_macro(block, script)
 	local name = block:match('^AM(.*)$')
 	assert(name and name:match('^[A-Z]'))
-	return _M.macro(name, script)
+	local instructions = {}
+	for _,block in ipairs(script) do
+		local instruction = load_macro_instruction(block)
+		table.insert(instructions, instruction)
+	end
+	return _M.macro(name, instructions)
 end
 
 ------------------------------------------------------------------------------
