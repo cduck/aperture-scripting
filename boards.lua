@@ -256,10 +256,7 @@ local function load_image(path, type)
 		if outline then
 			print("outline found")
 			image.outline = outline
-			table.remove(image.layers[ilayer], ipath)
-			if #image.layers[ilayer] == 0 then
-				table.remove(image.layers, ilayer)
-			end
+			image.layers[ilayer][ipath].outline = true
 		end
 	end
 	return image
@@ -272,19 +269,6 @@ local function save_image(image, path, type)
 	else
 		return gerber.save(image, path)
 	end
-	--[[
-	if not ignore_outline[type] then
-		local outline,ilayer,ipath = find_outline(image)
-		if outline then
-			print("outline found")
-			image.outline = outline
-			table.remove(image.layers[ilayer], ipath)
-			if #image.layers[ilayer] == 0 then
-				table.remove(image.layers, ilayer)
-			end
-		end
-	end
-	--]]
 end
 
 ------------------------------------------------------------------------------
