@@ -402,7 +402,7 @@ function _M.load(file_path)
 				layer_name = nil
 				table.insert(layers, layer)
 			elseif tp=='MO' then
-				assert(not unit, "gerber files with mixtures of units not supported")
+				assert(not unit or unit==block.value, "gerber files with mixtures of units not supported")
 				assert(scales[block.value], "unsupported unit "..tostring(block.value))
 				unit = block.value
 			elseif tp=='IJ' then
@@ -508,10 +508,10 @@ function _M.load(file_path)
 			elseif block.G==3 then
 				interpolation = 'counterclockwise'
 			elseif block.G==70 then
-				assert(not unit, "gerber files with mixtures of units not supported")
+				assert(not unit or unit=='IN', "gerber files with mixtures of units not supported")
 				unit = 'IN'
 			elseif block.G==71 then
-				assert(not unit, "gerber files with mixtures of units not supported")
+				assert(not unit or unit=='MM', "gerber files with mixtures of units not supported")
 				unit = 'MM'
 			elseif block.G==74 then
 				quadrant = 'single'
