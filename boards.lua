@@ -414,31 +414,6 @@ function _M.load(path, options)
 		return nil,"board is empty"
 	end
 	
-	-- compute special outline hash
-	local outline_name = {}
-	for type,image in pairs(images) do
-		if image.outline then
-			table.insert(outline_name, hashes[type])
-		end
-	end
-	table.sort(outline_name)
-	outline_name = table.concat(outline_name, ":")
-	if outline_name == "" then
-		local l = board.extents.left
-		local r = board.extents.right
-		local t = board.extents.top
-		local b = board.extents.bottom
-		outline_name = "l="..l..":r="..r..":t="..t..":b="..b
-	end
-	if board.hashes.milling then
-		outline_name = outline_name..":m="..board.hashes.milling
-	end
-	if board.hashes.drill then
-		outline_name = outline_name..":d="..board.hashes.drill
-	end
-	local outline_hash = crypto.evp.digest('md5', outline_name):lower()
-	board.outline_hash = outline_hash
-	
 	return board
 end
 
