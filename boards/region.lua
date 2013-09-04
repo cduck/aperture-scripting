@@ -1,6 +1,8 @@
 local _MT = {}
 local _M = setmetatable({}, _MT)
 
+local math = require 'math'
+
 local default_region = {
 	left = math.huge,
 	right = -math.huge,
