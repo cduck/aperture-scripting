@@ -11,8 +11,10 @@ test-check:
 
 .PHONY:test-copy
 test-copy:
+	@rm -rf test/copy.grb
 	grbcopy test/example2.grb test/copy.grb
 	diff -durN test/copy.grb.expected test/copy.grb
+#	@rm -rf test/copy.drl
 #	drlcopy test/example.drl test/copy.drl
 #	diff -durN test/copy.drl.expected test/copy.drl
 	# copy a board
