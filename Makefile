@@ -2,7 +2,7 @@
 export LUA_PATH=./?.lua;;
 
 .PHONY:test
-test:test-check test-copy test-merge test-misc
+test:test-check test-copy test-offset test-merge test-misc
 
 .PHONY:test-check
 test-check:
@@ -25,6 +25,19 @@ test-copy:
 	@mkdir test/simple.copy2
 	brdcopy test/simple.copy/simple test/simple.copy2/simple
 	diff -durN test/simple.copy.expected test/simple.copy2
+
+.PHONY:test-offset
+test-offset:
+	# null offset, should be a copy
+	@rm -rf test/simple.offset-0-0
+	@mkdir test/simple.offset-0-0
+	brdoffset test/simple/simple 0 0 test/simple.offset-0-0/simple
+	diff -durN test/simple.copy.expected test/simple.offset-0-0
+	# move one inch to the right
+	@rm -rf test/simple.offset-1in-0
+	@mkdir test/simple.offset-1in-0
+	brdoffset test/simple/simple 25.4 0 test/simple.offset-1in-0/simple
+	diff -durN test/simple.offset-1in-0.expected test/simple.offset-1in-0
 
 .PHONY:test-merge
 test-merge:

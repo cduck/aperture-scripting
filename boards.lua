@@ -365,7 +365,7 @@ local function offset_extents(extents, dx, dy)
 	copy.right = extents.right + dx
 	copy.bottom = extents.bottom + dy
 	copy.top = extents.top + dy
-	return copy
+	return region(copy)
 end
 
 local function offset_point(point, dx, dy)
@@ -379,7 +379,9 @@ local function offset_point(point, dx, dy)
 end
 
 local function offset_path(path, dx, dy)
-	local copy = {}
+	local copy = {
+		unit = path.unit,
+	}
 	copy.aperture = path.aperture
 	for i,point in ipairs(path) do
 		copy[i] = offset_point(point, dx, dy)
@@ -388,7 +390,9 @@ local function offset_path(path, dx, dy)
 end
 
 local function offset_layer(layer, dx, dy)
-	local copy = {}
+	local copy = {
+		polarity = layer.polarity,
+	}
 	for i,path in ipairs(layer) do
 		copy[i] = offset_path(path, dx, dy)
 	end
@@ -398,16 +402,24 @@ end
 local function offset_image(image, dx, dy)
 	local copy = {
 		file_path = nil,
-		extents = {},
+		name = image.name,
+		format = {},
+		unit = image.unit,
 		layers = {},
 	}
 	
+	-- copy format
+	for k,v in pairs(image.format) do
+		copy.format[k] = v
+	end
+	
 	-- move extents
 	copy.extents = offset_extents(image.extents, dx, dy)
+	copy.center_extents = offset_extents(image.center_extents, dx, dy)
 	
 	-- move layers
 	for i,layer in ipairs(image.layers) do
-		copy.layers[i] = offset_layer(layer, dw, dy)
+		copy.layers[i] = offset_layer(layer, dx, dy)
 	end
 	
 	return copy
@@ -415,8 +427,14 @@ end
 
 local function offset_board(board, dx, dy)
 	local copy = {
+		extensions = {},
 		images = {},
 	}
+	
+	-- copy extensions
+	for type,extension in pairs(board.extensions) do
+		copy.extensions[type] = extension
+	end
 	
 	-- move extents
 	copy.extents = offset_extents(board.extents, dx, dy)

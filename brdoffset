@@ -1,0 +1,13 @@
+local boards = require 'boards'
+
+local input,dx,dy,output = ...
+dx = assert(tonumber(dx), "invalid dx")
+dy = assert(tonumber(dy), "invalid dy")
+
+local data = assert(boards.load(input))
+
+local copy = boards.offset(data, dx, dy)
+
+boards.save(copy, output)
+
+-- vi: ft=lua

@@ -3,5 +3,7 @@ test/copy.drl
 test/copy.grb
 test/simple.copy
 test/simple.copy2
+test/simple.offset-0-0
+test/simple.offset-1in-0
 test/merged.drl
 test/merged.grb
