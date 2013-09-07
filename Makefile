@@ -17,7 +17,7 @@ test-copy:test/simple.copy
 #	diff -durN test/copy.drl.expected test/copy.drl
 	@rm -rf test/simple.copy/simple
 	brdcopy test/simple/simple test/simple.copy/simple
-	diff -durN test/simple.expected test/simple.copy
+	diff -durN test/simple.copy.expected test/simple.copy
 
 test/simple.copy:
 	mkdir test/simple.copy
