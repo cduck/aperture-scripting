@@ -727,14 +727,16 @@ function _M.save(image, file_path, verbose)
 							end
 						end
 						local px,py = point.x * scale,point.y * scale
-						table.insert(data, _M.blocks.directive({
-							G = G,
-							D = D,
-							X = (verbose or px ~= x) and px or nil,
-							Y = (verbose or py ~= y) and py or nil,
-							I = point.i and (verbose or point.i ~= 0) and point.i * scale or nil,
-							J = point.j and (verbose or point.j ~= 0) and point.j * scale or nil,
-						}, image.format))
+						if D ~= 2 or x ~= px or y ~= py then -- don't move to the current pos
+							table.insert(data, _M.blocks.directive({
+								G = G,
+								D = D,
+								X = (verbose or px ~= x) and px or nil,
+								Y = (verbose or py ~= y) and py or nil,
+								I = point.i and (verbose or point.i ~= 0) and point.i * scale or nil,
+								J = point.j and (verbose or point.j ~= 0) and point.j * scale or nil,
+							}, image.format))
+						end
 						x,y = px,py
 					end
 				end
