@@ -1,5 +1,6 @@
 syntax: glob
 test/copy.drl
 test/copy.grb
+test/simple.copy
 test/merged.drl
 test/merged.grb
