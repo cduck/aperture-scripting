@@ -211,7 +211,7 @@ local function load_macro(data, unit)
 end
 
 local function save_macro(macro)
-	local name = assert(macro.name)
+	local name = assert(macro.save_name)
 	local script = assert(macro.script)
 	assert(#script==1 and script[1].type=='primitive', "only macros with 1 primitive are supported")
 	return _M.blocks.macro(name, script)
@@ -249,13 +249,14 @@ local function load_aperture(data, macros, unit)
 end
 
 local function save_aperture(aperture)
+	local name = assert(aperture.save_name)
 	local shape
 	if aperture.macro then
 		shape = aperture.macro.name
 	else
 		shape = assert(reverse_gerber_shapes[aperture.shape])
 	end
-	return _M.blocks.aperture(aperture.name, shape, aperture.parameters)
+	return _M.blocks.aperture(name, shape, aperture.parameters)
 end
 
 ------------------------------------------------------------------------------
@@ -636,9 +637,27 @@ function _M.save(image, file_path, verbose)
 		macro.save_name = name
 	end
 	
-	-- generate aperture names and fix shape names
+	-- generate unique aperture names
+	local aperture_names = {}
+	local aperture_conflicts = {}
 	for i,aperture in ipairs(aperture_order) do
-		aperture.dcode = 10 + i - 1
+		local name = aperture.name
+		if aperture_names[name] then
+			table.insert(aperture_conflicts, aperture)
+		else
+			aperture_names[name] = aperture
+			aperture.save_name = name
+		end
+	end
+	for _,aperture in ipairs(aperture_conflicts) do
+		for name=10,2^31 do
+			if not aperture_names[name] then
+				aperture_names[name] = aperture
+				aperture.save_name = name
+				break
+			end
+		end
+		assert(aperture.save_name, "could not assign a unique name to aperture")
 	end
 	
 	-- assemble a block array
@@ -684,7 +703,7 @@ function _M.save(image, file_path, verbose)
 			if path.aperture then
 				if path.aperture ~= aperture then
 					aperture = path.aperture
-					table.insert(data, _M.blocks.directive{D=aperture.dcode})
+					table.insert(data, _M.blocks.directive{D=aperture.save_name})
 				end
 			else
 				-- start region
@@ -757,7 +776,7 @@ function _M.save(image, file_path, verbose)
 	end
 	-- clear aperture names
 	for _,aperture in ipairs(aperture_order) do
-		aperture.dcode = nil
+		aperture.save_name = nil
 	end
 	
 	return success,err
