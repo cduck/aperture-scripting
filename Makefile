@@ -10,17 +10,21 @@ test-check:
 	brdcheck test/simple/simple
 
 .PHONY:test-copy
-test-copy:test/simple.copy
+test-copy:
 	grbcopy test/example2.grb test/copy.grb
 	diff -durN test/copy.grb.expected test/copy.grb
 #	drlcopy test/example.drl test/copy.drl
 #	diff -durN test/copy.drl.expected test/copy.drl
-	@rm -rf test/simple.copy/simple
+	# copy a board
+	@rm -rf test/simple.copy
+	@mkdir test/simple.copy
 	brdcopy test/simple/simple test/simple.copy/simple
 	diff -durN test/simple.copy.expected test/simple.copy
-
-test/simple.copy:
-	mkdir test/simple.copy
+	# copy a copy of a board
+	@rm -rf test/simple.copy2
+	@mkdir test/simple.copy2
+	brdcopy test/simple.copy/simple test/simple.copy2/simple
+	diff -durN test/simple.copy.expected test/simple.copy2
 
 .PHONY:test-merge
 test-merge:
