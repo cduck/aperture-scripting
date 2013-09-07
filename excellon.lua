@@ -12,6 +12,8 @@ local scales = {
 	MM = 1,
 }
 
+------------------------------------------------------------------------------
+
 local function load_tool(data, unit)
 	local tcode = data.tcode
 	local d = data.parameters.C
@@ -24,6 +26,15 @@ local function load_tool(data, unit)
 	}
 end
 
+local function save_tool(aperture)
+	local name = assert(aperture.save_name)
+	assert(aperture.shape == 'circle', "only circle apertures are supported")
+	local parameters = { 'C', C = aperture.parameters[1] }
+	return _M.blocks.tool(name, parameters)
+end
+
+------------------------------------------------------------------------------
+
 function _M.load(file_path)
 	local data = _M.blocks.load(file_path)
 	
@@ -33,6 +44,7 @@ function _M.load(file_path)
 	local layers = {layer}
 	local unit,tool
 	local x,y = 0,0
+	local format = data.format
 	for _,header in ipairs(data.headers) do
 		local th = header.type or type(header)
 		if th=='tool' then
@@ -80,10 +92,7 @@ function _M.load(file_path)
 				if block.Y then
 					y = block.Y * scale
 				end
-				table.insert(layer, {
-					aperture = tool,
-					{ x = x, y = y },
-				})
+				table.insert(layer, {aperture=tool, unit=unit, {x=x, y=y}})
 			else
 				error("unsupported directive ("..tostring(block)..")")
 			end
@@ -94,6 +103,7 @@ function _M.load(file_path)
 	
 	local image = {
 		file_path = file_path,
+		format = format,
 		unit = unit,
 		layers = layers,
 	}
@@ -103,9 +113,94 @@ end
 
 function _M.save(image, file_path)
 	assert(#image.layers == 1)
+	
+	-- list apertures
+	local apertures = {}
+	local aperture_order = {}
+	for _,layer in ipairs(image.layers) do
+		for _,path in ipairs(layer) do
+			assert(#path == 1, "path has several points")
+			local aperture = path.aperture
+			assert(aperture, "path has no aperture")
+			if aperture and not apertures[aperture] then
+				assert(aperture.shape == 'circle', "aperture is not a circle")
+				apertures[aperture] = true
+				table.insert(aperture_order, aperture)
+			end
+		end
+	end
+	
+	-- generate unique aperture names
+	local aperture_names = {}
+	local aperture_conflicts = {}
+	for i,aperture in ipairs(aperture_order) do
+		local name = aperture.name
+		if aperture_names[name] then
+			table.insert(aperture_conflicts, aperture)
+		else
+			aperture_names[name] = aperture
+			aperture.save_name = name
+		end
+	end
+	for _,aperture in ipairs(aperture_conflicts) do
+		for name=10,2^31 do
+			if not aperture_names[name] then
+				aperture_names[name] = aperture
+				aperture.save_name = name
+				break
+			end
+		end
+		assert(aperture.save_name, "could not assign a unique name to aperture")
+	end
+	
+	-- assemble a block array
 	local data = {headers={}}
---	data.headers
-	return _M.blocks.save(data, file_path)
+	
+	local unit,tool
+	local x,y = 0,0
+	local unit = image.unit
+	assert(scales[unit])
+	
+	if unit == 'IN' then
+		table.insert(data.headers, 'M72')
+	else
+		error("unsupported unit")
+	end
+	
+	for _,aperture in ipairs(aperture_order) do
+		table.insert(data.headers, save_tool(aperture))
+	end
+	
+	for _,layer in ipairs(image.layers) do
+		for _,path in ipairs(layer) do
+			if path.aperture ~= tool then
+				tool = path.aperture
+				table.insert(data, _M.blocks.directive{T=tool.save_name})
+			end
+			local scale = 1 / scales[path.unit]
+			local flash = path[1]
+			local px,py = flash.x * scale,flash.y * scale
+			table.insert(data, _M.blocks.directive({
+				D = 3,
+				-- :TODO: check if Excellon allow for modal coordinates
+			--	X = (verbose or px ~= x) and px or nil,
+			--	Y = (verbose or py ~= y) and py or nil,
+				X = px,
+				Y = py,
+			}, image.format))
+			x,y = px,py
+		end
+	end
+	table.insert(data, _M.blocks.directive{M=30})
+	
+	local success,err = _M.blocks.save(data, file_path)
+	
+	-- clear aperture names
+	for _,aperture in ipairs(aperture_order) do
+		aperture.save_name = nil
+	end
+	
+	return success,err
 end
 
 ------------------------------------------------------------------------------

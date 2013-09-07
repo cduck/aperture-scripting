@@ -56,17 +56,28 @@ function directive_mt:__tostring()
 	return save_directive(self)
 end
 
-local function load_directive(block, format)
+function _M.directive(data, format)
 	local directive = setmetatable({type='directive'}, directive_mt)
+	if data.X or data.Y then
+		directive.format = assert(format)
+	end
+	for k,v in pairs(data) do
+		directive[k] = v
+	end
+	return directive
+end
+
+local function load_directive(block, format)
+	local data = {}
 	for letter,number in block:gmatch('(%a)([0-9+-]+)') do
 		if letter:match('[XY]') then
-			directive.format = assert(format)
-			directive[letter] = gerber.load_number(number, format)
+			data[letter] = gerber.load_number(number, assert(format))
 		else
 			assert(number:match('^%d%d%d?$'))
-			directive[letter] = tonumber(number)
+			data[letter] = tonumber(number)
 		end
 	end
+	local directive = _M.directive(data, format)
 	local short,long = tostring(directive),save_directive(directive, true)
 	assert(block == short or block == long, "block '"..block.."' has been converted to '"..short.."' or '"..long.."'")
 	return directive
@@ -81,7 +92,7 @@ function _M.load(filename)
 
 	local data = { headers = {}, tools = {} }
 	-- :FIXME: find out how excellon files declare their format
-	local format = { integer = 2, decimal = 4, zeroes = 'L' }
+	data.format = { integer = 2, decimal = 4, zeroes = 'L' }
 	local header = nil
 	for block in content:gmatch('[^\n]+') do
 		if header then
@@ -94,16 +105,16 @@ function _M.load(filename)
 					table.insert(data.headers, tool)
 				elseif block:match('^;FILE_FORMAT=') then
 					local i,d = block:match('^;FILE_FORMAT=(%d+):(%d+)$')
-					format.integer = tonumber(i)
-					format.decimal = tonumber(d)
+					data.format.integer = tonumber(i)
+					data.format.decimal = tonumber(d)
 					table.insert(data.headers, load_header(block))
 				elseif block=='INCH,LZ' or block=='INCH,TZ' or block=='METRIC,LZ' or block=='METRIC,TZ' then
 					local unit,zeroes = block:match('^(.*),(.*)$')
 					assert(unit=='INCH', "metric Excellon files are not yet supported")
 					if zeroes == 'LZ' then -- header is what is present
-						format.zeroes = 'T' -- format is what we omit
+						data.format.zeroes = 'T' -- format is what we omit
 					elseif zeroes == 'TZ' then
-						format.zeroes = 'L'
+						data.format.zeroes = 'L'
 					end
 					table.insert(data.headers, load_header(block))
 				else
@@ -117,7 +128,7 @@ function _M.load(filename)
 			elseif block=='M48' then
 				header = true
 			elseif block:match('^[MXYT]') then
-				table.insert(data, load_directive(block, format))
+				table.insert(data, load_directive(block, data.format))
 			else
 				table.insert(data, block)
 			end
