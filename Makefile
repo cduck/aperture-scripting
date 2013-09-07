@@ -1,4 +1,6 @@
 
+export LUA_PATH=./?.lua;;
+
 .PHONY:test
 test:test-check test-copy test-merge test-misc
 
