@@ -347,7 +347,6 @@ function _M.save(board, path)
 	if pathlib.type(path) ~= 'path' then
 		path = pathlib.split(path)
 	end
---	print("not saving board to '"..tostring(path).."'")
 	for type,image in pairs(board.images) do
 		local extension = assert(board.extensions[type])
 		local path = path.dir / (path.file..'.'..extension)
