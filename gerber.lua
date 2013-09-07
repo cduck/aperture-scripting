@@ -695,6 +695,7 @@ function _M.save(image, file_path, verbose)
 	end
 	
 	for _,layer in ipairs(image.layers) do
+		assert(layer.polarity, "layer has no polarity")
 		table.insert(data, _M.blocks.parameter('LP', layer.polarity))
 		if layer.name then
 			table.insert(data, _M.blocks.parameter('LN', layer.name))
