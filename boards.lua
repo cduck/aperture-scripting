@@ -233,6 +233,11 @@ function _M.load(path, options)
 	
 	local board = {}
 	
+	-- single file special case
+	if type(path)=='string' and lfs.attributes(path, 'mode') then
+		path = { path }
+	end
+	
 	-- locate files
 	local paths = {}
 	local extensions = {}
@@ -248,8 +253,6 @@ function _M.load(path, options)
 				print("cannot guess type of file "..tostring(path))
 			end
 		end
-	elseif lfs.attributes(path, 'mode') then
-		paths.top_copper = pathlib.split(path)
 	else
 		path = pathlib.split(path)
 		for file in lfs.dir(path.dir) do
