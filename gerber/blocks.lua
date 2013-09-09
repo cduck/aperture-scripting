@@ -373,7 +373,7 @@ local function load_directive(block, format)
 		end
 		directive = _M.directive(data, format)
 	end
-	assert(block == tostring(directive) or block == save_directive(directive, true), "block '"..block.."' has been converted to '"..tostring(directive).."'")
+--	assert(block == tostring(directive) or block == save_directive(directive, true), "block '"..block.."' has been converted to '"..tostring(directive).."'")
 	return directive
 end
 
