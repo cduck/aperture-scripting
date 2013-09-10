@@ -143,7 +143,7 @@ function _M.save(image, file_path)
 		end
 	end
 	for _,aperture in ipairs(aperture_conflicts) do
-		for name=10,2^31 do
+		for name=1,99 do -- be conservative here, for now
 			if not aperture_names[name] then
 				aperture_names[name] = aperture
 				aperture.save_name = name
