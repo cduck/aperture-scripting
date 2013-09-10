@@ -47,6 +47,11 @@ test-merge:
 #	diff -durN test/merged.grb.expected test/merged.grb
 #	drlmerge -offset +0+0 test/example.drl -offset +10+0 test/example.drl test/merged.drl
 #	diff -durN test/merged.drl.expected test/merged.drl
+	# move one inch to the right
+	@rm -rf test/simple.merge-a
+	@mkdir test/simple.merge-a
+	brdmerge -offset +0+0 test/simple/simple -offset +25.4+0 test/simple/simple test/simple.merge-a/simple
+	diff -durN test/simple.merge-a.expected test/simple.merge-a
 
 .PHONY:test-misc
 test-misc:

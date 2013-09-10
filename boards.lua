@@ -455,6 +455,124 @@ end
 
 ------------------------------------------------------------------------------
 
+local function copy_path(path)
+	return offset_path(path, 0, 0)
+end
+
+local function copy_layer(layer)
+	return offset_layer(layer, 0, 0)
+end
+
+local function copy_image(image)
+	return offset_image(image, 0, 0)
+end
+
+------------------------------------------------------------------------------
+
+local function merge_layers(layer_a, layer_b)
+	assert(layer_a.polarity == layer_b.polarity, "layer polarity mismatch")
+	local merged = {
+		polarity = layer_a.polarity,
+	}
+	for i,path in ipairs(layer_a) do
+		table.insert(merged, copy_path(path))
+	end
+	for i,path in ipairs(layer_b) do
+		table.insert(merged, copy_path(path))
+	end
+	return merged
+end
+
+local function merge_images(image_a, image_b)
+	assert(image_a.unit == image_b.unit, "image unit mismatch")
+	local merged = {
+		file_path = nil,
+		name = nil,
+		format = {},
+		unit = image_a.unit,
+		layers = {},
+	}
+	
+	-- merge names
+	if image_a.name or image_b.name then
+		merged.name = (image_a.name or '<unknown>')..' merged with '..(image_b.name or '<unknown>')
+	end
+	
+	-- copy format (and check that they are identical
+	for k,v in pairs(image_a.format) do
+		assert(image_b.format[k] == v, "image format mismatch")
+		merged.format[k] = v
+	end
+	for k,v in pairs(image_b.format) do
+		assert(image_a.format[k] == v, "image format mismatch")
+	end
+	
+	-- merge extents
+	merged.extents = image_a.extents + image_b.extents
+	merged.center_extents = image_a.center_extents + image_b.center_extents
+	
+	-- merge layers
+	for i=1,#image_a.layers do
+		local layer_a = image_a.layers[i]
+		local layer_b = image_b.layers[i]
+		if layer_b then
+			merged.layers[i] = merge_layers(layer_a, layer_b)
+		else
+			merged.layers[i] = copy_layer(layer_a)
+		end
+	end
+	for i=#image_a.layers+1,#image_b.layers do
+		merged.layers[i] = copy_layer(#image_b.layers[i])
+	end
+	
+	return merged
+end
+
+local function merge_boards(board_a, board_b)
+	local merged = {
+		extensions = {},
+		images = {},
+	}
+	
+	-- merge extensions
+	for type,extension in pairs(board_a.extensions) do
+		merged.extensions[type] = extension
+	end
+	for type,extension in pairs(board_b.extensions) do
+		-- prefer extensions from A in case of conflict
+		if not merged.extensions[type] then
+			merged.extensions[type] = extension
+		end
+	end
+	
+	-- merge extents
+	merged.extents = board_a.extents + board_b.extents
+	
+	-- merge images
+	for type,image_a in pairs(board_a.images) do
+		local image_b = board_b.images[type]
+		if image_b then
+			merged.images[type] = merge_images(image_a, image_b)
+		else
+			merged.images[type] = copy_image(image_a)
+		end
+	end
+	for type,image_b in pairs(board_b.images) do
+		local image_a = board_a.images[type]
+		if not image_a then
+			merged.images[type] = copy_image(image_b)
+		end
+	end
+	
+	return merged
+end
+
+function _M.merge(board_a, board_b)
+	return merge_boards(board_a, board_b)
+end
+
+------------------------------------------------------------------------------
+
 function _M.panelize(options, layout)
 	local panel = {}
 	panel.extents = {
