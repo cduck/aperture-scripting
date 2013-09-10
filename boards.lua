@@ -573,6 +573,77 @@ end
 
 ------------------------------------------------------------------------------
 
+local function copy(v)
+	local t = type(v)
+	if t=='nil' or t=='number' or t=='string' then
+		return v
+	elseif t=='table' then
+		local v2 = {}
+		for k,v in pairs(v) do
+			v2[copy(k)] = copy(v)
+		end
+		return setmetatable(v2, getmetatable(v))
+	else
+		error("uncopyable type "..t)
+	end
+end
+
+function _M.decouple_apertures(board)
+	-- decouple the apertures and macros
+	for _,image in pairs(board.images) do
+		for _,layer in ipairs(image.layers) do
+			for _,path in ipairs(layer) do
+				path.aperture = copy(path.aperture)
+			end
+		end
+	end
+end
+
+function _M.merge_apertures(board)
+	for _,image in pairs(board.images) do
+		-- list apertures
+		local apertures = {}
+		local aperture_order = {}
+		for _,layer in ipairs(image.layers) do
+			for _,path in ipairs(layer) do
+				local aperture = path.aperture
+				local s = dump.tostring(aperture)
+				if apertures[s] then
+					aperture = apertures[s]
+					path.aperture = aperture
+				else
+					apertures[s] = aperture
+					table.insert(aperture_order, aperture)
+				end
+				local path2 = {}
+				path2.unit = path.unit
+				path2.aperture = aperture
+				for _,point in ipairs(path) do
+					table.insert(path2, point)
+				end
+			end
+		end
+		
+		-- list macros
+		local macros = {}
+		local macro_order = {}
+		for _,aperture in ipairs(aperture_order) do
+			local macro = aperture.macro
+			if macro then
+				local s = dump.tostring(macro)
+				if macros[s] then
+					aperture.macro = macros[s]
+				else
+					macros[s] = macro
+					table.insert(macro_order, macro)
+				end
+			end
+		end
+	end
+end
+
+------------------------------------------------------------------------------
+
 function _M.panelize(options, layout)
 	local panel = {}
 	panel.extents = {

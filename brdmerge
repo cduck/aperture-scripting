@@ -41,6 +41,9 @@ for i=2,#files do
 	merged = boards.merge(merged, files[i].board)
 end
 
+-- merge apertures
+boards.merge_apertures(merged)
+
 -- save output file
 assert(boards.save(merged, output))
 
