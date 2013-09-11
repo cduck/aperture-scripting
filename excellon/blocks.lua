@@ -111,7 +111,6 @@ function _M.load(filename)
 					table.insert(data.headers, load_header(block))
 				elseif block=='INCH,LZ' or block=='INCH,TZ' or block=='METRIC,LZ' or block=='METRIC,TZ' then
 					local unit,zeroes = block:match('^(.*),(.*)$')
-					assert(unit=='INCH', "metric Excellon files are not yet supported")
 					if zeroes == 'LZ' then -- header is what is present
 						data.format.zeroes = 'T' -- format is what we omit
 					elseif zeroes == 'TZ' then

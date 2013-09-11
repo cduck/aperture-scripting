@@ -57,9 +57,12 @@ function _M.load(file_path)
 				unit = 'IN'
 			elseif header:match('^;') then
 				-- ignore
-			elseif header=='INCH,LZ' then
+			elseif header=='INCH,LZ' or header=='INCH,TZ' then
 				assert(not unit or unit=='IN', "excellon files with mixtures of units not supported")
 				unit = 'IN'
+			elseif header=='METRIC,LZ' or header=='METRIC,TZ' then
+				assert(not unit or unit=='MM', "excellon files with mixtures of units not supported")
+				unit = 'MM'
 			else
 				error("unsupported header "..header)
 			end
