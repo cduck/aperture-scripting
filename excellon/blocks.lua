@@ -72,9 +72,10 @@ local function load_directive(block, format)
 	for letter,number in block:gmatch('(%a)([0-9+-]+)') do
 		if letter:match('[XY]') then
 			data[letter] = gerber.load_number(number, assert(format))
-		else
-			assert(number:match('^%d%d%d?$'))
+		elseif number:match('^%d+$') then
 			data[letter] = tonumber(number)
+		else
+			error("unexpected number '"..number.."'")
 		end
 	end
 	local directive = _M.directive(data, format)
