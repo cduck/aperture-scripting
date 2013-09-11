@@ -79,8 +79,8 @@ local function load_directive(block, format)
 		end
 	end
 	local directive = _M.directive(data, format)
-	local short,long = tostring(directive),save_directive(directive, true)
-	assert(block == short or block == long, "block '"..block.."' has been converted to '"..short.."' or '"..long.."'")
+--	local short,long = tostring(directive),save_directive(directive, true)
+--	assert(block == short or block == long, "block '"..block.."' has been converted to '"..short.."' or '"..long.."'")
 	return directive
 end
 
