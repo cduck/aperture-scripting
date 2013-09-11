@@ -63,6 +63,8 @@ function _M.load(file_path)
 			elseif header=='METRIC,LZ' or header=='METRIC,TZ' then
 				assert(not unit or unit=='MM', "excellon files with mixtures of units not supported")
 				unit = 'MM'
+			elseif header=='FMAT,1' or header=='FMAT,2' then
+				-- ignore (though we should parse differently depending on format)
 			else
 				error("unsupported header "..header)
 			end
