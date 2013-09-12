@@ -583,7 +583,7 @@ function _M.save(image, file_path, verbose)
 	local aperture_conflicts = {}
 	for i,aperture in ipairs(aperture_order) do
 		local name = aperture.name
-		if aperture_names[name] then
+		if not name or aperture_names[name] then
 			table.insert(aperture_conflicts, aperture)
 		else
 			aperture_names[name] = aperture
