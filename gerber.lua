@@ -621,12 +621,6 @@ function _M.save(image, file_path, verbose)
 --	table.insert(data, _M.blocks.directive{G=70})
 	table.insert(data, _M.blocks.format(image.format.zeroes, image.format.integer, image.format.decimal))
 	table.insert(data, _M.blocks.parameter('MO', unit))
---	for _,block in pairs(image.parameters) do
---		table.insert(data, block)
---	end
---	for _,block in pairs(image.image) do
---		table.insert(data, block)
---	end
 	
 	for _,macro in ipairs(macro_order) do
 		table.insert(data, save_macro(macro))

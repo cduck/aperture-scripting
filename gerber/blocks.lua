@@ -35,23 +35,6 @@ local layer_polarities = {
 
 ------------------------------------------------------------------------------
 
-local parameter_scopes = {
-	AS = 'directive',
-	FS = 'directive',
-	MI = 'directive',
-	MO = 'directive',
-	OF = 'directive',
-	SF = 'directive',
-	IN = 'image',
-	IP = 'image',
-	IR = 'image',
-	IJ = 'image',
-	LN = 'layer',
-	LP = 'layer',
-	SR = 'layer',
-	KO = 'layer',
-}
-
 local parameter_mt = {}
 
 function parameter_mt:__tostring()
@@ -60,7 +43,6 @@ end
 
 function _M.parameter(name, value)
 	local parameter = setmetatable({type='parameter'}, parameter_mt)
-	parameter.scope = assert(parameter_scopes[name], "unknown parameter "..name)
 	parameter.name = name
 	parameter.value = value
 	return parameter
@@ -398,7 +380,7 @@ function _M.load(filename)
 	assert(file:close())
 	content = content:gsub('([%%*])%s*', '%1')
 	
-	local data = { parameters = {}, image = {}, macros = {}, apertures = {} }
+	local data = { macros = {}, apertures = {} }
 	
 	-- directives may appear before the first parameter
 	local directives = content:match('^([^%%]*)%%')
@@ -437,13 +419,6 @@ function _M.load(filename)
 				table.insert(data, macro)
 			else
 				local parameter = load_parameter(block)
-				if parameter.scope == 'directive' then
-					assert(data.parameters[parameter.name] == nil)
-					data.parameters[parameter.name] = parameter
-				elseif parameter.scope == 'image' then
-					assert(data.image[parameter.name] == nil)
-					data.image[parameter.name] = parameter
-				end
 				table.insert(data, parameter)
 			end
 			i = i + 1

@@ -43,8 +43,6 @@ test-offset:
 
 .PHONY:test-merge
 test-merge:
-#	grbmerge -offset +0+0 test/example2.grb -offset +10+0 test/example2.grb test/merged.grb
-#	diff -durN test/merged.grb.expected test/merged.grb
 #	drlmerge -offset +0+0 test/example.drl -offset +10+0 test/example.drl test/merged.drl
 #	diff -durN test/merged.drl.expected test/merged.drl
 	# move one inch to the right
