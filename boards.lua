@@ -453,6 +453,23 @@ function _M.offset(board, dx, dy)
 	return offset_board(board, dx, dy)
 end
 
+local function offset_side(side, dz)
+	local copy = {}
+	for i,z in ipairs(side) do
+		copy[i] = z + dz
+	end
+	return copy
+end
+
+local function offset_panel(panel, dx, dy)
+	local copy = offset_board(panel, dx, dy)
+	copy.left = offset_side(panel.left, dy)
+	copy.right = offset_side(panel.right, dy)
+	copy.bottom = offset_side(panel.bottom, dx)
+	copy.top = offset_side(panel.top, dx)
+	return copy
+end
+
 ------------------------------------------------------------------------------
 
 local function copy_path(path)
@@ -467,10 +484,18 @@ local function copy_image(image)
 	return offset_image(image, 0, 0)
 end
 
+local function copy_board(board)
+	return offset_board(board, 0, 0)
+end
+
+local function copy_side(side)
+	return offset_side(side, 0)
+end
+
 ------------------------------------------------------------------------------
 
 local function merge_layers(layer_a, layer_b)
-	assert(layer_a.polarity == layer_b.polarity, "layer polarity mismatch")
+	assert(layer_a.polarity == layer_b.polarity, "layer polarity mismatch ("..tostring(layer_a.polarity).." vs. "..tostring(layer_b.polarity)..")")
 	local merged = {
 		polarity = layer_a.polarity,
 	}
@@ -500,7 +525,7 @@ local function merge_images(image_a, image_b)
 	
 	-- copy format (and check that they are identical
 	for k,v in pairs(image_a.format) do
-		assert(image_b.format[k] == v, "image format mismatch")
+		assert(image_b.format[k] == v, "image format mismatch (field "..tostring(k)..": "..tostring(v)..' vs. '..tostring(image_b.format[k])..")")
 		merged.format[k] = v
 	end
 	for k,v in pairs(image_b.format) do
@@ -569,6 +594,33 @@ end
 
 function _M.merge(board_a, board_b)
 	return merge_boards(board_a, board_b)
+end
+
+local function merge_sides(side_a, side_b)
+	local merged = {}
+	for _,z in ipairs(side_a) do
+		table.insert(merged, z)
+	end
+	for _,z in ipairs(side_b) do
+		table.insert(merged, z)
+	end
+	return merged
+end
+
+local function merge_panels(panel_a, panel_b, vertical)
+	local merged = merge_boards(panel_a, panel_b)
+	if vertical then
+		merged.left = merge_sides(panel_a.left, panel_b.left)
+		merged.right = merge_sides(panel_a.right, panel_b.right)
+		merged.bottom = copy_side(panel_a.bottom)
+		merged.top = copy_side(panel_b.top)
+	else
+		merged.left = copy_side(panel_a.left)
+		merged.right = copy_side(panel_b.right)
+		merged.bottom = merge_sides(panel_a.bottom, panel_b.bottom)
+		merged.top = merge_sides(panel_a.top, panel_b.top)
+	end
+	return merged
 end
 
 ------------------------------------------------------------------------------
@@ -644,15 +696,149 @@ end
 
 ------------------------------------------------------------------------------
 
-function _M.panelize(options, layout)
-	local panel = {}
-	panel.extents = {
-		left = math.huge,
-		right = -math.huge,
-		bottom = math.huge,
-		top = -math.huge,
+local function empty_image()
+	return {
+		format = { integer = 2, decimal = 4, zeroes = 'L' },
+		unit = 'IN',
+		extents = region(),
+		center_extents = region(),
+		layers = { { polarity = 'dark' } },
 	}
-	panel.images = {}
+end
+
+function _M.empty_board(width, height)
+	return {
+		images = {
+			milling = empty_image(),
+			drill = empty_image(),
+		},
+		extensions = {
+			milling = 'gml',
+			drill = 'drd',
+		},
+		extents = region{
+			left = 0, right = width,
+			bottom = 0, top = height,
+		},
+	}
+end
+
+local function board_to_panel(board)
+	local panel = copy_board(board)
+	panel.left = { board.extents.bottom, board.extents.top }
+	panel.right = { board.extents.bottom, board.extents.top }
+	panel.bottom = { board.extents.left, board.extents.right }
+	panel.top = { board.extents.left, board.extents.right }
+	-- panels need milling and drill images
+	if not panel.images.milling then
+		panel.images.milling = empty_image()
+		panel.extensions.milling = 'gml'
+	end
+	if not panel.images.drill then
+		panel.images.drill = empty_image()
+		panel.extensions.drill = 'drd'
+	end
+	return panel
+end
+
+local function draw_path(image, aperture, ...)
+	local path = {
+		aperture = aperture,
+		unit = image.unit,
+	}
+	for i=1,select('#', ...),2 do
+		local x,y = select(i, ...)
+		table.insert(path, { x = x, y = y })
+	end
+	table.insert(image.layers[#image.layers], path)
+end
+
+function _M.panelize(layout, options, vertical)
+	if #layout == 0 then
+		-- this is not a layout but a board
+		return board_to_panel(layout)
+	end
+	
+	-- panelize subpanels
+	assert(#layout >= 1)
+	local subpanels = {}
+	for i=1,#layout do
+		-- panelize sublayout
+		local child = _M.panelize(layout[i], options, not vertical)
+		subpanels[i] = child
+		-- discard the outline
+		child.images.outline = nil
+	end
+	
+	-- prepare routing and tab-separation drills
+	-- :FIXME: for some reason the diameter needs to be scaled here, this is wrong
+	local mill = { unit = select(2, next(subpanels[1].images)).unit, shape = 'circle', parameters = { options.spacing / 25.4 } }
+	local drill = { unit = select(2, next(subpanels[1].images)).unit, shape = 'circle', parameters = { 0.5 / 25.4 } }
+	
+	-- assemble the panel
+	local left,bottom = 0,0
+	local panel
+	for _,subpanel in ipairs(subpanels) do
+		local dx = left - subpanel.extents.left
+		local dy = bottom - subpanel.extents.bottom
+		if not panel then
+			panel = offset_panel(subpanel, dx, dy)
+		else
+			-- draw cut lines and break tabs
+			-- see http://blogs.mentor.com/tom-hausherr/blog/2011/06/23/pcb-design-perfection-starts-in-the-cad-library-part-19/
+			if vertical then
+				for i=1,#panel.top,2 do
+					local a,b = panel.top[i],panel.top[i+1]
+					local z1 = a - options.spacing / 2
+					local z2 = (a + b) / 2 - 2.5 - options.spacing / 2
+					local z3 = (a + b) / 2 + 2.5 + options.spacing / 2
+					local z4 = b + options.spacing / 2
+					local w = bottom - options.spacing / 2
+					-- a half-line before the tab and a half-line after
+					draw_path(panel.images.milling, mill, z1, w, z2, w)
+					draw_path(panel.images.milling, mill, z3, w, z4, w)
+					-- drill holes to make the tabs easy to break
+					for z=-2,2 do
+						draw_path(panel.images.drill, drill, (a + b) / 2 + z, w - options.spacing / 2)
+						draw_path(panel.images.drill, drill, (a + b) / 2 + z, w + options.spacing / 2)
+					end
+				end
+			else
+				for i=1,#panel.right,2 do
+					local a,b = panel.right[i],panel.right[i+1]
+					local z1 = a - options.spacing / 2
+					local z2 = (a + b) / 2 - 2.5 - options.spacing / 2
+					local z3 = (a + b) / 2 + 2.5 + options.spacing / 2
+					local z4 = b + options.spacing / 2
+					local w = left - options.spacing / 2
+					draw_path(panel.images.milling, mill, w, z1, w, z2)
+					draw_path(panel.images.milling, mill, w, z3, w, z4)
+					for z=-2,2 do
+						draw_path(panel.images.drill, drill, w - options.spacing / 2, (a + b) / 2 + z)
+						draw_path(panel.images.drill, drill, w + options.spacing / 2, (a + b) / 2 + z)
+					end
+				end
+			end
+			panel = merge_panels(panel, offset_panel(subpanel, dx, dy))
+		end
+		if vertical then
+			bottom = panel.extents.top + options.spacing
+		else
+			left = panel.extents.right + options.spacing
+		end
+	end
+	
+	-- regenerate an outline
+	local outline = copy_image(panel.images.milling)
+	outline.layers = {{polarity = 'dark'}}
+	draw_path(outline, { unit = outline.unit, shape = 'circle', parameters = { 0 } },
+		panel.extents.left, panel.extents.bottom,
+		panel.extents.right, panel.extents.bottom,
+		panel.extents.right, panel.extents.top,
+		panel.extents.left, panel.extents.top,
+		panel.extents.left, panel.extents.bottom)
+	panel.images.outline = outline
+	
 	return panel
 end
 
