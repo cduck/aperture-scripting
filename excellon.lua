@@ -40,7 +40,7 @@ function _M.load(file_path)
 	
 	-- parse the data blocks
 	local tools = {}
-	local layer = {}
+	local layer = {polarity='dark'}
 	local layers = {layer}
 	local unit,tool
 	local x,y = 0,0
