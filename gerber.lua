@@ -328,6 +328,43 @@ local function interpolate(path, point)
 	table.insert(path, point)
 end
 
+local ignored_parameter = {
+--	AA = true, -- Aperture Assignment
+--	AF = true, -- Auto Focus
+--	AP = true, -- Aperture Offset
+--	AR = true, -- Aperture Record
+--	AS = true, -- Axis Select
+--	AV = true, -- Aperture Velocity
+--	BD = true, -- Block Delete
+--	BG = true, -- Background Mode
+--	DL = true, -- Dash Line Specification
+	IC = true, -- Input Code
+	ID = true, -- Input Display
+--	IF = true, -- Include File
+--	IO = true, -- Image Offset
+--	IR = true, -- Image Rotation
+--	KO = true, -- KnockOut
+--	LS = true, -- Load Symbol
+--	MI = true, -- Mirror Image
+--	NF = true, -- Sequence Number
+--	NS = true, -- Sequence Number
+--	OP = true, -- Option Stop
+--	PD = true, -- Plotter Destination
+--	PE = true, -- Perspective
+--	PF = true, -- Film Type
+--	PK = true, -- Park
+--	PO = true, -- Pen Offset
+--	RC = true, -- Rotate Symbol
+--	RO = true, -- Rotate Position Data
+--	SC = true, -- Single Step Mode
+--	SF = true, -- Scale Factor
+--	SM = true, -- Symbol Mirroring
+--	SS = true, -- Symbol Scaling
+--	TR = true, -- Translation
+--	VL = true, -- Velocity Limit
+--	WI = true, -- Window Specification
+}
+
 function _M.load(file_path)
 	local data,err = _M.blocks.load(file_path)
 	if not data then return nil,err end
@@ -364,6 +401,7 @@ function _M.load(file_path)
 		elseif tb=='parameter' then
 			local tp = block.name
 			if tp=='OF' then
+				-- offset
 				-- :TODO: implement
 			elseif tp=='IP' then
 				-- image polarity
@@ -400,6 +438,8 @@ function _M.load(file_path)
 			elseif tp=='IN' then
 				-- image name
 				image_name = block.value
+			elseif ignored_parameter[tp] then
+				print("ignored Gerber parameter "..tp.." with value "..tostring(block.value))
 			else
 				error("unsupported parameter "..tp)
 			end
