@@ -75,7 +75,7 @@ local function load_directive(block, format)
 		elseif number:match('^%d+$') then
 			data[letter] = tonumber(number)
 		else
-			error("unexpected number '"..number.."'")
+			error("unexpected number '"..number.."' for field '"..letter.."'")
 		end
 	end
 	local directive = _M.directive(data, format)

@@ -366,9 +366,10 @@ local function load_directive(block, format)
 		for letter,number in block:gmatch('(%a)([0-9+-]+)') do
 			if letter:match('[XYIJ]') then
 				data[letter] = _M.load_number(number, assert(format))
-			else
-				assert(number:match('^%d%d%d?$'))
+			elseif number:match('^%d+$') then
 				data[letter] = tonumber(number)
+			else
+				error("unexpected number '"..number.."' for field '"..letter.."'")
 			end
 		end
 		directive = _M.directive(data, format)
