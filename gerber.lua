@@ -365,6 +365,15 @@ local ignored_parameter = {
 --	WI = true, -- Window Specification
 }
 
+local layer_polarity_names = {
+	D = 'dark',
+	C = 'clear',
+}
+local layer_polarity_codes = {
+	dark = 'D',
+	clear = 'C',
+}
+
 function _M.load(file_path)
 	local data,err = _M.blocks.load(file_path)
 	if not data then return nil,err end
@@ -387,7 +396,11 @@ function _M.load(file_path)
 		local tb = block.type
 		if tb=='format' then
 			assert(not format)
-			format = block
+			format = {
+				integer = block.integer,
+				decimal = block.decimal,
+				zeroes = block.zeroes,
+			}
 		elseif tb=='macro' then
 			-- ignore
 			local name = block.name
@@ -421,7 +434,7 @@ function _M.load(file_path)
 				x,y = 0,0
 			--	assert(block.value == 'D', "layer polarity '"..tostring(block.value).."' not yet supported")
 				layer = {}
-				layer.polarity = block.value
+				layer.polarity = layer_polarity_names[block.value]
 				layer.name = layer_name
 				layer_name = nil
 				table.insert(layers, layer)
@@ -475,7 +488,7 @@ function _M.load(file_path)
 						assert(region or aperture, "no aperture selected while stroking")
 						path = {aperture=not region and aperture or nil, {x=x, y=y}}
 						if not layer then
-							layer = { polarity = 'D' }
+							layer = { polarity = 'dark' }
 							table.insert(layers, layer)
 						end
 						table.insert(layer, path)
@@ -518,7 +531,7 @@ function _M.load(file_path)
 						y = block.Y * scale
 					end
 					if not layer then
-						layer = { polarity = 'D' }
+						layer = { polarity = 'dark' }
 						table.insert(layers, layer)
 					end
 					table.insert(layer, {aperture=aperture, {x=x, y=y}})
@@ -671,7 +684,7 @@ function _M.save(image, file_path, verbose)
 	
 	for _,layer in ipairs(image.layers) do
 		assert(layer.polarity, "layer has no polarity")
-		table.insert(data, _M.blocks.parameter('LP', layer.polarity))
+		table.insert(data, _M.blocks.parameter('LP', layer_polarity_codes[layer.polarity]))
 		if layer.name then
 			table.insert(data, _M.blocks.parameter('LN', layer.name))
 		end
