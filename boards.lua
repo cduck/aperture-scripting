@@ -753,7 +753,61 @@ local function draw_path(image, aperture, ...)
 	table.insert(image.layers[#image.layers], path)
 end
 
+local function cut_tabs(panel, side_a, side_b, position, options, vertical)
+	-- prepare routing and tab-separation drills
+	-- :FIXME: for some reason the diameter needs to be scaled here, this is wrong
+	local mill = { shape = 'circle', parameters = { options.spacing / 25.4 } }
+	local drill = { shape = 'circle', parameters = { options.break_hole_diameter / 25.4 } }
+	
+	-- iterate over sides
+	local a,b = 1,1
+	while a < #side_a and b < #side_b do
+		local a0,a1 = side_a[a],side_a[a+1]
+		local b0,b1 = side_b[b],side_b[b+1]
+		local c0 = math.max(a0, b0)
+		local c1 = math.min(a1, b1)
+		-- :TODO: add multiple tabs on long edges
+		if c1 - c0 > 5 + options.spacing then
+			local c = (c0 + c1) / 2
+			local z1 = c0 - options.spacing / 2
+			local z2 = c - 2.5 - options.spacing / 2
+			local z3 = c + 2.5 + options.spacing / 2
+			local z4 = c1 + options.spacing / 2
+			local w = position
+			-- a half-line before the tab and a half-line after
+			if vertical then
+				draw_path(panel.images.milling, mill, z1, w, z2, w)
+				draw_path(panel.images.milling, mill, z3, w, z4, w)
+			else
+				draw_path(panel.images.milling, mill, w, z1, w, z2)
+				draw_path(panel.images.milling, mill, w, z3, w, z4)
+			end
+			-- drill holes to make the tabs easy to break
+			for z=-2,2 do
+				if vertical then
+					draw_path(panel.images.drill, drill, c + z, w - options.spacing / 2)
+					draw_path(panel.images.drill, drill, c + z, w + options.spacing / 2)
+				else
+					draw_path(panel.images.drill, drill, w - options.spacing / 2, c + z)
+					draw_path(panel.images.drill, drill, w + options.spacing / 2, c + z)
+				end
+			end
+		end
+		if a1 < b1 then
+			a = a + 1
+		else
+			b = b + 1
+		end
+	end
+end
+
 function _M.panelize(layout, options, vertical)
+	if not options.spacing then
+		options.spacing = 2
+	end
+	if not options.break_hole_diameter then
+		options.break_hole_diameter = 0.5
+	end
 	if #layout == 0 then
 		-- this is not a layout but a board
 		return board_to_panel(layout)
@@ -770,11 +824,6 @@ function _M.panelize(layout, options, vertical)
 		child.images.outline = nil
 	end
 	
-	-- prepare routing and tab-separation drills
-	-- :FIXME: for some reason the diameter needs to be scaled here, this is wrong
-	local mill = { unit = select(2, next(subpanels[1].images)).unit, shape = 'circle', parameters = { options.spacing / 25.4 } }
-	local drill = { unit = select(2, next(subpanels[1].images)).unit, shape = 'circle', parameters = { 0.5 / 25.4 } }
-	
 	-- assemble the panel
 	local left,bottom = 0,0
 	local panel
@@ -784,42 +833,15 @@ function _M.panelize(layout, options, vertical)
 		if not panel then
 			panel = offset_panel(subpanel, dx, dy)
 		else
+			local neighbour = offset_panel(subpanel, dx, dy)
 			-- draw cut lines and break tabs
 			-- see http://blogs.mentor.com/tom-hausherr/blog/2011/06/23/pcb-design-perfection-starts-in-the-cad-library-part-19/
 			if vertical then
-				for i=1,#panel.top,2 do
-					local a,b = panel.top[i],panel.top[i+1]
-					local z1 = a - options.spacing / 2
-					local z2 = (a + b) / 2 - 2.5 - options.spacing / 2
-					local z3 = (a + b) / 2 + 2.5 + options.spacing / 2
-					local z4 = b + options.spacing / 2
-					local w = bottom - options.spacing / 2
-					-- a half-line before the tab and a half-line after
-					draw_path(panel.images.milling, mill, z1, w, z2, w)
-					draw_path(panel.images.milling, mill, z3, w, z4, w)
-					-- drill holes to make the tabs easy to break
-					for z=-2,2 do
-						draw_path(panel.images.drill, drill, (a + b) / 2 + z, w - options.spacing / 2)
-						draw_path(panel.images.drill, drill, (a + b) / 2 + z, w + options.spacing / 2)
-					end
-				end
+				cut_tabs(panel, panel.top, neighbour.bottom, bottom - options.spacing / 2, options, vertical)
 			else
-				for i=1,#panel.right,2 do
-					local a,b = panel.right[i],panel.right[i+1]
-					local z1 = a - options.spacing / 2
-					local z2 = (a + b) / 2 - 2.5 - options.spacing / 2
-					local z3 = (a + b) / 2 + 2.5 + options.spacing / 2
-					local z4 = b + options.spacing / 2
-					local w = left - options.spacing / 2
-					draw_path(panel.images.milling, mill, w, z1, w, z2)
-					draw_path(panel.images.milling, mill, w, z3, w, z4)
-					for z=-2,2 do
-						draw_path(panel.images.drill, drill, w - options.spacing / 2, (a + b) / 2 + z)
-						draw_path(panel.images.drill, drill, w + options.spacing / 2, (a + b) / 2 + z)
-					end
-				end
+				cut_tabs(panel, panel.right, neighbour.left, left - options.spacing / 2, options, vertical)
 			end
-			panel = merge_panels(panel, offset_panel(subpanel, dx, dy), vertical)
+			panel = merge_panels(panel, neighbour, vertical)
 		end
 		if vertical then
 			bottom = panel.extents.top + options.spacing
