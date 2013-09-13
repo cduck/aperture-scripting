@@ -472,6 +472,102 @@ end
 
 ------------------------------------------------------------------------------
 
+local function rotate180_extents(extents)
+	local copy = {}
+	copy.left = -extents.right
+	copy.right = -extents.left
+	copy.bottom = -extents.top
+	copy.top = -extents.bottom
+	return region(copy)
+end
+
+local function rotate180_point(point)
+	local copy = {}
+	for k,v in pairs(point) do
+		copy[k] = v
+	end
+	if copy.x then copy.x = -copy.x end
+	if copy.y then copy.y = -copy.y end
+	if copy.i then copy.i = -copy.i end
+	if copy.j then copy.j = -copy.j end
+	return copy
+end
+
+local function rotate180_path(path)
+	local copy = {
+		unit = path.unit,
+	}
+	copy.aperture = path.aperture
+	for i,point in ipairs(path) do
+		copy[i] = rotate180_point(point)
+	end
+	return copy
+end
+
+local function rotate180_layer(layer)
+	local copy = {
+		polarity = layer.polarity,
+	}
+	for i,path in ipairs(layer) do
+		copy[i] = rotate180_path(path)
+	end
+	return copy
+end
+
+local function rotate180_image(image)
+	local copy = {
+		file_path = nil,
+		name = image.name,
+		format = {},
+		unit = image.unit,
+		layers = {},
+	}
+	
+	-- copy format
+	for k,v in pairs(image.format) do
+		copy.format[k] = v
+	end
+	
+	-- move extents
+	copy.extents = rotate180_extents(image.extents)
+	copy.center_extents = rotate180_extents(image.center_extents)
+	
+	-- move layers
+	for i,layer in ipairs(image.layers) do
+		copy.layers[i] = rotate180_layer(layer)
+	end
+	
+	return copy
+end
+
+local function rotate180_board(board)
+	local copy = {
+		extensions = {},
+		images = {},
+	}
+	
+	-- copy extensions
+	for type,extension in pairs(board.extensions) do
+		copy.extensions[type] = extension
+	end
+	
+	-- rotate extents
+	copy.extents = rotate180_extents(board.extents)
+	
+	-- rotate images
+	for type,image in pairs(board.images) do
+		copy.images[type] = rotate180_image(image)
+	end
+	
+	return copy
+end
+
+function _M.rotate180(board)
+	return rotate180_board(board)
+end
+
+------------------------------------------------------------------------------
+
 local function copy_path(path)
 	return offset_path(path, 0, 0)
 end
@@ -711,11 +807,14 @@ function _M.empty_board(width, height)
 		images = {
 			milling = empty_image(),
 			drill = empty_image(),
+			top_paste = empty_image(),
+			bottom_paste = empty_image(),
+			top_copper = empty_image(),
+			bottom_copper = empty_image(),
+			top_soldermask = empty_image(),
+			bottom_soldermask = empty_image(),
 		},
-		extensions = {
-			milling = 'gml',
-			drill = 'drd',
-		},
+		extensions = {},
 		extents = region{
 			left = 0, right = width,
 			bottom = 0, top = height,
@@ -752,6 +851,7 @@ local function draw_path(image, aperture, ...)
 	end
 	table.insert(image.layers[#image.layers], path)
 end
+_M.draw_path = draw_path
 
 local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 	-- prepare routing and tab-separation drills
