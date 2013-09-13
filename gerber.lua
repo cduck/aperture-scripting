@@ -473,7 +473,7 @@ function _M.load(file_path)
 					-- start a path if necessary
 					if not path then
 						assert(region or aperture, "no aperture selected while stroking")
-						path = {aperture=not region and aperture or nil, unit=unit, {x=x, y=y}}
+						path = {aperture=not region and aperture or nil, {x=x, y=y}}
 						if not layer then
 							layer = { polarity = 'D' }
 							table.insert(layers, layer)
@@ -521,7 +521,7 @@ function _M.load(file_path)
 						layer = { polarity = 'D' }
 						table.insert(layers, layer)
 					end
-					table.insert(layer, {aperture=aperture, unit=unit, {x=x, y=y}})
+					table.insert(layer, {aperture=aperture, {x=x, y=y}})
 				elseif block.D then
 					error("unsupported drawing block D"..block.D)
 				else
@@ -685,7 +685,7 @@ function _M.save(image, file_path, verbose)
 				-- start region
 				table.insert(data, _M.blocks.directive{G=36})
 			end
-			local scale = 1 / scales[path.unit]
+			local scale = 1 / scales[unit]
 			if #path == 1 then
 				local flash = path[1]
 				local px,py = flash.x * scale,flash.y * scale

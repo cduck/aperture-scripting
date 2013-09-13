@@ -97,7 +97,7 @@ function _M.load(file_path)
 				if block.Y then
 					y = block.Y * scale
 				end
-				table.insert(layer, {aperture=tool, unit=unit, {x=x, y=y}})
+				table.insert(layer, {aperture=tool, {x=x, y=y}})
 			else
 				error("unsupported directive ("..tostring(block)..")")
 			end
@@ -182,7 +182,7 @@ function _M.save(image, file_path)
 				tool = path.aperture
 				table.insert(data, _M.blocks.directive{T=tool.save_name})
 			end
-			local scale = 1 / scales[path.unit]
+			local scale = 1 / scales[unit]
 			local flash = path[1]
 			local px,py = flash.x * scale,flash.y * scale
 			table.insert(data, _M.blocks.directive({
