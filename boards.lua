@@ -819,7 +819,7 @@ function _M.panelize(layout, options, vertical)
 					end
 				end
 			end
-			panel = merge_panels(panel, offset_panel(subpanel, dx, dy))
+			panel = merge_panels(panel, offset_panel(subpanel, dx, dy), vertical)
 		end
 		if vertical then
 			bottom = panel.extents.top + options.spacing
