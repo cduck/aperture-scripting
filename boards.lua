@@ -794,9 +794,9 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 			end
 		end
 		if a1 < b1 then
-			a = a + 1
+			a = a + 2
 		else
-			b = b + 1
+			b = b + 2
 		end
 	end
 end
