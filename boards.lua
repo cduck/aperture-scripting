@@ -482,6 +482,35 @@ local function rotate180_extents(extents)
 	return region(copy)
 end
 
+local function rotate180_macro(macro)
+	local copy = {
+		name = macro.name,
+		unit = macro.unit,
+		script = macro.script,
+		chunk = macro.chunk,
+	}
+	print("warning: macro rotation not yet implemented, assumed symmetrical")
+	return copy
+end
+
+local function rotate180_aperture(aperture)
+	local copy = {
+		name = aperture.name,
+		unit = aperture.unit,
+		shape = aperture.shape,
+		macro = nil,
+		parameters = {},
+	}
+	if aperture.macro then
+		copy.macro = rotate180_macro(aperture.macro)
+	end
+	print("warning: aperture rotation not yet implemented, assumed symmetrical")
+	for k,v in pairs(aperture.parameters) do
+		copy.parameters[k] = v
+	end
+	return copy
+end
+
 local function rotate180_point(point)
 	local copy = {}
 	for k,v in pairs(point) do
@@ -501,7 +530,7 @@ local function rotate180_path(path)
 	if path.extents then
 		copy.extents = rotate180_extents(path.extents)
 	end
-	copy.aperture = path.aperture
+	copy.aperture = rotate180_aperture(path.aperture)
 	for i,point in ipairs(path) do
 		copy[i] = rotate180_point(point)
 	end
