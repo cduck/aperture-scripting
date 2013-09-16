@@ -72,6 +72,12 @@ function _M.load(file_path)
 			error("unsupported header type "..tostring(header.type))
 		end
 	end
+	if not unit then
+		unit = 'IN'
+		for _,tool in pairs(tools) do
+			tool.unit = unit
+		end
+	end
 	for _,block in ipairs(data) do
 		local tb = block.type
 		if tb=='tool' then
