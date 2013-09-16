@@ -382,6 +382,7 @@ local function offset_path(path, dx, dy)
 	local copy = {
 		unit = path.unit,
 	}
+	copy.extents = offset_extents(path.extents, dx, dy)
 	copy.aperture = path.aperture
 	for i,point in ipairs(path) do
 		copy[i] = offset_point(point, dx, dy)
@@ -495,6 +496,7 @@ local function rotate180_path(path)
 	local copy = {
 		unit = path.unit,
 	}
+	copy.extents = rotate180_extents(path.extents)
 	copy.aperture = path.aperture
 	for i,point in ipairs(path) do
 		copy[i] = rotate180_point(point)
