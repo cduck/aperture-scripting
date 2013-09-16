@@ -572,6 +572,8 @@ function _M.load(file_path)
 			elseif block.G==91 then
 				-- set coordinates to incremental notation
 				error("incremental notation for coordinates is not supported")
+			elseif next(block)=='type' and next(block, 'type')==nil then
+				-- empty block, ignore
 			else
 				error("unsupported directive ("..tostring(block)..")")
 			end
