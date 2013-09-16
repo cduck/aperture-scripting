@@ -127,7 +127,9 @@ function _M.load(filename)
 				-- ignore
 			elseif block=='M48' then
 				header = true
-			elseif block:match('^[MXYT]') then
+			elseif block:match('^T') then
+				table.insert(data, load_tool(block, data.format))
+			elseif block:match('^[MXY]') then
 				table.insert(data, load_directive(block, data.format))
 			else
 				table.insert(data, block)

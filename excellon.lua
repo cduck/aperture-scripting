@@ -74,11 +74,17 @@ function _M.load(file_path)
 	end
 	for _,block in ipairs(data) do
 		local tb = block.type
-		if tb=='directive' then
-			if block.T then
-				assert(not block.X and not block.Y and not block.M)
-				tool = tools[block.T]
-			elseif block.M==72 then
+		if tb=='tool' then
+			local name = assert(block.tcode)
+			assert(not block.X and not block.Y and not block.M)
+			tool = tools[name]
+			if not tool then
+				-- assume it's an inline tool definition
+				tool = load_tool(block, unit)
+				tools[name] = tool
+			end
+		elseif tb=='directive' then
+			if block.M==72 then
 				assert(not unit or unit=='IN', "excellon files with mixtures of units not supported")
 				unit = 'IN'
 			elseif block.M==71 then
