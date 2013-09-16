@@ -131,12 +131,10 @@ local function load_image(path, type)
 	
 	-- collect apertures
 	local apertures = {}
-	image.apertures = {}
 	for _,layer in ipairs(image.layers) do
 		for _,path in ipairs(layer) do
 			local aperture = path.aperture
 			if aperture and not apertures[aperture] then
-				table.insert(image.apertures, aperture)
 				apertures[aperture] = true
 			end
 		end
@@ -148,7 +146,7 @@ local function load_image(path, type)
 	end
 	
 	-- compute extents
-	for _,aperture in ipairs(image.apertures) do
+	for aperture in pairs(apertures) do
 		if not aperture.extents then
 			aperture.extents = region()
 			for	_,point in ipairs(aperture.path) do
