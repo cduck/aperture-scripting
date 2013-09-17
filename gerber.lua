@@ -140,7 +140,7 @@ assert(compile_expression("1.08239X$1")=="1.08239*_VARS[1]")
 local function load_macro(data, unit)
 	local name = data.name
 	local script = data.script
-	assert(#script==1 and script[1].type=='primitive', "only macros with 1 primitive are supported")
+--	assert(#script==1 and script[1].type=='primitive', "only macros with 1 primitive are supported")
 	local source = "local _VARS = {...}\n"
 	for _,instruction in ipairs(script) do
 		if instruction.type=='comment' then
