@@ -7,6 +7,8 @@ local gerber = require 'gerber.blocks'
 
 local tool_mt = {}
 
+_M.decimal_shift = gerber.decimal_shift
+
 function tool_mt:__tostring()
 	local parameters = {}
 	for _,name in ipairs(self.parameters) do

@@ -17,19 +17,22 @@ local unpack = unpack or table.unpack
 
 ------------------------------------------------------------------------------
 
-local scales = {
-	IN = 25.4,
-	MM = 1,
+-- all positions are in picometers
+local aperture_scales = {
+	IN_pm = 25400000000,
+	MM_pm =  1000000000,
+	IN_mm = 25.4,
+	MM_mm =  1,
 }
 
 local circle_steps = 64
 
-local function generate_aperture_path(aperture)
+local function generate_aperture_path(aperture, board_unit)
 	local shape = aperture.shape
 	local macro = aperture.macro
 	local parameters = aperture.parameters
-	local unit = aperture.unit
-	local scale = assert(scales[unit], "unsupported aperture unit "..tostring(unit))
+	local scale_name = aperture.unit..'_'..board_unit
+	local scale = assert(aperture_scales[scale_name], "unsupported aperture scale "..scale_name)
 	
 	local path
 	local path
@@ -120,13 +123,37 @@ end
 
 ------------------------------------------------------------------------------
 
-local function load_image(path, type)
+local path_scales = {
+	pm = 1,
+	mm = 1e-9,
+}
+
+local function load_image(path, type, unit)
 	print("loading "..tostring(path))
 	local image
 	if type=='drill' then
 		image = excellon.load(path)
 	else
 		image = gerber.load(path)
+	end
+	
+	-- scale the path data (sub-modules output picometers)
+	local scale = assert(path_scales[unit], "unsupported board output unit "..tostring(unit))
+	if scale ~= 1 then
+		print("scaling image")
+		local k = 0
+		for _,layer in ipairs(image.layers) do
+			for _,path in ipairs(layer) do
+				for _,point in ipairs(path) do
+					point.x = point.x * scale
+					point.y = point.y * scale
+					if point.i then point.i = point.i * scale end
+					if point.j then point.j = point.j * scale end
+					k = k + 1
+				end
+			end
+		end
+		print("converted "..k.." points")
 	end
 	
 	-- collect apertures
@@ -142,7 +169,7 @@ local function load_image(path, type)
 	
 	-- generate aperture paths
 	for aperture in pairs(apertures) do
-		generate_aperture_path(aperture)
+		generate_aperture_path(aperture, unit)
 	end
 	
 	-- compute extents
@@ -175,8 +202,9 @@ local function load_image(path, type)
 	return image
 end
 
-local function save_image(image, path, type)
+local function save_image(image, path, type, unit)
 	print("saving "..tostring(path))
+	assert(unit == 'pm', "saving scaled images is not yet supported")
 	if type=='drill' then
 		return excellon.save(image, path)
 	else
@@ -230,6 +258,8 @@ function _M.load(path, options)
 	if not options then options = {} end
 	
 	local board = {}
+	
+	board.unit = options.unit or 'pm'
 	
 	-- single file special case
 	if type(path)=='string' and lfs.attributes(path, 'mode') then
@@ -301,7 +331,7 @@ function _M.load(path, options)
 			image = load_metadata(board.cache_directory, hash, path, type)
 		end
 		if not image then
-			image = load_image(path, type)
+			image = load_image(path, type, board.unit)
 			if board.cache_directory then
 				save_metadata(board.cache_directory, hash, image)
 			end
@@ -334,7 +364,7 @@ function _M.load_layers(board, image)
 	if not image.layers then
 		local metadata = image
 		assert(metadata.path)
-		local image = load_image(metadata.path, metadata.type)
+		local image = load_image(metadata.path, metadata.type, board.unit)
 		if board.cache_directory then
 			save_metadata(board.cache_directory, metadata.hash, image)
 		end
@@ -351,7 +381,7 @@ function _M.save(board, path)
 	for type,image in pairs(board.images) do
 		local extension = assert(board.extensions[type])
 		local path = path.dir / (path.file..'.'..extension)
-		local success,msg = save_image(image, path, type)
+		local success,msg = save_image(image, path, type, board.unit)
 		if not success then return nil,msg end
 	end
 	return true
@@ -430,6 +460,7 @@ end
 
 local function offset_board(board, dx, dy)
 	local copy = {
+		unit = board.unit,
 		extensions = {},
 		images = {},
 	}
@@ -683,7 +714,9 @@ local function merge_images(image_a, image_b)
 end
 
 local function merge_boards(board_a, board_b)
+	assert(board_a.unit == board_b.unit, "board unit mismatch")
 	local merged = {
+		unit = board_a.unit,
 		extensions = {},
 		images = {},
 	}
@@ -825,6 +858,62 @@ end
 
 ------------------------------------------------------------------------------
 
+local function value_to_pm(value, unit)
+	assert(value:match('^(%d+)%.(%d+)$') or value:match('^(%d+)$'), "malformed number '"..value.."'")
+	if unit=='pm' then
+		return assert(tonumber(value), "number conversion failed")
+	elseif unit=='mm' then
+		-- simply move the dot 9 digits to the right
+		local i,dm = value:match('^(%d+)%.(%d+)$')
+		local dp
+		if i and dm then
+			if #dm < 9 then
+				dp = '0'
+				dm = dm..string.rep('0', 9 - #dm)
+			else
+				dp = dm:sub(10)
+				dm = dm:sub(1, 9)
+			end
+		else
+			i = value
+			dp = '0'
+			dm = '000000000'
+		end
+		return assert(tonumber(i..dm..'.'..dp), "number conversion failed")
+	elseif unit=='in' then
+		-- move the dot 8 digits to the right, and multiply by 254
+		local i,dm = value:match('^(%d+)%.(%d+)$')
+		local dp
+		if i and dm then
+			if #dm < 8 then
+				dp = '0'
+				dm = dm..string.rep('0', 8 - #dm)
+			else
+				dp = dm:sub(9)
+				dm = dm:sub(1, 8)
+			end
+		else
+			i = value
+			dp = '0'
+			dm = '00000000'
+		end
+		return 254 * assert(tonumber(i..dm..'.'..dp), "number conversion failed")
+	else
+		error("invalid unit '"..tostring(unit).."'")
+	end
+end
+
+function _M.parse_distances(str)
+	local numbers = {}
+	for sign,value,unit in str:gmatch('([+-]?)([%d.]+)(%w*)') do
+		if unit=='' then unit = 'mm' end
+		local n = value_to_pm(value, unit)
+		if sign=='-' then n = -n end
+		table.insert(numbers, n)
+	end
+	return table.unpack(numbers)
+end
+
 local function empty_image()
 	return {
 		format = { integer = 2, decimal = 4, zeroes = 'L' },
@@ -837,6 +926,7 @@ end
 
 function _M.empty_board(width, height)
 	return {
+		unit = 'pm',
 		images = {
 			milling = empty_image(),
 			drill = empty_image(),

@@ -7,10 +7,14 @@ _M.blocks = require 'gerber.blocks'
 
 ------------------------------------------------------------------------------
 
+-- all positions in picometers (1e-12 meters)
 local scales = {
-	IN = 25.4,
-	MM = 1,
+	IN = 25400000000 / 10 ^ _M.blocks.decimal_shift,
+	MM =  1000000000 / 10 ^ _M.blocks.decimal_shift,
 }
+for unit,scale in pairs(scales) do
+	assert(math.floor(scale)==scale)
+end
 
 local circle_steps = 64
 --local circle_steps = 360
@@ -700,10 +704,10 @@ function _M.save(image, file_path, verbose)
 				-- start region
 				table.insert(data, _M.blocks.directive{G=36})
 			end
-			local scale = 1 / scales[unit]
+			local scale = scales[unit]
 			if #path == 1 then
 				local flash = path[1]
-				local px,py = flash.x * scale,flash.y * scale
+				local px,py = flash.x / scale,flash.y / scale
 				table.insert(data, _M.blocks.directive({
 					D = 3,
 					X = (verbose or px ~= x) and px or nil,
@@ -736,15 +740,15 @@ function _M.save(image, file_path, verbose)
 								table.insert(data, _M.blocks.directive{G=interpolations[interpolation]})
 							end
 						end
-						local px,py = point.x * scale,point.y * scale
+						local px,py = point.x / scale,point.y / scale
 						if D ~= 2 or x ~= px or y ~= py then -- don't move to the current pos
 							table.insert(data, _M.blocks.directive({
 								G = G,
 								D = D,
 								X = (verbose or px ~= x) and px or nil,
 								Y = (verbose or py ~= y) and py or nil,
-								I = point.i and (verbose or point.i ~= 0) and point.i * scale or nil,
-								J = point.j and (verbose or point.j ~= 0) and point.j * scale or nil,
+								I = point.i and (verbose or point.i ~= 0) and point.i / scale or nil,
+								J = point.j and (verbose or point.j ~= 0) and point.j / scale or nil,
 							}, image.format))
 						end
 						x,y = px,py

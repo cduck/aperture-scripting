@@ -38,7 +38,7 @@ test-offset:
 	# move one inch to the right
 	@rm -rf test/simple.offset-1in-0
 	@mkdir test/simple.offset-1in-0
-	brdoffset test/simple/simple 25.4 0 test/simple.offset-1in-0/simple
+	brdoffset test/simple/simple 1in 0 test/simple.offset-1in-0/simple
 	diff -durN test/simple.offset-1in-0.expected test/simple.offset-1in-0
 
 .PHONY:test-merge

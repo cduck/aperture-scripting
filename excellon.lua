@@ -7,10 +7,14 @@ _M.blocks = require 'excellon.blocks'
 
 ------------------------------------------------------------------------------
 
+-- all positions in picometers (1e-12 meters)
 local scales = {
-	IN = 25.4,
-	MM = 1,
+	IN = 25400000000 / 10 ^ _M.blocks.decimal_shift,
+	MM =  1000000000 / 10 ^ _M.blocks.decimal_shift,
 }
+for unit,scale in pairs(scales) do
+	assert(math.floor(scale)==scale)
+end
 
 ------------------------------------------------------------------------------
 

@@ -11,12 +11,8 @@ while i <= #args do
 	if arg=='-offset' then
 		i = i + 1
 		assert(i <= #args, "-offset need an argument")
-		local sx,x,sy,y = args[i]:match('^([+-])([%d.]+)([+-])([%d.]+)$')
-		assert(sx and x and sy and y)
-		x,y = tonumber(x),tonumber(y)
-		assert(x and y)
-		if sx=='-' then x = -x end
-		if sy=='-' then y = -y end
+		assert(args[i]:match('^([+-])([%d.]+)(%w*)([+-])([%d.]+)(%w*)$'), "invalid offset")
+		local x,y = boards.parse_distances(args[i])
 		offset = { x = x, y = y }
 	elseif arg:match('^%-') then
 		error("unknown option "..arg)

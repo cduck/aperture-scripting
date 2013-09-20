@@ -1,8 +1,10 @@
 local boards = require 'boards'
 
 local input,dx,dy,output = ...
-dx = assert(tonumber(dx), "invalid dx")
-dy = assert(tonumber(dy), "invalid dy")
+assert(dx:match('^([+-]?)([%d.]+)(%w*)$'), "invalid dx")
+assert(dy:match('^([+-]?)([%d.]+)(%w*)$'), "invalid dy")
+dx = boards.parse_distances(dx)
+dy = boards.parse_distances(dy)
 
 local data = assert(boards.load(input))
 

@@ -267,6 +267,11 @@ end
 
 ------------------------------------------------------------------------------
 
+-- numbers are scaled by a factor of 10^8 to keep as many digits as possible in the integer part of lua numbers
+-- also 1e-8 inches and 1e-8 millimeters are both an integer number of picometers
+local decimal_shift = 8
+_M.decimal_shift = decimal_shift
+
 local function load_number(s, format)
 	local sign,base = s:match('^([+-]?)(%d+)$')
 	assert(sign and base)
@@ -280,7 +285,7 @@ local function load_number(s, format)
 			error("unexpected number "..s.." in format "..tostring(format))
 		end
 	end
-	return (sign=='-' and -1 or 1) * tonumber(base) / 10 ^ format.decimal
+	return (sign=='-' and -1 or 1) * tonumber(base) * 10 ^ (decimal_shift - format.decimal)
 end
 _M.load_number = load_number
 
@@ -292,13 +297,13 @@ local function save_number(n, format, long)
 	else
 		sign = ''
 	end
-	n = n * 10 ^ format.decimal
-	local i = math.floor(n + 0.5)
---	assert(math.abs(n - i) < 1e-8, "rounding error")
-	n = i
-	local size = format.integer + format.decimal
-	n = string.format('%0'..size..'d', n)
-	assert(#n == size)
+	local d = n % 10 ^ decimal_shift
+	local i = (n - d) / 10 ^ decimal_shift
+	d = d / 10 ^ (decimal_shift - format.decimal)
+	local di = math.floor(d + 0.5)
+	assert(math.abs(d - di) < 1e-8, "rounding error")
+	n = string.format('%0'..format.integer..'d%0'..format.decimal..'d', i, di)
+	assert(#n == format.integer + format.decimal)
 	if not long then
 		if format.zeroes == 'L' then
 			n = n:match('^0*(.*.)$')
