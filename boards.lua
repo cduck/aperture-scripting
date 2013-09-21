@@ -802,26 +802,34 @@ local function copy(v)
 	end
 end
 
-function _M.decouple_apertures(board)
+local function decouple_image_apertures(image)
 	-- decouple the apertures and macros
-	for _,image in pairs(board.images) do
-		for _,layer in ipairs(image.layers) do
-			for _,path in ipairs(layer) do
-				path.aperture = copy(path.aperture)
-			end
+	for _,layer in ipairs(image.layers) do
+		for _,path in ipairs(layer) do
+			path.aperture = copy(path.aperture)
 		end
 	end
 end
 
-function _M.merge_apertures(board)
+local function decouple_board_apertures(board)
 	for _,image in pairs(board.images) do
-		-- list apertures
-		local apertures = {}
-		local aperture_order = {}
-		for _,layer in ipairs(image.layers) do
-			for _,path in ipairs(layer) do
-				local aperture = path.aperture
-				local s = dump.tostring(aperture)
+		decouple_image_apertures(image)
+	end
+end
+
+function _M.decouple_apertures(board)
+	decouple_board_apertures(board)
+end
+
+local function merge_image_apertures(image)
+	-- list apertures
+	local apertures = {}
+	local aperture_order = {}
+	for _,layer in ipairs(image.layers) do
+		for _,path in ipairs(layer) do
+			local aperture = path.aperture
+			if aperture then
+				local s = assert(dump.tostring(aperture))
 				if apertures[s] then
 					aperture = apertures[s]
 					path.aperture = aperture
@@ -831,23 +839,33 @@ function _M.merge_apertures(board)
 				end
 			end
 		end
-		
-		-- list macros
-		local macros = {}
-		local macro_order = {}
-		for _,aperture in ipairs(aperture_order) do
-			local macro = aperture.macro
-			if macro then
-				local s = dump.tostring(macro)
-				if macros[s] then
-					aperture.macro = macros[s]
-				else
-					macros[s] = macro
-					table.insert(macro_order, macro)
-				end
+	end
+	
+	-- list macros
+	local macros = {}
+	local macro_order = {}
+	for _,aperture in ipairs(aperture_order) do
+		local macro = aperture.macro
+		if macro then
+			local s = dump.tostring(macro)
+			if macros[s] then
+				aperture.macro = macros[s]
+			else
+				macros[s] = macro
+				table.insert(macro_order, macro)
 			end
 		end
 	end
+end
+
+local function merge_board_apertures(board)
+	for _,image in pairs(board.images) do
+		merge_image_apertures(image)
+	end
+end
+
+function _M.merge_apertures(board)
+	merge_board_apertures(board)
 end
 
 ------------------------------------------------------------------------------
