@@ -829,12 +829,6 @@ function _M.merge_apertures(board)
 					apertures[s] = aperture
 					table.insert(aperture_order, aperture)
 				end
-				local path2 = {}
-				path2.unit = path.unit
-				path2.aperture = aperture
-				for _,point in ipairs(path) do
-					table.insert(path2, point)
-				end
 			end
 		end
 		
