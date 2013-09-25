@@ -117,6 +117,8 @@ function _M.load(file_path)
 			else
 				error("unsupported directive ("..tostring(block)..")")
 			end
+		elseif type(block)=='string' then
+			error("unsupported block '"..block.."'")
 		else
 			error("unsupported block type "..tostring(block.type))
 		end
