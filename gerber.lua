@@ -417,10 +417,7 @@ function _M.load(file_path)
 			apertures[name] = aperture
 		elseif tb=='parameter' then
 			local tp = block.name
-			if tp=='OF' then
-				-- offset
-				-- :TODO: implement
-			elseif tp=='IP' then
+			if tp=='IP' then
 				-- image polarity
 				assert(block.value=='POS', "unsupported image polarity")
 			elseif tp=='LN' then
@@ -449,16 +446,22 @@ function _M.load(file_path)
 			elseif tp=='IJ' then
 				-- image justify
 				assert(block.value == 'ALBL')
+			elseif tp=='OF' then
+				-- offset
+				assert(block.value == 'A0B0', "unsupported non-null offset (Gerber OF parameter")
+			elseif tp=='SF' then
+				-- scale factor
+				assert(block.value == 'A1B1', "unsupported non-identity scale factor (Gerber SF parameter")
 			elseif tp=='SR' then
 				-- step & repeat
-				assert(block.value == 'X1Y1I0J0')
+				assert(block.value == 'X1Y1I0J0', "unsupported non-trivial step & repeat (Gerber SR parameter)")
 			elseif tp=='IN' then
 				-- image name
 				image_name = block.value
 			elseif ignored_parameter[tp] then
 				print("ignored Gerber parameter "..tp.." with value "..tostring(block.value))
 			else
-				error("unsupported parameter "..tp)
+				error("unsupported parameter "..tp.." with value "..tostring(block.value))
 			end
 		elseif tb=='directive' then
 			if block.D and block.D >= 10 then
