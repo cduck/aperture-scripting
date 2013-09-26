@@ -61,10 +61,10 @@ function _M.load(file_path)
 				unit = 'IN'
 			elseif header:match('^;') then
 				-- ignore
-			elseif header=='INCH,LZ' or header=='INCH,TZ' then
+			elseif header=='INCH' or header=='INCH,LZ' or header=='INCH,TZ' then
 				assert(not unit or unit=='IN', "excellon files with mixtures of units not supported")
 				unit = 'IN'
-			elseif header=='METRIC,LZ' or header=='METRIC,TZ' then
+			elseif header=='METRIC' or header=='METRIC,LZ' or header=='METRIC,TZ' then
 				assert(not unit or unit=='MM', "excellon files with mixtures of units not supported")
 				unit = 'MM'
 			elseif header=='FMAT,1' or header=='FMAT,2' then
