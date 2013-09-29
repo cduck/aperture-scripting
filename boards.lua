@@ -1003,11 +1003,11 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 		local c0 = math.max(a0, b0)
 		local c1 = math.min(a1, b1)
 		-- :TODO: add multiple tabs on long edges
-		if c1 - c0 > 5 + options.spacing then
+		if c1 - c0 > options.break_tab_width + options.spacing then
 			local c = (c0 + c1) / 2
 			local z1 = c0 - options.spacing / 2
-			local z2 = c - 2.5 - options.spacing / 2
-			local z3 = c + 2.5 + options.spacing / 2
+			local z2 = c - (options.break_tab_width + options.spacing) / 2
+			local z3 = c + (options.break_tab_width + options.spacing) / 2
 			local z4 = c1 + options.spacing / 2
 			local w = position
 			-- a half-line before the tab and a half-line after
@@ -1019,7 +1019,10 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 				draw_path(panel.images.milling, mill, w, z3, w, z4)
 			end
 			-- drill holes to make the tabs easy to break
-			for z=-2,2 do
+			local drill_count = math.floor(options.break_tab_width / options.break_hole_diameter / 2)
+			local min
+			for i=0,drill_count-1 do
+				local z = (i - (drill_count-1) / 2) * options.break_hole_diameter * 2
 				if vertical then
 					draw_path(panel.images.drill, drill, c + z, w - options.spacing / 2)
 					draw_path(panel.images.drill, drill, c + z, w + options.spacing / 2)
@@ -1044,6 +1047,9 @@ function _M.panelize(layout, options, vertical)
 	end
 	if not options.break_hole_diameter then
 		options.break_hole_diameter = 0.5*mm
+	end
+	if not options.break_tab_width then
+		options.break_tab_width = 5*mm
 	end
 	if #layout == 0 then
 		-- this is not a layout but a board
