@@ -297,12 +297,12 @@ local function save_number(n, format, long)
 	else
 		sign = ''
 	end
-	local d = n % 10 ^ decimal_shift
-	local i = (n - d) / 10 ^ decimal_shift
-	d = d / 10 ^ (decimal_shift - format.decimal)
-	local di = math.floor(d + 0.5)
-	assert(math.abs(d - di) < 1e-8, "rounding error")
-	n = string.format('%0'..format.integer..'d%0'..format.decimal..'d', i, di)
+	n = n / 10 ^ (decimal_shift - format.decimal)
+	local ni = math.floor(n + 0.5)
+	assert(math.abs(n - ni) < 1e-8, "rounding error")
+	local d = ni % 10 ^ format.decimal
+	local i = (ni - d) / 10 ^ format.decimal
+	n = string.format('%0'..format.integer..'d%0'..format.decimal..'d', i, d)
 	assert(#n == format.integer + format.decimal)
 	if not long then
 		if format.zeroes == 'L' then
