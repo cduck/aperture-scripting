@@ -302,6 +302,7 @@ local function save_number(n, format, long)
 	assert(math.abs(n - ni) < 1e-8, "rounding error")
 	local d = ni % 10 ^ format.decimal
 	local i = (ni - d) / 10 ^ format.decimal
+	assert(i < 10 ^ format.integer, "number is too big for format")
 	n = string.format('%0'..format.integer..'d%0'..format.decimal..'d', i, d)
 	assert(#n == format.integer + format.decimal)
 	if not long then
