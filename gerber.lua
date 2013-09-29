@@ -145,23 +145,26 @@ local function load_macro(data, unit)
 	local name = data.name
 	local script = data.script
 --	assert(#script==1 and script[1].type=='primitive', "only macros with 1 primitive are supported")
-	local source = "local _VARS = {...}\n"
+	local source = {}
+	local function write(s) table.insert(source, s) end
+	write("local _VARS = {...}\n")
 	for _,instruction in ipairs(script) do
 		if instruction.type=='comment' then
 			-- ignore
 		elseif instruction.type=='variable' then
-			source = source.."_VARS['"..instruction.name.."'] = "..compile_expression(instruction.expression).."\n"
+			write("_VARS['"..instruction.name.."'] = "..compile_expression(instruction.expression).."\n")
 		elseif instruction.type=='primitive' then
-			source = source..instruction.shape.."("
+			write(instruction.shape.."(")
 			for i,expression in ipairs(instruction.parameters) do
-				if i > 1 then source = source..", " end
-				source = source..compile_expression(expression)
+				if i > 1 then write(", ") end
+				write(compile_expression(expression))
 			end
-			source = source..")\n"
+			write(")\n")
 		else
 			error("unsupported macro instruction type "..tostring(instruction.type))
 		end
 	end
+	source = table.concat(source)
 --	print("========================================")
 --	print(source)
 --	print("========================================")
