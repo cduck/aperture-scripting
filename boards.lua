@@ -524,7 +524,7 @@ local function rotate180_macro(macro)
 	return copy
 end
 
-local function rotate180_aperture(aperture)
+local function rotate180_aperture(aperture, macros)
 	local copy = {
 		name = aperture.name,
 		unit = aperture.unit,
@@ -533,7 +533,11 @@ local function rotate180_aperture(aperture)
 		parameters = {},
 	}
 	if aperture.macro then
-		copy.macro = rotate180_macro(aperture.macro)
+		copy.macro = macros[aperture.macro]
+		if not copy.macro then
+			copy.macro = rotate180_macro(aperture.macro)
+			macros[aperture.macro] = copy.macro
+		end
 	end
 	print("warning: aperture rotation not yet implemented, assumed symmetrical")
 	for k,v in pairs(aperture.parameters) do
@@ -554,26 +558,32 @@ local function rotate180_point(point)
 	return copy
 end
 
-local function rotate180_path(path)
+local function rotate180_path(path, apertures, macros)
 	local copy = {
 		unit = path.unit,
 	}
 	if path.extents then
 		copy.extents = rotate180_extents(path.extents)
 	end
-	copy.aperture = rotate180_aperture(path.aperture)
+	if path.aperture then
+		copy.aperture = apertures[path.aperture]
+		if not copy.aperture then
+			copy.aperture = rotate180_aperture(path.aperture, macros)
+			apertures[path.aperture] = copy.aperture
+		end
+	end
 	for i,point in ipairs(path) do
 		copy[i] = rotate180_point(point)
 	end
 	return copy
 end
 
-local function rotate180_layer(layer)
+local function rotate180_layer(layer, apertures, macros)
 	local copy = {
 		polarity = layer.polarity,
 	}
 	for i,path in ipairs(layer) do
-		copy[i] = rotate180_path(path)
+		copy[i] = rotate180_path(path, apertures, macros)
 	end
 	return copy
 end
@@ -596,9 +606,13 @@ local function rotate180_image(image)
 	copy.extents = rotate180_extents(image.extents)
 	copy.center_extents = rotate180_extents(image.center_extents)
 	
+	-- apertures and macros are shared by layers and paths, so create an index to avoid duplicating them in the copy
+	local apertures = {}
+	local macros = {}
+	
 	-- move layers
 	for i,layer in ipairs(image.layers) do
-		copy.layers[i] = rotate180_layer(layer)
+		copy.layers[i] = rotate180_layer(layer, apertures, macros)
 	end
 	
 	return copy
