@@ -524,6 +524,12 @@ local function rotate180_macro(macro)
 	return copy
 end
 
+local symmetrical180_shapes = {
+	circle = true,
+	rectangle = true,
+	obround = true,
+}
+
 local function rotate180_aperture(aperture, macros)
 	local copy = {
 		name = aperture.name,
@@ -532,16 +538,30 @@ local function rotate180_aperture(aperture, macros)
 		macro = nil,
 		parameters = {},
 	}
+	-- copy parameters
+	for k,v in pairs(aperture.parameters) do
+		copy.parameters[k] = v
+	end
+	-- adjust parameters
+	assert(not (aperture.shape and aperture.macro), "aperture has a shape and a macro")
 	if aperture.macro then
 		copy.macro = macros[aperture.macro]
 		if not copy.macro then
 			copy.macro = rotate180_macro(aperture.macro)
 			macros[aperture.macro] = copy.macro
 		end
-	end
-	print("warning: aperture rotation not yet implemented, assumed symmetrical")
-	for k,v in pairs(aperture.parameters) do
-		copy.parameters[k] = v
+	elseif symmetrical180_shapes[aperture.shape] then
+		-- keep it that way
+	elseif aperture.shape=='polygon' then
+		local angle = copy.parameters[3] or 0
+		angle = angle + 180
+		if #copy.parameters==3 and angle==0 then
+			copy.parameters[3] = nil
+		else
+			copy.parameters[3] = angle
+		end
+	else
+		error("unsupported aperture shape")
 	end
 	return copy
 end
