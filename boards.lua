@@ -606,6 +606,7 @@ end
 
 local function rotate180_board(board)
 	local copy = {
+		unit = board.unit,
 		extensions = {},
 		images = {},
 	}
