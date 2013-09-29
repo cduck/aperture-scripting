@@ -299,7 +299,7 @@ local function save_number(n, format, long)
 	end
 	n = n / 10 ^ (decimal_shift - format.decimal)
 	local ni = math.floor(n + 0.5)
-	assert(math.abs(n - ni) < 1e-8, "rounding error")
+--	assert(math.abs(n - ni) < 1e-8, "rounding error")
 	local d = ni % 10 ^ format.decimal
 	local i = (ni - d) / 10 ^ format.decimal
 	assert(i < 10 ^ format.integer, "number is too big for format")
