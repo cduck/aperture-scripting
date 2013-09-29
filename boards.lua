@@ -992,8 +992,8 @@ _M.draw_path = draw_path
 local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 	-- prepare routing and tab-separation drills
 	-- :FIXME: for some reason the diameter needs to be scaled here, this is wrong
-	local mill = { shape = 'circle', parameters = { options.spacing / 25.4 } }
-	local drill = { shape = 'circle', parameters = { options.break_hole_diameter / 25.4 } }
+	local mill = { shape = 'circle', parameters = { options.spacing / 25.4 / 1e9 } }
+	local drill = { shape = 'circle', parameters = { options.break_hole_diameter / 25.4 / 1e9 } }
 	
 	-- iterate over sides
 	local a,b = 1,1
@@ -1038,11 +1038,12 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 end
 
 function _M.panelize(layout, options, vertical)
+	local mm = 1e9
 	if not options.spacing then
-		options.spacing = 2
+		options.spacing = 2*mm
 	end
 	if not options.break_hole_diameter then
-		options.break_hole_diameter = 0.5
+		options.break_hole_diameter = 0.5*mm
 	end
 	if #layout == 0 then
 		-- this is not a layout but a board
