@@ -214,22 +214,19 @@ end
 
 ------------------------------------------------------------------------------
 
-local layer_guess = {
-	gtl = 'top_copper',
-	gts = 'top_soldermask',
-	gto = 'top_silkscreen',
-	gtp = 'top_paste',
-	gbl = 'bottom_copper',
-	gbs = 'bottom_soldermask',
-	gbo = 'bottom_silkscreen',
-	gbp = 'bottom_paste',
-	gml = 'milling',
-	gm1 = 'milling',
-	oln = 'outline',
-	out = 'outline',
-	drd = 'drill',
-	txt = 'drill',
-}
+local default_template = { patterns = {
+	top_copper = '%.gtl',
+	top_soldermask = '%.gts',
+	top_silkscreen = '%.gto',
+	top_paste = '%.gtp',
+	bottom_copper = '%.gbl',
+	bottom_soldermask = '%.gbs',
+	bottom_silkscreen = '%.gbo',
+	bottom_paste = '%.gbp',
+	milling = {'%.gml', '%.gm1'},
+	outline = {'%.oln', '%.out'},
+	drill = {'%.drd', '%.txt'},
+} }
 
 local function save_metadata(cache_directory, hash, image)
 	local metadata = {}
@@ -256,6 +253,7 @@ end
 
 function _M.load(path, options)
 	if not options then options = {} end
+	local template = default_template -- make that configurable
 	
 	local board = {}
 	
@@ -269,31 +267,53 @@ function _M.load(path, options)
 	-- locate files
 	local paths = {}
 	local extensions = {}
+	if type(path)~='table' and lfs.attributes(path, 'mode') then
+		path = { path }
+	end
 	if type(path)=='table' then
 		for _,path in ipairs(path) do
 			path = pathlib.split(path)
-			local extension = path.file:match('%.([^.]+)$'):lower()
-			local type = layer_guess[extension]
-			if type then
-				paths[type] = path
-				extensions[type] = extension
-			else
+			local found = false
+			for image,patterns in pairs(template.patterns) do
+				if type(patterns)=='string' then patterns = { patterns } end
+				for _,pattern in ipairs(patterns) do
+					local lpattern = '^'..pattern:gsub('[%%%.()]', {
+						['.'] = '%.',
+						['('] = '%(',
+						[')'] = '%)',
+						['%'] = '(.*)',
+					})..'$'
+					local basename = path.file:lower():match(lpattern)
+					if basename then
+						paths[image] = path
+						extensions[image] = pattern
+						found = true
+						break
+					end
+				end
+				if found then
+					break
+				end
+			end
+			if not found then
 				print("cannot guess type of file "..tostring(path))
 			end
 		end
 	else
 		path = pathlib.split(path)
+		local files = {}
 		for file in lfs.dir(path.dir) do
-			if file:sub(1, #path.file)==path.file then
-				local extension = file:sub(#path.file+1):lower()
-				if extension:sub(1,1)=='.' then extension = extension:sub(2) end
-				local path = path.dir / file
-				local type = layer_guess[extension]
-				if type then
-					paths[type] = path
-					extensions[type] = extension
-				else
-					print("cannot guess type of file "..tostring(path))
+			files[file:lower()] = file
+		end
+		for image,patterns in pairs(template.patterns) do
+			if type(patterns)=='string' then patterns = { patterns } end
+			for _,pattern in ipairs(patterns) do
+				local file = files[pattern:gsub('%%', path.file)]
+				if file then
+					paths[image] = path.dir / file
+					extensions[image] = pattern
+					found = true
+					break
 				end
 			end
 		end
@@ -379,8 +399,8 @@ function _M.save(board, path)
 		path = pathlib.split(path)
 	end
 	for type,image in pairs(board.images) do
-		local extension = assert(board.extensions[type])
-		local path = path.dir / (path.file..'.'..extension)
+		local pattern = assert(board.extensions[type])
+		local path = path.dir / pattern:gsub('%%', path.file)
 		local success,msg = save_image(image, path, type, board.unit)
 		if not success then return nil,msg end
 	end
