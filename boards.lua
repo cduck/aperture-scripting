@@ -7,6 +7,7 @@ local lfs = require 'lfs'
 local pathlib = require 'path'
 local gerber = require 'gerber'
 local excellon = require 'excellon'
+local bom = require 'bom'
 local dump = require 'dump'
 local crypto = require 'crypto'
 local region = require 'boards.region'
@@ -30,6 +31,9 @@ local circle_steps = 64
 local function generate_aperture_path(aperture, board_unit)
 	local shape = aperture.shape
 	local macro = aperture.macro
+	if not shape and not macro then
+		return
+	end
 	local parameters = aperture.parameters
 	local scale_name = aperture.unit..'_'..board_unit
 	local scale = assert(aperture_scales[scale_name], "unsupported aperture scale "..scale_name)
@@ -133,6 +137,8 @@ local function load_image(path, type, unit)
 	local image
 	if type=='drill' then
 		image = excellon.load(path)
+	elseif type=='bom' then
+		image = bom.load(path)
 	else
 		image = gerber.load(path)
 	end
@@ -176,8 +182,10 @@ local function load_image(path, type, unit)
 	for aperture in pairs(apertures) do
 		if not aperture.extents then
 			aperture.extents = region()
-			for	_,point in ipairs(aperture.path) do
-				aperture.extents = aperture.extents + point
+			if aperture.path then
+				for _,point in ipairs(aperture.path) do
+					aperture.extents = aperture.extents + point
+				end
 			end
 		end
 	end
@@ -207,6 +215,8 @@ local function save_image(image, path, type, unit)
 	assert(unit == 'pm', "saving scaled images is not yet supported")
 	if type=='drill' then
 		return excellon.save(image, path)
+	elseif type=='bom' then
+		return bom.save(image, path)
 	else
 		return gerber.save(image, path)
 	end
@@ -226,6 +236,7 @@ local default_template = { patterns = {
 	milling = {'%.gml', '%.gm1'},
 	outline = {'%.oln', '%.out'},
 	drill = {'%.drd', '%.txt'},
+	bom = '%-bom.txt',
 } }
 
 local function save_metadata(cache_directory, hash, image)
@@ -580,6 +591,9 @@ local function rotate180_aperture(aperture, macros)
 		else
 			copy.parameters[3] = angle
 		end
+	elseif aperture.device then
+		-- parts rotation is in the layer data
+		copy.device = true
 	else
 		error("unsupported aperture shape")
 	end
@@ -595,6 +609,7 @@ local function rotate180_point(point)
 	if copy.y then copy.y = -copy.y end
 	if copy.i then copy.i = -copy.i end
 	if copy.j then copy.j = -copy.j end
+	if copy.angle then copy.angle = (copy.angle + 180) % 360 end
 	return copy
 end
 
