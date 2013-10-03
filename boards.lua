@@ -379,6 +379,8 @@ function _M.load(path, options)
 			board.extents = board.extents + image.center_extents
 		elseif (type=='top_silkscreen' or type=='bottom_silkscreen') and not options.silkscreen_extends_board then
 			-- don't extend with these
+		elseif type=='bom' then
+			-- BOM is parts logical centers, unrelated to board actual dimension
 		else
 			board.extents = board.extents + image.extents
 		end
