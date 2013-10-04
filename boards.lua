@@ -336,7 +336,7 @@ function _M.load(path, options)
 		for image,patterns in pairs(template.patterns) do
 			if type(patterns)=='string' then patterns = { patterns } end
 			for _,pattern in ipairs(patterns) do
-				local file = files[pattern:gsub('%%', path.file)]
+				local file = files[pattern:gsub('%%', path.file):lower()]
 				if file then
 					paths[image] = path.dir / file
 					extensions[image] = pattern
