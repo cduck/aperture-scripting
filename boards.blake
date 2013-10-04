@@ -7,6 +7,7 @@ return {
 		{
 			dirs = {source=P'.'},
 			"boards.lua",
+			"bom.lua",
 			"excellon.lua",
 			"gerber.lua",
 		},
