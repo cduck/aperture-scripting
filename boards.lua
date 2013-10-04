@@ -132,13 +132,13 @@ local path_scales = {
 	mm = 1e-9,
 }
 
-local function load_image(path, type, unit)
+local function load_image(path, type, unit, template)
 	print("loading "..tostring(path))
 	local image
 	if type=='drill' then
 		image = excellon.load(path)
 	elseif type=='bom' then
-		image = bom.load(path)
+		image = bom.load(path, template.bom)
 	else
 		image = gerber.load(path)
 	end
@@ -210,13 +210,13 @@ local function load_image(path, type, unit)
 	return image
 end
 
-local function save_image(image, path, type, unit)
+local function save_image(image, path, type, unit, template)
 	print("saving "..tostring(path))
 	assert(unit == 'pm', "saving scaled images is not yet supported")
 	if type=='drill' then
 		return excellon.save(image, path)
 	elseif type=='bom' then
-		return bom.save(image, path)
+		return bom.save(image, path, template.bom)
 	else
 		return gerber.save(image, path)
 	end
@@ -224,20 +224,36 @@ end
 
 ------------------------------------------------------------------------------
 
-local default_template = { patterns = {
-	top_copper = '%.gtl',
-	top_soldermask = '%.gts',
-	top_silkscreen = '%.gto',
-	top_paste = '%.gtp',
-	bottom_copper = '%.gbl',
-	bottom_soldermask = '%.gbs',
-	bottom_silkscreen = '%.gbo',
-	bottom_paste = '%.gbp',
-	milling = {'%.gml', '%.gm1'},
-	outline = {'%.oln', '%.out'},
-	drill = {'%.drd', '%.txt'},
-	bom = '%-bom.txt',
-} }
+local default_template = {
+	patterns = {
+		top_copper = '%.gtl',
+		top_soldermask = '%.gts',
+		top_silkscreen = '%.gto',
+		top_paste = '%.gtp',
+		bottom_copper = '%.gbl',
+		bottom_soldermask = '%.gbs',
+		bottom_silkscreen = '%.gbo',
+		bottom_paste = '%.gbp',
+		milling = {'%.gml', '%.gm1'},
+		outline = {'%.oln', '%.out'},
+		drill = {'%.drd', '%.txt'},
+		bom = '%-bom.txt',
+	},
+	bom = {
+		scale = {
+			dimension = 1e9,
+			angle = 1,
+		},
+		fields = {
+			package = '3D Model',
+			x = 'X',
+			y = 'Y',
+			angle = 'Angle',
+			side = 'Side',
+			name = 'Part',
+		},
+	},
+}
 
 local function save_metadata(cache_directory, hash, image)
 	local metadata = {}
@@ -264,11 +280,12 @@ end
 
 function _M.load(path, options)
 	if not options then options = {} end
-	local template = default_template -- make that configurable
 	
 	local board = {}
 	
 	board.unit = options.unit or 'pm'
+	local template = default_template -- make that configurable
+	board.template = template
 	
 	-- single file special case
 	if type(path)=='string' and lfs.attributes(path, 'mode') then
@@ -362,7 +379,7 @@ function _M.load(path, options)
 			image = load_metadata(board.cache_directory, hash, path, type)
 		end
 		if not image then
-			image = load_image(path, type, board.unit)
+			image = load_image(path, type, board.unit, board.template)
 			if board.cache_directory then
 				save_metadata(board.cache_directory, hash, image)
 			end
@@ -397,7 +414,7 @@ function _M.load_layers(board, image)
 	if not image.layers then
 		local metadata = image
 		assert(metadata.path)
-		local image = load_image(metadata.path, metadata.type, board.unit)
+		local image = load_image(metadata.path, metadata.type, board.unit, board.template)
 		if board.cache_directory then
 			save_metadata(board.cache_directory, metadata.hash, image)
 		end
@@ -414,7 +431,7 @@ function _M.save(board, path)
 	for type,image in pairs(board.images) do
 		local pattern = assert(board.extensions[type])
 		local path = path.dir / pattern:gsub('%%', path.file)
-		local success,msg = save_image(image, path, type, board.unit)
+		local success,msg = save_image(image, path, type, board.unit, board.template)
 		if not success then return nil,msg end
 	end
 	return true
@@ -494,6 +511,7 @@ end
 local function offset_board(board, dx, dy)
 	local copy = {
 		unit = board.unit,
+		template = board.template,
 		extensions = {},
 		images = {},
 	}
@@ -678,6 +696,7 @@ end
 local function rotate180_board(board)
 	local copy = {
 		unit = board.unit,
+		template = board.template,
 		extensions = {},
 		images = {},
 	}
@@ -787,8 +806,10 @@ end
 
 local function merge_boards(board_a, board_b)
 	assert(board_a.unit == board_b.unit, "board unit mismatch")
+	assert(board_a.template == board_b.template, "board template mismatch")
 	local merged = {
 		unit = board_a.unit,
+		template = board_a.template,
 		extensions = {},
 		images = {},
 	}
@@ -1011,6 +1032,7 @@ end
 function _M.empty_board(width, height)
 	return {
 		unit = 'pm',
+		template = default_template,
 		images = {
 			milling = empty_image(),
 			drill = empty_image(),

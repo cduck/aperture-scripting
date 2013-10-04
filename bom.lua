@@ -1,32 +1,6 @@
 local _M = {}
 
---[[
-
-Part
-Value
-Attributes
-Package
-Part Num
-X
-Y
-Angle
-Side
-Mfg Name
-VID
-Mouser Part Num
-DigiKey Part Num
-Description
-Package
-Value
-Tolerance
-Rating
-Min Qty
-
-]]
-
-local mm = 1e9
-
-function _M.load(file_path)
+function _M.load(file_path, template)
 	local name = file_path.file
 	local unit = nil
 	local top = { polarity = 'top' }
@@ -47,24 +21,27 @@ function _M.load(file_path)
 	
 	local field_names = data[1]
 	for i=2,#data do
-		local fields = data[i]
-		local part,pos,device = {},{},{}
-		local section = part
+		local array = data[i]
+		local set = {}
 		for i,field_name in ipairs(field_names) do
-			section[field_name] = fields[i]
-			if field_name=='Part Num' then
-				section = pos
-			elseif field_name=='Side' then
-				section = device
-			end
+			set[field_name] = array[i]
 		end
-		part.x = pos.X * mm
-		part.y = pos.Y * mm
-		part.angle = pos.Angle -- in degrees
+		local package = set[template.fields.package]
+		local part = {}
+		part.name = set[template.fields.name]
+		part.x = set[template.fields.x] * template.scale.dimension
+		part.y = set[template.fields.y] * template.scale.dimension
+		part.angle = set[template.fields.angle] * template.scale.angle
+		local side = set[template.fields.side]
+		for _,field in pairs(template.fields) do
+			set[field] = nil
+		end
+		local device = set
+		device.package = package
 		local layer
-		if pos.Side=='top' then
+		if side=='top' then
 			layer = top
-		elseif pos.Side=='bottom' then
+		elseif side=='bottom' then
 			layer = bottom
 		else
 			error("unexpected Side in BOM: "..tostring(pos.Side))
@@ -89,7 +66,7 @@ function _M.load(file_path)
 	return image
 end
 
-function _M.save(image, file_path)
+function _M.save(image, file_path, template)
 	local file = assert(io.open(file_path, 'wb'))
 	local field_names = image.format
 	assert(#image.layers==2)
@@ -100,30 +77,21 @@ function _M.save(image, file_path)
 			assert(path.aperture and path.aperture.device)
 			local device = path.aperture.parameters
 			local part = path[1]
-			local pos = { Side = layer.polarity }
-			for k,v in pairs(part) do
-				if k=='x' then
-					pos.X = v / mm
-					part[k] = nil
-				elseif k=='y' then
-					pos.Y = v / mm
-					part[k] = nil
-				elseif k=='angle' then
-					pos.Angle = v
-					part[k] = nil
-				end
+			local set = {}
+			for k,v in pairs(device) do
+				set[k] = v
 			end
-			local section = part
-			local fields = {}
+			set[template.fields.package] = device.package
+			set[template.fields.name] = part.name
+			set[template.fields.x] = part.x / template.scale.dimension
+			set[template.fields.y] = part.y / template.scale.dimension
+			set[template.fields.angle] = part.angle / template.scale.angle
+			set[template.fields.side] = layer.polarity
+			local array = {}
 			for i,field_name in ipairs(field_names) do
-				fields[i] = section[field_name]
-				if field_name=='Part Num' then
-					section = pos
-				elseif field_name=='Side' then
-					section = device
-				end
+				array[i] = set[field_name]
 			end
-			assert(file:write(table.concat(fields, '\t')..'\n'))
+			assert(file:write(table.concat(array, '\t')..'\n'))
 		end
 	end
 	assert(file:close())
