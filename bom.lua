@@ -36,6 +36,7 @@ function _M.load(file_path)
 	local file = assert(io.open(file_path, 'rb'))
 	local data = {}
 	for line in file:lines() do
+		line = line:gsub('\r', '')
 		local fields = {}
 		for field in (line..'\t'):gmatch('([^\t]*)\t') do
 			table.insert(fields, field)
