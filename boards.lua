@@ -439,6 +439,77 @@ end
 
 ------------------------------------------------------------------------------
 
+local function find_image_outline(image)
+	-- find path with largest area
+	local amax,lmax,pmax = -math.huge
+	for l,layer in ipairs(image.layers) do
+		for p,path in ipairs(layer) do
+			local width = path.extents.right - path.extents.left
+			local height = path.extents.top - path.extents.bottom
+			local a = width * height
+			if a > amax then
+				amax,lmax,pmax = a,l,p
+			end
+		end
+	end
+	if not lmax or not pmax then return nil end
+	local path = image.layers[lmax][pmax]
+	-- check that the path has the same extents as the image
+	if path.extents.left ~= image.extents.left
+		or path.extents.right ~= image.extents.right
+		or path.extents.bottom ~= image.extents.bottom
+		or path.extents.top ~= image.extents.top then
+		return nil
+	end
+	-- check that the path is long enough to enclose a region
+	if #path < 3 then
+		return nil
+	end
+	-- check that the path is closed
+	if path[1].x ~= path[#path].x or path[1].y ~= path[#path].y then
+		return nil
+	end
+	-- check that path is a line, not a region
+	if not path.aperture then
+		return nil
+	end
+	-- :TODO: check that all other paths are within the outline
+	
+	return path,lmax,pmax
+end
+
+local ignore_outline = {
+	top_soldermask = true,
+	bottom_soldermask = true,
+}
+_M.ignore_outline = ignore_outline
+
+function _M.find_board_outlines(board)
+	local outlines = {}
+	-- gen raw list
+	local max_area = -math.huge
+	for type,image in pairs(board.images) do
+		if not ignore_outline[type] then
+			local path,ilayer,ipath = find_image_outline(image)
+			if path then
+				local area = (path.center_extents.right - path.center_extents.left) * (path.center_extents.top - path.center_extents.bottom)
+				max_area = math.max(max_area, area)
+				outlines[type] = {path=path, ilayer=ilayer, ipath=ipath, area=area}
+			end
+		end
+	end
+	-- filter the list
+	for type,data in pairs(outlines) do
+		-- igore all but the the largest ones
+		if data.area < max_area then
+			outlines[type] = nil
+		end
+	end
+	return outlines
+end
+
+------------------------------------------------------------------------------
+
 local function offset_extents(extents, dx, dy)
 	local copy = {}
 	copy.left = extents.left + dx
