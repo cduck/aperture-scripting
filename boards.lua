@@ -146,7 +146,6 @@ local function load_image(path, type, unit, template)
 	-- scale the path data (sub-modules output picometers)
 	local scale = assert(path_scales[unit], "unsupported board output unit "..tostring(unit))
 	if scale ~= 1 then
-		print("scaling image")
 		local k = 0
 		for _,layer in ipairs(image.layers) do
 			for _,path in ipairs(layer) do
@@ -159,7 +158,6 @@ local function load_image(path, type, unit, template)
 				end
 			end
 		end
-		print("converted "..k.." points")
 	end
 	
 	-- collect apertures
