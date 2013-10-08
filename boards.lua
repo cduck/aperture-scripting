@@ -253,29 +253,6 @@ local default_template = {
 	},
 }
 
-local function save_metadata(cache_directory, hash, image)
-	local metadata = {}
-	metadata.center_extents = image.center_extents
-	metadata.extents = image.extents
-	dump.tofile(metadata, tostring(cache_directory / (hash..'.lua')))
-end
-
-local function load_metadata(cache_directory, hash, path, type)
-	local metapath = cache_directory / (hash..'.lua')
-	if lfs.attributes(metapath, 'mode') then
-		local metadata = dofile(metapath)
-		return {
-			path = path,
-			type = type,
-			hash = hash,
-			extents = region(metadata.extents),
-			center_extents = region(metadata.center_extents),
-		}
-	else
-		return nil
-	end
-end
-
 function _M.load(path, options)
 	if not options then options = {} end
 	
@@ -349,14 +326,6 @@ function _M.load(path, options)
 	end
 	board.extensions = extensions
 	
-	-- create cache directory
-	if options.cache_directory then
-		board.cache_directory = pathlib.split(options.cache_directory)
-		if not lfs.attributes(board.cache_directory, 'mode') then
-			lfs.mkdir(board.cache_directory)
-		end
-	end
-	
 	-- determine file hashes
 	local hashes = {}
 	for type,path in pairs(paths) do
@@ -372,16 +341,7 @@ function _M.load(path, options)
 	local images = {}
 	for type,path in pairs(paths) do
 		local hash = hashes[type]
-		local image
-		if board.cache_directory then
-			image = load_metadata(board.cache_directory, hash, path, type)
-		end
-		if not image then
-			image = load_image(path, type, board.unit, board.template)
-			if board.cache_directory then
-				save_metadata(board.cache_directory, hash, image)
-			end
-		end
+		local image = load_image(path, type, board.unit, board.template)
 		images[type] = image
 	end
 	board.images = images
@@ -405,21 +365,6 @@ function _M.load(path, options)
 	end
 	
 	return board
-end
-
-function _M.load_layers(board, image)
-	-- lazily load the gerber data if necessary
-	if not image.layers then
-		local metadata = image
-		assert(metadata.path)
-		local image = load_image(metadata.path, metadata.type, board.unit, board.template)
-		if board.cache_directory then
-			save_metadata(board.cache_directory, metadata.hash, image)
-		end
-		-- replace metadata with image everywhere it's referenced by swapping content
-		for k in pairs(metadata) do metadata[k] = nil end
-		for k,v in pairs(image) do metadata[k] = v end
-	end
 end
 
 function _M.save(board, path)
