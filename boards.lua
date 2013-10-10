@@ -14,6 +14,7 @@ local crypto = require 'crypto'
 local region = require 'boards.region'
 local drawing = require 'boards.drawing'
 local templates = require 'boards.templates'
+local pathmerge = require 'boards.pathmerge'
 local manipulation = require 'boards.manipulation'
 local panelization = require 'boards.panelization'
 
@@ -541,6 +542,8 @@ _M.merge = manipulation.merge_boards
 _M.draw_path = drawing.draw_path
 _M.empty_board = panelization.empty_board
 _M.panelize = panelization.panelize
+
+_M.merge_image_paths = pathmerge.merge_image_paths
 
 ------------------------------------------------------------------------------
 
