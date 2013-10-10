@@ -316,7 +316,7 @@ function _M.load(path, options)
 	local images = {}
 	for type,path in pairs(paths) do
 		local hash = hashes[type]
-		local image = load_image(path, type, board.unit, board.template)
+		local image = load_image(path, type, board.unit, template)
 		images[type] = image
 	end
 	board.images = images
