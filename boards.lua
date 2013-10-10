@@ -312,7 +312,7 @@ function _M.load(path, options)
 	end
 	board.hashes = hashes
 	
-	-- load image metadata
+	-- load images
 	local images = {}
 	for type,path in pairs(paths) do
 		local hash = hashes[type]
