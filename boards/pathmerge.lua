@@ -1,5 +1,8 @@
 local _M = {}
 
+local math = require 'math'
+local table = require 'table'
+
 ------------------------------------------------------------------------------
 
 local function reverse_path(path)
