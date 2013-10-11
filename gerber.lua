@@ -268,8 +268,23 @@ local function load_macro(data, unit)
 	local chunk = function(...)
 		paths = {}
 		rawchunk(...)
-		assert(#paths==1, "macro scripts must generate a single path")
-		return paths[1]
+		local path
+		if #paths==1 then
+			path = paths[1]
+		else
+			local tesselation = require 'tesselation'
+			local surface = tesselation.surface()
+			for _,path in ipairs(paths) do
+				surface:extend(path)
+			end
+			paths = surface.contour
+			assert(#paths==1, "macro scripts must generate a single contour")
+			path = {}
+			for _,point in ipairs(paths[1]) do
+				table.insert(path, {x=point.x, y=point.y})
+			end
+		end
+		return path
 	end
 	return {
 		name = name,
