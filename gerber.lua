@@ -23,6 +23,110 @@ local circle_steps = 64
 
 local macro_primitives = {}
 
+-- Circle, primitive code 1
+function macro_primitives.circle(exposure, diameter, x, y)
+	assert(exposure, "unexposed circle primitives are not supported")
+	assert(type(diameter)=='number')
+	assert(type(x)=='number')
+	assert(type(y)=='number')
+	return macro_primitives.polygon(exposure, circle_steps, x, y, diameter, 0)
+end
+
+local function rotate(point, rotation)
+	return {
+		x = point.x * math.cos(math.rad(rotation)) - point.y * math.sin(math.rad(rotation)),
+		y = point.x * math.sin(math.rad(rotation)) + point.y * math.cos(math.rad(rotation)),
+	}
+end
+
+-- Vector Line, primitive code 2 or 20
+function macro_primitives.line(exposure, line_width, x0, y0, x1, y1, rotation)
+	assert(exposure==1, "unexposed line primitives are not supported")
+	assert(type(line_width)=='number')
+	assert(type(x0)=='number')
+	assert(type(y0)=='number')
+	assert(type(x1)=='number')
+	assert(type(y1)=='number')
+	assert(type(rotation)=='number')
+	local dx = x1 - x0
+	local dy = y1 - y0
+	local n = math.sqrt(dx*dx + dy*dy)
+	if n == 0 then
+		return nil -- empty primitive
+	end
+	dx = dx * line_width / n
+	dy = dy * line_width / n
+	local path = {}
+	table.insert(path, rotate({x=x0-dy, y=y0+dx}, rotation))
+	table.insert(path, rotate({x=x0+dy, y=y0-dx}, rotation))
+	table.insert(path, rotate({x=x1+dy, y=y1-dx}, rotation))
+	table.insert(path, rotate({x=x1-dy, y=y1+dx}, rotation))
+	table.insert(path, rotate({x=x0-dy, y=y0+dx}, rotation))
+	return path
+end
+macro_primitives.rectangle_ends = macro_primitives.line
+
+-- Center Line, primitive code 21
+function macro_primitives.rectangle_center(exposure, width, height, x, y, rotation)
+	assert(exposure==1, "unexposed line primitives are not supported")
+	assert(type(width)=='number')
+	assert(type(height)=='number')
+	assert(type(x)=='number')
+	assert(type(y)=='number')
+	assert(type(rotation)=='number')
+	local dx = width / 2
+	local dy = height / 2
+	local path = {}
+	table.insert(path, rotate({x=x-dx, y=y-dy}, rotation))
+	table.insert(path, rotate({x=x+dx, y=y-dy}, rotation))
+	table.insert(path, rotate({x=x+dx, y=y+dy}, rotation))
+	table.insert(path, rotate({x=x-dx, y=y+dy}, rotation))
+	table.insert(path, rotate({x=x-dx, y=y-dy}, rotation))
+	return path
+end
+
+-- Lower Left Line, primitive code 22
+function macro_primitives.rectangle_corner(...)
+	assert(exposure==1, "unexposed line primitives are not supported")
+	assert(type(width)=='number')
+	assert(type(height)=='number')
+	assert(type(x)=='number')
+	assert(type(y)=='number')
+	assert(type(rotation)=='number')
+	local dx = width
+	local dy = height
+	local path = {}
+	table.insert(path, rotate({x=x   , y=y   }, rotation))
+	table.insert(path, rotate({x=x+dx, y=y   }, rotation))
+	table.insert(path, rotate({x=x+dx, y=y+dy}, rotation))
+	table.insert(path, rotate({x=x   , y=y+dy}, rotation))
+	table.insert(path, rotate({x=x   , y=y   }, rotation))
+	return path
+end
+
+-- Outline, primitive code 4
+function macro_primitives.outline(exposure, points, ...)
+	assert(exposure==1, "unexposed polygon primitives are not supported")
+	assert(type(points)=='number')
+	local path = {}
+	for i=0,points do
+		local x,y = select(i*2+1, ...)
+		assert(type(x)=='number')
+		assert(type(y)=='number')
+		table.insert(path, {x=x, y=y})
+	end
+	assert(#path >= 3)
+	assert(path[1].x == path[#path].x)
+	assert(path[1].y == path[#path].y)
+	local rotation = select((points+1)*2+1, ...)
+	assert(type(rotation)=='number')
+	for i=1,#path do
+		path[i] = rotate(path[i], rotation)
+	end
+	return path
+end
+
+-- Polygon, primitive code 5
 function macro_primitives.polygon(exposure, vertices, x, y, diameter, rotation)
 	assert(exposure==1, "unexposed polygon primitives are not supported")
 	assert(type(vertices)=='number')
@@ -47,6 +151,7 @@ function macro_primitives.polygon(exposure, vertices, x, y, diameter, rotation)
 	return path
 end
 
+-- Moiré, primitive code 6
 function macro_primitives.moire(x, y, outer_diameter, ring_thickness, ring_gap, max_rings, cross_hair_thickness, cross_hair_length, rotation)
 	assert(type(x)=='number')
 	assert(type(y)=='number')
@@ -75,6 +180,7 @@ function macro_primitives.moire(x, y, outer_diameter, ring_thickness, ring_gap, 
 	return path
 end
 
+-- Thermal, primitive code 7
 function macro_primitives.thermal(x, y, outer_diameter, inner_diameter, gap_thickness, rotation)
 	assert(type(x)=='number')
 	assert(type(y)=='number')
@@ -99,35 +205,6 @@ function macro_primitives.thermal(x, y, outer_diameter, inner_diameter, gap_thic
 	end
 	return path
 end
-
-function macro_primitives.outline(exposure, points, ...)
-	assert(exposure==1, "unexposed polygon primitives are not supported")
-	assert(type(points)=='number')
-	local path = {}
-	for i=0,points do
-		local x,y = select(i*2+1, ...)
-		assert(type(x)=='number')
-		assert(type(y)=='number')
-		table.insert(path, {x=x, y=y})
-	end
-	assert(#path >= 3)
-	assert(path[1].x == path[#path].x)
-	assert(path[1].y == path[#path].y)
-	local rotation = select((points+1)*2+1, ...)
-	assert(type(rotation)=='number')
-	assert(rotation==0, "non-zero rotation of outline macro primitive is not yet supported")
-	return path
-end
-
---[[
-function macro_primitives.circle(exposure, diameter, x, y)
-	assert(exposure, "unexposed circle primitives are not supported")
-	assert(type(diameter)=='number')
-	assert(type(x)=='number')
-	assert(type(y)=='number')
-	return macro_primitives.polygon(exposure, circle_steps, x, y, diameter, 0)
-end
---]]
 
 local function compile_expression(expression)
 	if type(expression)=='number' then
