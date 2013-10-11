@@ -370,15 +370,11 @@ local function find_image_outline(image)
 			end
 		end
 	end
-	if not lmax or not pmax then return nil end
-	local path = image.layers[lmax][pmax]
-	-- check that the path has the same extents as the image
-	if path.extents.left ~= image.extents.left
-		or path.extents.right ~= image.extents.right
-		or path.extents.bottom ~= image.extents.bottom
-		or path.extents.top ~= image.extents.top then
+	-- check that we have a path
+	if not lmax or not pmax then
 		return nil
 	end
+	local path = image.layers[lmax][pmax]
 	-- check that the path is long enough to enclose a region
 	if #path < 3 then
 		return nil
