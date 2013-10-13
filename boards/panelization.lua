@@ -10,60 +10,6 @@ local manipulation = require 'boards.manipulation'
 
 ------------------------------------------------------------------------------
 
-local function offset_side(side, dz)
-	local copy = {}
-	for i,z in ipairs(side) do
-		copy[i] = z + dz
-	end
-	return copy
-end
-
-local function offset_panel(panel, dx, dy)
-	local copy = manipulation.offset_board(panel, dx, dy)
-	copy.left = offset_side(panel.left, dy)
-	copy.right = offset_side(panel.right, dy)
-	copy.bottom = offset_side(panel.bottom, dx)
-	copy.top = offset_side(panel.top, dx)
-	return copy
-end
-
-------------------------------------------------------------------------------
-
-local function copy_side(side)
-	return offset_side(side, 0)
-end
-
-------------------------------------------------------------------------------
-
-local function merge_sides(side_a, side_b)
-	local merged = {}
-	for _,z in ipairs(side_a) do
-		table.insert(merged, z)
-	end
-	for _,z in ipairs(side_b) do
-		table.insert(merged, z)
-	end
-	return merged
-end
-
-local function merge_panels(panel_a, panel_b, vertical)
-	local merged = manipulation.merge_boards(panel_a, panel_b)
-	if vertical then
-		merged.left = merge_sides(panel_a.left, panel_b.left)
-		merged.right = merge_sides(panel_a.right, panel_b.right)
-		merged.bottom = copy_side(panel_a.bottom)
-		merged.top = copy_side(panel_b.top)
-	else
-		merged.left = copy_side(panel_a.left)
-		merged.right = copy_side(panel_b.right)
-		merged.bottom = merge_sides(panel_a.bottom, panel_b.bottom)
-		merged.top = merge_sides(panel_a.top, panel_b.top)
-	end
-	return merged
-end
-
-------------------------------------------------------------------------------
-
 local function empty_image()
 	return {
 		format = { integer = 2, decimal = 4, zeroes = 'L' },
@@ -75,6 +21,10 @@ local function empty_image()
 end
 
 function _M.empty_board(width, height)
+	local extents = region{
+		left = 0, right = width,
+		bottom = 0, top = height,
+	}
 	return {
 		unit = 'pm',
 		template = templates.default_template,
@@ -89,32 +39,26 @@ function _M.empty_board(width, height)
 			bottom_soldermask = empty_image(),
 		},
 		extensions = {},
-		extents = region{
-			left = 0, right = width,
-			bottom = 0, top = height,
+		extents = extents,
+		outline = {
+			apertures = {},
+			extents = extents,
+			path = {
+				extents = extents,
+				{ x = 0, y = 0 },
+				{ x = width, y = 0 },
+				{ x = width, y = height },
+				{ x = 0, y = height },
+				{ x = 0, y = 0 },
+			},
 		},
 	}
 end
 
-local function board_to_panel(board)
-	local panel = manipulation.copy_board(board)
-	panel.left = { board.extents.bottom, board.extents.top }
-	panel.right = { board.extents.bottom, board.extents.top }
-	panel.bottom = { board.extents.left, board.extents.right }
-	panel.top = { board.extents.left, board.extents.right }
-	-- panels need milling and drill images
-	if not panel.images.milling then
-		panel.images.milling = empty_image()
-		panel.extensions.milling = 'gml'
-	end
-	if not panel.images.drill then
-		panel.images.drill = empty_image()
-		panel.extensions.drill = 'drd'
-	end
-	return panel
-end
-
 local function cut_tabs(panel, side_a, side_b, position, options, vertical)
+	-- draw cut lines and break tabs
+	-- see http://blogs.mentor.com/tom-hausherr/blog/2011/06/23/pcb-design-perfection-starts-in-the-cad-library-part-19/
+	
 	-- prepare routing and tab-separation drills
 	-- :FIXME: for some reason the diameter needs to be scaled here, this is wrong
 	local mill = { shape = 'circle', parameters = { options.spacing / 25.4 / 1e9 } }
@@ -165,6 +109,156 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 	end
 end
 
+local function find_sides(outline)
+	local path = outline.path
+	local sides = {}
+	
+	-- first point should be left-most of the bottom-most
+	sides.bottom_left = 1
+	
+	-- follow bottom
+	sides.bottom_right = sides.bottom_left
+	while sides.bottom_right < #path and path[sides.bottom_right+1].y == path[sides.bottom_right].y do
+		sides.bottom_right = sides.bottom_right + 1
+	end
+	
+	-- skip bottom-right rounded corner
+	sides.right_bottom = sides.bottom_right
+	while sides.right_bottom < #path and path[sides.right_bottom+1].x ~= path[sides.right_bottom].x do
+		assert(path[sides.right_bottom+1].x > path[sides.right_bottom].x)
+		sides.right_bottom = sides.right_bottom + 1
+	end
+	
+	-- follow right
+	sides.right_top = sides.right_bottom
+	while sides.right_top < #path and path[sides.right_top+1].x == path[sides.right_top].x do
+		sides.right_top = sides.right_top + 1
+	end
+	
+	-- skip top-right rounded corner
+	sides.top_right = sides.right_top
+	while sides.top_right < #path and path[sides.top_right+1].y ~= path[sides.top_right].y do
+		assert(path[sides.top_right+1].y > path[sides.top_right].y)
+		sides.top_right = sides.top_right + 1
+	end
+	
+	-- follow top
+	sides.top_left = sides.top_right
+	while sides.top_left < #path and path[sides.top_left+1].y == path[sides.top_left].y do
+		sides.top_left = sides.top_left + 1
+	end
+	
+	-- skip top-left rounded corner
+	sides.left_top = sides.top_left
+	while sides.left_top < #path and path[sides.left_top+1].x ~= path[sides.left_top].x do
+		assert(path[sides.top_right+1].x < path[sides.top_right].x)
+		sides.left_top = sides.left_top + 1
+	end
+	
+	-- follow left
+	sides.left_bottom = sides.left_top
+	while sides.left_bottom < #path and path[sides.left_bottom+1].x == path[sides.left_bottom].x do
+		sides.left_bottom = sides.left_bottom + 1
+	end
+	
+	return sides
+end
+
+local function merge_panels(panel_a, panel_b, options, vertical)
+	-- merge_boards doesn't merge outlines
+	local merged = manipulation.merge_boards(panel_a, panel_b)
+	
+	local outline_a = panel_a.outline
+	local outline_b = panel_b.outline
+	
+	if vertical then
+		assert(outline_a.extents.left == outline_b.extents.left and outline_a.extents.right == outline_b.extents.right)
+	else
+		assert(outline_a.extents.bottom == outline_b.extents.bottom and outline_a.extents.top == outline_b.extents.top)
+	end
+	
+	-- generate a new outline
+	merged.outline = {
+		apertures = {},
+		path = {},
+	}
+	merged.outline.extents = outline_a.extents + outline_b.extents
+	for type,aperture in pairs(outline_a.apertures) do
+		merged.outline.apertures[type] = aperture
+		if outline_b.apertures[type] then
+			-- :TODO: ensure the two are identical
+		--	assert(outline_b.apertures[type] == aperture)
+		end
+	end
+	for type,aperture in pairs(outline_b.apertures) do
+		merged.outline.apertures[type] = aperture
+		if outline_a.apertures[type] then
+			-- :TODO: ensure the two are identical
+		--	assert(outline_a.apertures[type] == aperture)
+		end
+	end
+	
+	local sides_a = find_sides(outline_a)
+	local sides_b = find_sides(outline_b)
+	if vertical then
+		-- cut tabs
+		local side_a = {}
+		for i=sides_a.top_left,sides_a.top_right,-1 do
+			table.insert(side_a, outline_a.path[i].x)
+		end
+		local y_a = outline_a.path[sides_a.top_left].y
+		local side_b = {}
+		for i=sides_b.bottom_left,sides_b.bottom_right do
+			table.insert(side_b, outline_b.path[i].x)
+		end
+		local y_b = outline_b.path[sides_b.bottom_left].y
+		assert(y_a + options.spacing == y_b)
+		cut_tabs(merged, side_a, side_b, (y_a + y_b) / 2, options, vertical)
+		
+		-- merge outlines
+		for i=1,sides_a.top_right do
+			table.insert(merged.outline.path, outline_a.path[i])
+		end
+		for i=sides_b.bottom_right,#outline_b.path do
+			table.insert(merged.outline.path, outline_b.path[i])
+		end
+		for i=sides_a.top_left,#outline_a.path do
+			table.insert(merged.outline.path, outline_a.path[i])
+		end
+	else
+		-- cut tabs
+		local side_a = {}
+		for i=sides_a.right_bottom,sides_a.right_top do
+			table.insert(side_a, outline_a.path[i].y)
+		end
+		local x_a = outline_a.path[sides_a.right_bottom].x
+		local side_b = {}
+		for i=sides_b.left_bottom,sides_b.left_top,-1 do
+			table.insert(side_b, outline_b.path[i].y)
+		end
+		local x_b = outline_b.path[sides_b.left_bottom].x
+		assert(x_a + options.spacing == x_b)
+		cut_tabs(merged, side_a, side_b, (x_a + x_b) / 2, options, vertical)
+		
+		-- merge outlines
+		assert(#merged.outline.path == 0)
+		for i=1,sides_a.right_bottom do
+			table.insert(merged.outline.path, outline_a.path[i])
+		end
+		for i=sides_b.left_bottom,#outline_b.path-1 do
+			table.insert(merged.outline.path, outline_b.path[i])
+		end
+		for i=1,sides_b.left_top do
+			table.insert(merged.outline.path, outline_b.path[i])
+		end
+		for i=sides_a.right_top,#outline_a.path do
+			table.insert(merged.outline.path, outline_a.path[i])
+		end
+	end
+	
+	return merged
+end
+
 function _M.panelize(layout, options, vertical)
 	local mm = 1e9
 	if not options.spacing then
@@ -178,66 +272,37 @@ function _M.panelize(layout, options, vertical)
 	end
 	if #layout == 0 then
 		-- this is not a layout but a board
-		return board_to_panel(layout)
+		return layout
 	end
 	
 	-- panelize subpanels
 	assert(#layout >= 1)
 	local subpanels = {}
-	local had_outline = false
 	for i=1,#layout do
 		-- panelize sublayout
 		local child = _M.panelize(layout[i], options, not vertical)
+		assert(child.outline, "panelized boards must have an outline")
 		subpanels[i] = child
-		-- discard the outline
-		if child.images.outline then
-		--	child.images.outline = nil
-			had_outline = true
-		end
 	end
 	
 	-- assemble the panel
 	local left,bottom = 0,0
 	local panel
 	for _,subpanel in ipairs(subpanels) do
-		local dx = left - subpanel.extents.left
-		local dy = bottom - subpanel.extents.bottom
+		local dx = left - subpanel.outline.extents.left
+		local dy = bottom - subpanel.outline.extents.bottom
 		if not panel then
-			panel = offset_panel(subpanel, dx, dy)
+			panel = manipulation.offset_board(subpanel, dx, dy)
 		else
-			local neighbour = offset_panel(subpanel, dx, dy)
-			-- draw cut lines and break tabs
-			-- see http://blogs.mentor.com/tom-hausherr/blog/2011/06/23/pcb-design-perfection-starts-in-the-cad-library-part-19/
-			if vertical then
-				cut_tabs(panel, panel.top, neighbour.bottom, bottom - options.spacing / 2, options, vertical)
-			else
-				cut_tabs(panel, panel.right, neighbour.left, left - options.spacing / 2, options, vertical)
-			end
-			panel = merge_panels(panel, neighbour, vertical)
+			local neighbour = manipulation.offset_board(subpanel, dx, dy)
+			panel = merge_panels(panel, neighbour, options, vertical)
 		end
 		if vertical then
-			bottom = panel.extents.top + options.spacing
+			bottom = panel.outline.extents.top + options.spacing
 		else
-			left = panel.extents.right + options.spacing
+			left = panel.outline.extents.right + options.spacing
 		end
 	end
-	
-	-- regenerate an outline
-	local outline
-	if had_outline then
-		outline = manipulation.copy_image(panel.images.milling)
-		outline.layers = {{polarity = 'dark'}}
-		panel.images.outline = outline
-	else
-		-- if we had no separate outline image, assume it's in the milling image
-		outline = panel.images.milling
-	end
-	drawing.draw_path(outline, { unit = outline.unit, shape = 'circle', parameters = { 0 } },
-		panel.extents.left, panel.extents.bottom,
-		panel.extents.right, panel.extents.bottom,
-		panel.extents.right, panel.extents.top,
-		panel.extents.left, panel.extents.top,
-		panel.extents.left, panel.extents.bottom)
 	
 	return panel
 end

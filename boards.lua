@@ -233,6 +233,73 @@ local path_merge_scales = {
 	mm = 1,
 }
 
+local function exterior(path)
+	local total = 0
+	for i=1,#path-1 do
+		local p0 = path[i-1] or path[#path-1]
+		local p1 = path[i]
+		local p2 = path[i+1] or path[1]
+		local dx1 = p1.x - p0.x
+		local dy1 = p1.y - p0.y
+		local dx2 = p2.x - p1.x
+		local dy2 = p2.y - p1.y
+		local l1 = math.sqrt(dx1*dx1+dy1*dy1)
+		local l2 = math.sqrt(dx2*dx2+dy2*dy2)
+		if l1 * l2 ~= 0 then
+			local angle = math.asin((dx1*dy2-dy1*dx2)/(l1*l2))
+			total = total + angle
+		end
+	end
+	return total >= 0
+end
+
+local function path_to_region(path)
+	local region = { extents = path.center_extents }
+	
+	-- find bottom-left corner
+	local exterior = exterior(path)
+	local reversible = true
+	local corner = 1
+	for i=2,#path-1 do
+		if path[i].interpolated or path[i].interpolation~='linear' then
+			reversible = false
+		end
+		if path[i].y < path[corner].y or path[i].y == path[corner].y and path[i].x < path[corner].x then
+			corner = i
+		end
+	end
+	
+	local corner_interpolation = corner==1 and path[#path].interpolation or path[corner].interpolation
+	
+	if path[corner].interpolated or corner_interpolation~='linear' or not exterior and not reversible then
+		-- don't alter the path (which will prevent panelization)
+		for _,point in ipairs(path) do
+			table.insert(region, point)
+		end
+	else
+		if not exterior then
+			-- if we're here, it means reversible is true, which means we're all linear interpolation
+			for i=corner,1,-1 do
+				table.insert(region, {x=path[i].x, y=path[i].y, interpolation='linear'})
+			end
+			for i=#path-1,corner,-1 do
+				table.insert(region, {x=path[i].x, y=path[i].y, interpolation='linear'})
+			end
+			region[1].interpolation = nil
+		else
+			table.insert(region, {x=path[corner].x, y=path[corner].y})
+			for i=corner+1,#path do
+				table.insert(region, path[i])
+			end
+			for i=2,corner do
+				table.insert(region, path[i])
+			end
+		end
+	end
+	
+	return region
+end
+
 function _M.load(path, options)
 	if not options then options = {} end
 	
@@ -332,19 +399,36 @@ function _M.load(path, options)
 		_M.merge_image_paths(image, path_merge_epsilon)
 	end
 	
-	-- compute board extents
-	board.extents = region()
-	for type,image in pairs(images) do
-		if type=='milling' or type=='drill' then
-			-- only extend to the points centers
-			board.extents = board.extents + image.center_extents
-		elseif (type=='top_silkscreen' or type=='bottom_silkscreen') and not options.silkscreen_extends_board then
-			-- don't extend with these
-		elseif type=='bom' then
-			-- BOM is parts logical centers, unrelated to board actual dimension
-		else
-			board.extents = board.extents + image.extents
+	-- extract outline
+	local outlines = _M.find_board_outlines(board)
+	if next(outlines) and not options.keep_outlines_in_images then
+		local data = select(2, next(outlines))
+		local outline = {}
+		outline.path = path_to_region(data.path)
+		outline.extents = outline.path.extents
+		outline.apertures = {}
+		-- convert the outline data
+		for type,data in pairs(outlines) do
+			-- store the aperture used on this image
+			outline.apertures[type] = data.path.aperture
+			-- remove the path from the image
+			table.remove(board.images[type].layers[data.ilayer], data.ipath)
+			if #board.images[type].layers[data.ilayer] == 0 then
+				table.remove(board.images[type].layers, data.ilayer)
+			end
 		end
+		board.outline = outline
+	end
+	
+	-- compute board extents
+	if board.outline then
+		board.extents = board.outline.extents
+	else
+		local extents = region()
+		for _,image in pairs(board.images) do
+			extents = extents + image.extents
+		end
+		board.extents = extents
 	end
 	if board.extents.empty then
 		return nil,"board is empty"
@@ -358,6 +442,16 @@ function _M.save(board, path)
 		path = pathlib.split(path)
 	end
 	for type,image in pairs(board.images) do
+		-- re-inject outline before saving
+		if board.outline and board.outline.apertures[type] then
+			image = manipulation.copy_image(image)
+			local path = manipulation.copy_path(board.outline.path)
+			path.aperture = board.outline.apertures[type]
+			if #image.layers==0 or image.layers[#image.layers].polarity=='clear' then
+				table.insert(image.layers, {polarity='dark'})
+			end
+			table.insert(image.layers[#image.layers], path)
+		end
 		local pattern = assert(board.extensions[type], "no extension pattern for file of type "..type)
 		local path = path.dir / pattern:gsub('%%', path.file)
 		local success,msg = save_image(image, path, type, board.unit, board.template)

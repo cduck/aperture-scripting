@@ -28,7 +28,7 @@ files[#files] = nil
 -- load files
 for _,file in ipairs(files) do
 	print("loading "..file.filename)
-	file.board = boards.offset(assert(boards.load(file.filename)), file.offset.x, file.offset.y)
+	file.board = boards.offset(assert(boards.load(file.filename, {keep_outlines_in_images=true})), file.offset.x, file.offset.y)
 end
 
 -- merge files

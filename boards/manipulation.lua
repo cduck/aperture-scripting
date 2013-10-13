@@ -74,6 +74,25 @@ function _M.offset_image(image, dx, dy)
 	return copy
 end
 
+function _M.offset_outline(outline, dx, dy)
+	local copy = {
+		apertures = {},
+	}
+	
+	-- move the extents
+	copy.extents = _M.offset_extents(outline.extents, dx, dy)
+	
+	-- move the path
+	copy.path = _M.offset_path(outline.path, dx, dy)
+	
+	-- copy the aperture references
+	for type,aperture in pairs(outline.apertures) do
+		copy.apertures[type] = aperture
+	end
+	
+	return copy
+end
+
 function _M.offset_board(board, dx, dy)
 	local copy = {
 		unit = board.unit,
@@ -93,6 +112,11 @@ function _M.offset_board(board, dx, dy)
 	-- move images
 	for type,image in pairs(board.images) do
 		copy.images[type] = _M.offset_image(image, dx, dy)
+	end
+	
+	-- move outline
+	if board.outline then
+		copy.outline = _M.offset_outline(board.outline, dx, dy)
 	end
 	
 	return copy
@@ -208,7 +232,7 @@ function _M.rotate180_layer(layer, apertures, macros)
 	return copy
 end
 
-function _M.rotate180_image(image)
+function _M.rotate180_image(image, apertures, macros)
 	local copy = {
 		file_path = nil,
 		name = image.name,
@@ -222,17 +246,62 @@ function _M.rotate180_image(image)
 		copy.format[k] = v
 	end
 	
-	-- move extents
+	-- rotate extents
 	copy.extents = _M.rotate180_extents(image.extents)
 	copy.center_extents = _M.rotate180_extents(image.center_extents)
 	
-	-- apertures and macros are shared by layers and paths, so create an index to avoid duplicating them in the copy
-	local apertures = {}
-	local macros = {}
-	
-	-- move layers
+	-- rotate layers
 	for i,layer in ipairs(image.layers) do
 		copy.layers[i] = _M.rotate180_layer(layer, apertures, macros)
+	end
+	
+	return copy
+end
+
+function _M.rotate180_outline_path(path)
+	local copy = {
+		unit = path.unit,
+	}
+	if path.extents then
+		copy.extents = _M.rotate180_extents(path.extents)
+	end
+	assert(not path.aperture)
+	-- find top-right point
+	local min = 1
+	for i=2,#path do
+		if path[i].y > path[min].y or path[i].y == path[min].y and path[i].x > path[min].x then
+			min = i
+		end
+	end
+	-- copy rotated points
+	for i=min,#path-1 do
+		table.insert(copy, _M.rotate180_point(path[i]))
+	end
+	for i=1,min do
+		table.insert(copy, _M.rotate180_point(path[i]))
+	end
+	return copy
+end
+
+function _M.rotate180_outline(outline, apertures, macros)
+	local copy = {
+		apertures = {},
+	}
+	
+	-- rotate extents
+	copy.extents = _M.rotate180_extents(outline.extents)
+	
+	-- rotate path (which should be a region)
+	assert(not outline.path.aperture)
+	copy.path = _M.rotate180_outline_path(outline.path)
+	
+	-- rotate apertures
+	for type,aperture in pairs(outline.apertures) do
+		copy.apertures[type] = apertures[aperture]
+		if not copy.apertures[type] then
+			copy.apertures[type] = _M.rotate180_aperture(aperture, macros)
+			apertures[aperture] = copy.apertures[type]
+		end
 	end
 	
 	return copy
@@ -254,9 +323,19 @@ function _M.rotate180_board(board)
 	-- rotate extents
 	copy.extents = _M.rotate180_extents(board.extents)
 	
+	-- apertures and macros are shared by layers and paths, so create an index to avoid duplicating them in the copy
+	-- do it at the board level in case some apertures are shared between images and the outline or other images
+	local apertures = {}
+	local macros = {}
+	
 	-- rotate images
 	for type,image in pairs(board.images) do
-		copy.images[type] = _M.rotate180_image(image)
+		copy.images[type] = _M.rotate180_image(image, apertures, macros)
+	end
+	
+	-- rotate outline
+	if board.outline then
+		copy.outline = _M.rotate180_outline(board.outline, apertures, macros)
 	end
 	
 	return copy
@@ -384,6 +463,9 @@ function _M.merge_boards(board_a, board_b)
 			merged.images[type] = _M.copy_image(image_b)
 		end
 	end
+	
+	-- drop outlines, it's impossible to merge without multi-contour outlines
+	-- instead assume a panelization upper layer will regenerate it
 	
 	return merged
 end
