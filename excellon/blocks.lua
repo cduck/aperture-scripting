@@ -5,9 +5,11 @@ local table = require 'table'
 local string = require 'string'
 local gerber = require 'gerber.blocks'
 
-local tool_mt = {}
-
 _M.decimal_shift = gerber.decimal_shift
+
+------------------------------------------------------------------------------
+
+local tool_mt = {}
 
 function tool_mt:__tostring()
 	local parameters = {}
@@ -39,9 +41,63 @@ local function load_tool(block)
 	return _M.tool(tcode, parameters)
 end
 
-local function load_header(block)
-	return block
+------------------------------------------------------------------------------
+
+local comment_mt = {}
+
+function comment_mt:__tostring()
+	return string.format(';%s', self.comment)
 end
+
+function _M.comment(text)
+	local data = {
+		type = 'comment',
+		text = text,
+	}
+	return setmetatable(data, comment_mt)
+end
+
+local function load_comment(block)
+	local text = block:match('^%s*;%s*(.-)%s*$')
+	assert(text, "could not parse comment")
+	return _M.comment(text)
+end
+
+------------------------------------------------------------------------------
+
+local header_mt = {}
+
+function header_mt:__tostring()
+	local words = {self.name}
+	for _,parameter in ipairs(self.parameters) do
+		table.insert(words, parameter)
+	end
+	return table.concat(parameters, ",")
+end
+
+function _M.header(name, parameters)
+	local data = {
+		type = 'header',
+		name = name,
+		parameters = parameters,
+	}
+	return setmetatable(data, header_mt)
+end
+
+local function load_header(block)
+	-- may be a tool definition (in header) or a tool selection (in program)
+	local name,sparameters = block:match('^T(%d+)(.*)$')
+	local words = {}
+	for word in block:gmatch('[^;]+') do
+		table.insert(words, word)
+	end
+	assert(block == table.concat(words, ","))
+	local name = table.remove(words, 1)
+	local parameters = words
+	return _M.header(name, parameters)
+end
+
+------------------------------------------------------------------------------
 
 local function save_directive(self, long)
 	local G = self.G and string.format('G%02d', self.G) or ''
@@ -86,6 +142,8 @@ local function load_directive(block, format)
 	return directive
 end
 
+------------------------------------------------------------------------------
+
 function _M.load(filename)
 	local file = assert(io.open(filename, 'rb'))
 	local content = assert(file:read('*all'))
@@ -110,7 +168,9 @@ function _M.load(filename)
 					local i,d = block:match('^;FILE_FORMAT=(%d+):(%d+)$')
 					data.format.integer = tonumber(i)
 					data.format.decimal = tonumber(d)
-					table.insert(data.headers, load_header(block))
+					table.insert(data.headers, load_comment(block))
+				elseif block:match('^;') then
+					table.insert(data.headers, load_comment(block))
 				elseif block=='INCH,LZ' or block=='INCH,TZ' or block=='METRIC,LZ' or block=='METRIC,TZ' then
 					local unit,zeroes = block:match('^(.*),(.*)$')
 					if zeroes == 'LZ' then -- header is what is present

@@ -39,6 +39,56 @@ end
 
 ------------------------------------------------------------------------------
 
+local ignored_headers = {
+	-- from http://www.excellon.com/manuals/program.htm
+--	AFS = true, -- Automatic Feeds and Speeds
+--	ATC = true, -- Automatic Tool Change
+--	BLKD = true, -- Delete all Blocks starting with a slash (/)
+--	CCW = true, -- Clockwise or Counterclockwise Routing
+--	CP = true, -- Cutter Compensation
+	DETECT = true, -- Broken Tool Detection
+--	DN = true, -- Down Limit Set
+--	DTMDIST = true, -- Maximum Rout Distance Before Toolchange
+--	EXDA = true, -- Extended Drill Area
+	FMAT = true, -- Format 1 or 2
+--	FSB = true, -- Turns the Feed/Speed Buttons off
+--	HPCK = true, -- Home Pulse Check
+--	ICI = true, -- Incremental Input of Part Program Coordinates
+--	INCH = true, -- Measure Everything in Inches
+--	METRIC = true, -- Measure Everything in Metric
+--	M48 = true, -- Beginning of Part Program Header
+--	M95 = true, -- End of Header
+--	NCSL = true, -- NC Slope Enable/Disable
+--	OM48 = true, -- Override Part Program Header
+--	OSTOP = true, -- Optional Stop Switch
+--	OTCLMP = true, -- Override Table Clamp
+--	PCKPARAM = true, -- Set up pecking tool,depth,infeed and retract parameters
+--	PF = true, -- Floating Pressure Foot Switch
+--	PPR = true, -- Programmable Plunge Rate Enable
+--	PVS = true, -- Pre-vacuum Shut-off Switch
+--	['R,C'] = true, -- Reset Clocks
+--	['R,CP'] = true, -- Reset Program Clocks
+--	['R,CR'] = true, -- Reset Run Clocks
+--	['R,D'] = true, -- Reset All Cutter Distances
+--	['R,H'] = true, -- Reset All Hit Counters
+--	['R,T'] = true, -- Reset Tool Data
+--	SBK = true, -- Single Block Mode Switch
+--	SG = true, -- Spindle Group Mode
+--	SIXM = true, -- Input From External Source
+--	T = true, -- Tool Information
+--	TCST = true, -- Tool Change Stop
+--	UP = true, -- Upper Limit Set
+--	VER = true, -- Selection of X and Y Axis Version
+--	Z = true, -- Zero Set
+--	ZA = true, -- Auxiliary Zero
+--	ZC = true, -- Zero Correction
+--	ZS = true, -- Zero Preset
+--	['Z+#'] = true, ['Z-#'] = true, -- Set Depth Offset
+--	['%'] = true, -- Rewind Stop
+--	['#/#/#'] = true, -- Link Tool for Automatic Tool Change
+--	['/'] = true, -- Clear Tool Linking
+}
+
 function _M.load(file_path)
 	local data = _M.blocks.load(file_path)
 	
@@ -55,25 +105,25 @@ function _M.load(file_path)
 			local name = header.tcode
 			local tool = load_tool(header, unit)
 			tools[name] = tool
-		elseif th=='string' then
-			if header=='M72' then
+		elseif th=='comment' then
+			-- ignore
+		elseif th=='header' then
+			if header.name=='M72' then
 				assert(not unit or unit=='IN', "excellon files with mixtures of units not supported")
 				unit = 'IN'
-			elseif header:match('^;') then
-				-- ignore
-			elseif header=='INCH' or header=='INCH,LZ' or header=='INCH,TZ' then
+			elseif header.name=='INCH' then
 				assert(not unit or unit=='IN', "excellon files with mixtures of units not supported")
 				unit = 'IN'
-			elseif header=='METRIC' or header=='METRIC,LZ' or header=='METRIC,TZ' then
+			elseif header.name=='METRIC' then
 				assert(not unit or unit=='MM', "excellon files with mixtures of units not supported")
 				unit = 'MM'
-			elseif header=='FMAT,1' or header=='FMAT,2' then
-				-- ignore (though we should parse differently depending on format)
+			elseif ignored_header[header.name] then
+				print("ignored Excellon header "..header.name..(#header.parameters==0 and "" or (" with value "..table.concat(header.parameters, ","))))
 			else
-				error("unsupported header "..header)
+				error("unsupported header "..header.name..(#header.parameters==0 and "" or (" with value "..table.concat(header.parameters, ","))))
 			end
 		else
-			error("unsupported header type "..tostring(header.type))
+			error("unsupported header type "..th)
 		end
 	end
 	if not unit then
