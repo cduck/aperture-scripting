@@ -248,7 +248,7 @@ local function load_aperture(block)
 	local dcode,shape,parameters = block:match('^ADD(%d+)([^,]*)(.*)$')
 	assert(dcode and shape and parameters)
 	dcode = tonumber(dcode)
-	assert(dcode and dcode >= 10 and dcode <= 999)
+	assert(dcode and dcode >= 10 and dcode <= 2^31)
 	if parameters == "" then
 		parameters = nil
 	else
