@@ -30,6 +30,9 @@ _M.default_template = {
 			angle = 'Angle',
 			side = 'Side',
 			name = 'Part',
+			x_offset = 'X Offset',
+			y_offset = 'Y Offset',
+			angle_offset = 'Angle Offset',
 		},
 	},
 }

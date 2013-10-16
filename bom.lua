@@ -24,14 +24,16 @@ function _M.load(file_path, template)
 		local array = data[i]
 		local set = {}
 		for i,field_name in ipairs(field_names) do
-			set[field_name] = array[i]
+			if array[i] ~= "" and array[i] ~= "*" then
+				set[field_name] = array[i]
+			end
 		end
 		local package = set[template.fields.package]
 		local part = {}
 		part.name = set[template.fields.name]
-		part.x = set[template.fields.x] * template.scale.dimension
-		part.y = set[template.fields.y] * template.scale.dimension
-		part.angle = set[template.fields.angle] * template.scale.angle
+		part.x = (set[template.fields.x] + (set[template.fields.x_offset] or 0)) * template.scale.dimension
+		part.y = (set[template.fields.y] + (set[template.fields.y_offset] or 0)) * template.scale.dimension
+		part.angle = (set[template.fields.angle] + (set[template.fields.angle_offset] or 0)) * template.scale.angle
 		local side = set[template.fields.side]
 		for _,field in pairs(template.fields) do
 			set[field] = nil
