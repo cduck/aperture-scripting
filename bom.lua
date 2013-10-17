@@ -1,5 +1,9 @@
 local _M = {}
 
+local geometry = require 'geometry'
+local vector = geometry.vector
+local quaternion = geometry.quaternion
+
 function _M.load(file_path, template)
 	local name = file_path.file
 	local unit = nil
@@ -24,16 +28,29 @@ function _M.load(file_path, template)
 		local array = data[i]
 		local set = {}
 		for i,field_name in ipairs(field_names) do
-			if array[i] ~= "" and array[i] ~= "*" then
-				set[field_name] = array[i]
-			end
+			set[field_name] = array[i]
 		end
 		local package = set[template.fields.package]
 		local part = {}
 		part.name = set[template.fields.name]
-		part.x = (set[template.fields.x] + (set[template.fields.x_offset] or 0)) * template.scale.dimension
-		part.y = (set[template.fields.y] + (set[template.fields.y_offset] or 0)) * template.scale.dimension
-		part.angle = (set[template.fields.angle] + (set[template.fields.angle_offset] or 0)) * template.scale.angle
+		local angle = set[template.fields.angle]
+		if set[template.fields.angle_offset] and set[template.fields.angle_offset]~="" and set[template.fields.angle_offset]~="*" then
+			angle = angle + set[template.fields.angle_offset]
+		end
+		part.angle = angle * template.scale.angle
+		local offset = vector()
+		if set[template.fields.x_offset] and set[template.fields.x_offset]~="" and set[template.fields.x_offset]~="*" then
+			offset.x = set[template.fields.x_offset]
+		end
+		if set[template.fields.y_offset] and set[template.fields.y_offset]~="" and set[template.fields.y_offset]~="*" then
+			offset.y = set[template.fields.y_offset]
+		end
+		local rotation = quaternion.glrotation(angle, 0, 0, 1)
+		offset = rotation:rotate(offset)
+		local x = set[template.fields.x] + offset.x
+		local y = set[template.fields.y] + offset.y
+		part.x = x * template.scale.dimension
+		part.y = y * template.scale.dimension
 		local side = set[template.fields.side]
 		for _,field in pairs(template.fields) do
 			set[field] = nil
