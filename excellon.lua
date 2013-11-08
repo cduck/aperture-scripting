@@ -117,7 +117,7 @@ function _M.load(file_path)
 			elseif header.name=='METRIC' then
 				assert(not unit or unit=='MM', "excellon files with mixtures of units not supported")
 				unit = 'MM'
-			elseif ignored_header[header.name] then
+			elseif ignored_headers[header.name] then
 				print("ignored Excellon header "..header.name..(#header.parameters==0 and "" or (" with value "..table.concat(header.parameters, ","))))
 			else
 				error("unsupported header "..header.name..(#header.parameters==0 and "" or (" with value "..table.concat(header.parameters, ","))))
