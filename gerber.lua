@@ -547,6 +547,9 @@ function _M.load(file_path)
 			elseif tp=='SF' then
 				-- scale factor
 				assert(block.value == 'A1B1', "unsupported non-identity scale factor (Gerber SF parameter")
+			elseif tp=='IR' then
+				-- image rotation
+				assert(tonumber(block.value) == 0, "unsupported non-identity image rotation (Gerber IR parameter)")
 			elseif tp=='SR' then
 				-- step & repeat
 				assert(block.value == 'X1Y1I0J0', "unsupported non-trivial step & repeat (Gerber SR parameter)")
