@@ -233,6 +233,8 @@ function _M.rotate180_layer(layer, apertures, macros)
 end
 
 function _M.rotate180_image(image, apertures, macros)
+	if not apertures then apertures = {} end
+	if not macros then macros = {} end
 	local copy = {
 		file_path = nil,
 		name = image.name,
