@@ -412,7 +412,7 @@ function _M.load(filename)
 				table.insert(data, data.format)
 			elseif block:match('^AD') then
 				local aperture = load_aperture(block)
-				assert(data.apertures[aperture.dcode] == nil)
+				assert(data.apertures[aperture.dcode] == nil, "two different apertures share the same D-code")
 				data.apertures[aperture.dcode] = aperture
 				table.insert(data, aperture)
 			elseif block:match('^AM') then
