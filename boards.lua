@@ -8,6 +8,7 @@ local pathlib = require 'path'
 local gerber = require 'gerber'
 local excellon = require 'excellon'
 local bom = require 'bom'
+local svg = require 'svg'
 local dump = require 'dump'
 local crypto = require 'crypto'
 
@@ -152,6 +153,8 @@ local function load_image(filepath, format, unit, template)
 		image = bom.load(filepath, template.bom)
 	elseif format=='gerber' then
 		image = gerber.load(filepath)
+	elseif format=='svg' then
+		image = svg.load(filepath)
 	else
 		error("unsupported image format "..tostring(format))
 	end
@@ -243,6 +246,8 @@ local function save_image(image, filepath, format, unit, template)
 		return bom.save(image, filepath, template.bom)
 	elseif format=='gerber' then
 		return gerber.save(image, filepath)
+	elseif format=='svg' then
+		return svg.save(image, filepath)
 	else
 		error("unsupported image format "..tostring(format))
 	end
