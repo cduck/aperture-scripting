@@ -10,6 +10,7 @@ return {
 			"bom.lua",
 			"excellon.lua",
 			"gerber.lua",
+			"svg.lua",
 		},
 		{
 			dirs = {source=P'boards', build=P'boards', install=P'boards'},
