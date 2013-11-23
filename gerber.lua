@@ -377,7 +377,8 @@ local function interpolate(path, point)
 					while tb <= ta do tb = tb + 360 end
 					dt = tb - ta
 				end
-				if dt <= 90 then
+			--	if dt <= 90 then
+				if dt < 180 then
 					local ratio = math.max(ra, rb) / math.min(ra, rb)
 					if ratio < best then
 						best = ratio
