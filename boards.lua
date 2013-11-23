@@ -605,6 +605,7 @@ local function merge_image_apertures(image)
 		end
 	end
 end
+_M.merge_image_apertures = merge_image_apertures
 
 local function merge_board_apertures(board)
 	for _,image in pairs(board.images) do
