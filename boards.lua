@@ -9,6 +9,7 @@ local gerber = require 'gerber'
 local excellon = require 'excellon'
 local bom = require 'bom'
 local svg = require 'svg'
+local dxf = require 'dxf'
 local dump = require 'dump'
 local crypto = require 'crypto'
 
@@ -155,6 +156,8 @@ local function load_image(filepath, format, unit, template)
 		image = gerber.load(filepath)
 	elseif format=='svg' then
 		image = svg.load(filepath)
+	elseif format=='dxf' then
+		image = dxf.load(filepath)
 	else
 		error("unsupported image format "..tostring(format))
 	end
@@ -248,6 +251,8 @@ local function save_image(image, filepath, format, unit, template)
 		return gerber.save(image, filepath)
 	elseif format=='svg' then
 		return svg.save(image, filepath)
+	elseif format=='dxf' then
+		return dxf.save(image, filepath)
 	else
 		error("unsupported image format "..tostring(format))
 	end

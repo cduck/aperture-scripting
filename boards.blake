@@ -11,6 +11,7 @@ return {
 			"excellon.lua",
 			"gerber.lua",
 			"svg.lua",
+			"dxf.lua",
 		},
 		{
 			dirs = {source=P'boards', build=P'boards', install=P'boards'},
