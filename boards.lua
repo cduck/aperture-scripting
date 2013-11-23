@@ -569,6 +569,19 @@ end
 
 ------------------------------------------------------------------------------
 
+local function macro_hash(macro)
+	-- :TODO: only consider relevant fields
+	return dump.tostring(macro)
+end
+
+local function aperture_hash(aperture)
+	local t = {aperture.shape, table.unpack(aperture.parameters)}
+	if aperture.macro then
+		table.insert(t, macro_hash(aperture.macro))
+	end
+	return table.concat(t, '\0')
+end
+
 local function merge_image_apertures(image)
 	-- list apertures
 	local apertures = {}
@@ -577,7 +590,7 @@ local function merge_image_apertures(image)
 		for _,path in ipairs(layer) do
 			local aperture = path.aperture
 			if aperture then
-				local s = assert(dump.tostring(aperture))
+				local s = aperture_hash(aperture)
 				if apertures[s] then
 					aperture = apertures[s]
 					path.aperture = aperture
@@ -595,7 +608,7 @@ local function merge_image_apertures(image)
 	for _,aperture in ipairs(aperture_order) do
 		local macro = aperture.macro
 		if macro then
-			local s = dump.tostring(macro)
+			local s = macro_hash(macro)
 			if macros[s] then
 				aperture.macro = macros[s]
 			else
