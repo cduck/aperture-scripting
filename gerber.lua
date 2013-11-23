@@ -780,6 +780,7 @@ function _M.save(image, file_path, verbose)
 	end
 --	table.insert(data, _M.blocks.directive{G=75})
 --	table.insert(data, _M.blocks.directive{G=70})
+	assert(image.format.zeroes and image.format.integer and image.format.decimal)
 	table.insert(data, _M.blocks.format(image.format.zeroes, image.format.integer, image.format.decimal))
 	table.insert(data, _M.blocks.parameter('MO', unit))
 	
