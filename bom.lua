@@ -1,5 +1,7 @@
 local _M = {}
 
+local io = require 'io'
+local table = require 'table'
 local geometry = require 'geometry'
 local vector = geometry.vector
 local quaternion = geometry.quaternion
@@ -63,7 +65,7 @@ function _M.load(file_path, template)
 		elseif side=='bottom' then
 			layer = bottom
 		else
-			error("unexpected Side in BOM: "..tostring(pos.Side))
+			error("unexpected Side in BOM: "..tostring(side))
 		end
 		table.insert(layer, {
 			aperture = {
@@ -76,7 +78,7 @@ function _M.load(file_path, template)
 	
 	local image = {
 		file_path = file_path,
-		name = image_name,
+	--	name = image_name,
 		format = field_names,
 		unit = unit,
 		layers = layers,
