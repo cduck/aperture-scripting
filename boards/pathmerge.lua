@@ -48,8 +48,8 @@ local function prepend_path(parent, child)
 end
 
 local function point_to_node(point, epsilon)
-	local x = math.floor(point.x / epsilon)
-	local y = math.floor(point.y / epsilon)
+	local x = math.floor(point.x / epsilon + 0.5)
+	local y = math.floor(point.y / epsilon + 0.5)
 	return x..':'..y
 end
 
