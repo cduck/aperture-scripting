@@ -93,11 +93,11 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 			for i=0,drill_count-1 do
 				local z = (i - (drill_count-1) / 2) * options.break_hole_diameter * 2
 				if vertical then
-					drawing.draw_path(panel.images.drill, drill, c + z, w - options.spacing / 2)
-					drawing.draw_path(panel.images.drill, drill, c + z, w + options.spacing / 2)
+					drawing.draw_path(panel.images.milling, drill, c + z, w - options.spacing / 2)
+					drawing.draw_path(panel.images.milling, drill, c + z, w + options.spacing / 2)
 				else
-					drawing.draw_path(panel.images.drill, drill, w - options.spacing / 2, c + z)
-					drawing.draw_path(panel.images.drill, drill, w + options.spacing / 2, c + z)
+					drawing.draw_path(panel.images.milling, drill, w - options.spacing / 2, c + z)
+					drawing.draw_path(panel.images.milling, drill, w + options.spacing / 2, c + z)
 				end
 			end
 		end
