@@ -83,9 +83,17 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 			if vertical then
 				drawing.draw_path(panel.images.milling, mill, z1, w, z2, w)
 				drawing.draw_path(panel.images.milling, mill, z3, w, z4, w)
+				drawing.draw_path(panel.images.top_soldermask, drill, z2, w - options.spacing / 2, z3, w - options.spacing / 2)
+				drawing.draw_path(panel.images.top_soldermask, drill, z2, w + options.spacing / 2, z3, w + options.spacing / 2)
+				drawing.draw_path(panel.images.bottom_soldermask, drill, z2, w - options.spacing / 2, z3, w - options.spacing / 2)
+				drawing.draw_path(panel.images.bottom_soldermask, drill, z2, w + options.spacing / 2, z3, w + options.spacing / 2)
 			else
 				drawing.draw_path(panel.images.milling, mill, w, z1, w, z2)
 				drawing.draw_path(panel.images.milling, mill, w, z3, w, z4)
+				drawing.draw_path(panel.images.top_soldermask, drill, w - options.spacing / 2, z2, w - options.spacing / 2, z3)
+				drawing.draw_path(panel.images.top_soldermask, drill, w + options.spacing / 2, z2, w + options.spacing / 2, z3)
+				drawing.draw_path(panel.images.bottom_soldermask, drill, w - options.spacing / 2, z2, w - options.spacing / 2, z3)
+				drawing.draw_path(panel.images.bottom_soldermask, drill, w + options.spacing / 2, z2, w + options.spacing / 2, z3)
 			end
 			-- drill holes to make the tabs easy to break
 			local drill_count = math.floor(options.break_tab_width / options.break_hole_diameter / 2)
