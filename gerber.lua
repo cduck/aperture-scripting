@@ -16,8 +16,7 @@ for unit,scale in pairs(scales) do
 	assert(math.floor(scale)==scale)
 end
 
-local circle_steps = 64
---local circle_steps = 360
+_M.circle_steps = 64
 
 ------------------------------------------------------------------------------
 
@@ -29,7 +28,7 @@ function macro_primitives.circle(exposure, diameter, x, y)
 	assert(type(diameter)=='number')
 	assert(type(x)=='number')
 	assert(type(y)=='number')
-	return macro_primitives.polygon(exposure, circle_steps, x, y, diameter, 0)
+	return macro_primitives.polygon(exposure, _M.circle_steps, x, y, diameter, 0)
 end
 
 local function rotate(point, rotation)
@@ -166,6 +165,7 @@ function macro_primitives.moire(x, y, outer_diameter, ring_thickness, ring_gap, 
 	print("moiré primitive not yet supported, drawing a circle instead")
 	local r = outer_diameter / 2
 	rotation = math.rad(rotation)
+	local circle_steps = _M.circle_steps
 	local path = {}
 	for i=0,circle_steps do
 		local a
@@ -192,6 +192,7 @@ function macro_primitives.thermal(x, y, outer_diameter, inner_diameter, gap_thic
 	print("thermal primitive not yet supported, drawing a circle instead")
 	local r = outer_diameter / 2
 	rotation = math.rad(rotation)
+	local circle_steps = _M.circle_steps
 	local path = {}
 	for i=0,circle_steps do
 		local a

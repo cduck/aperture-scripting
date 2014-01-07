@@ -34,7 +34,7 @@ local aperture_scales = {
 	MM_mm =  1,
 }
 
-local circle_steps = 64
+_M.circle_steps = 64
 
 local function generate_aperture_path(aperture, board_unit)
 	local shape = aperture.shape
@@ -46,7 +46,7 @@ local function generate_aperture_path(aperture, board_unit)
 	local scale_name = aperture.unit..'_'..board_unit
 	local scale = assert(aperture_scales[scale_name], "unsupported aperture scale "..scale_name)
 	
-	local path
+	local circle_steps = _M.circle_steps
 	local path
 	if shape=='circle' then
 		local d,hx,hy = unpack(parameters)
