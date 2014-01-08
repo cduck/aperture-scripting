@@ -28,6 +28,9 @@ end
 
 local function append_path(parent, child)
 	local nparent = #parent
+	if (child[1].x==child[2].x or child[1].y==child[2].y) and parent[nparent].x~=parent[nparent-1].x and parent[nparent].y~=parent[nparent-1].y then
+		parent[nparent] = child[1]
+	end
 	for i=2,#child do
 		parent[nparent+i-1] = child[i]
 	end
@@ -39,6 +42,9 @@ local function prepend_path(parent, child)
 	local nchild = #child
 	for i=nparent+nchild-1,nchild,-1 do
 		parent[i] = parent[i-(nchild-1)]
+	end
+	if (child[nchild].x==child[nchild-1].x or child[nchild].y==child[nchild-1].y) and parent[nchild].x~=parent[nchild+1].x and parent[nchild].y~=parent[nchild+1].y then
+		parent[nchild] = child[nchild]
 	end
 	for i=1,nchild-1 do
 		parent[i] = child[i]
