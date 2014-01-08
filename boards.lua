@@ -210,15 +210,7 @@ local function load_image(filepath, format, unit, template)
 	image.extents = region()
 	for _,layer in ipairs(image.layers) do
 		for _,path in ipairs(layer) do
-			path.center_extents = region()
-			for _,point in ipairs(path) do
-				path.center_extents = path.center_extents + point
-			end
-			path.extents = region(path.center_extents)
-			local aperture = path.aperture
-			if aperture and not aperture.extents.empty then
-				path.extents = path.extents * aperture.extents
-			end
+			region.recompute_path_extents(path)
 			image.center_extents = image.center_extents + path.center_extents
 			image.extents = image.extents + path.extents
 		end
