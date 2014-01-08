@@ -2,6 +2,7 @@ local _M = {}
 
 local math = require 'math'
 local table = require 'table'
+local region = require 'boards.region'
 
 ------------------------------------------------------------------------------
 
@@ -30,8 +31,7 @@ local function append_path(parent, child)
 	for i=2,#child do
 		parent[nparent+i-1] = child[i]
 	end
-	parent.extents = parent.extents + child.extents
-	parent.center_extents = parent.center_extents + child.center_extents
+	region.recompute_path_extents(parent)
 end
 
 local function prepend_path(parent, child)
@@ -43,8 +43,7 @@ local function prepend_path(parent, child)
 	for i=1,nchild-1 do
 		parent[i] = child[i]
 	end
-	parent.extents = parent.extents + child.extents
-	parent.center_extents = parent.center_extents + child.center_extents
+	region.recompute_path_extents(parent)
 end
 
 local function point_to_node(point, epsilon)
