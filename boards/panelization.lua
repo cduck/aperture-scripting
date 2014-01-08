@@ -64,6 +64,22 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 	local mill = { shape = 'circle', parameters = { options.spacing / 25.4 / 1e9 } }
 	local drill = { shape = 'circle', parameters = { options.break_hole_diameter / 25.4 / 1e9 } }
 	
+	-- if sub-boards dimension mis-match, cut a clean border on the longest one
+	if side_a[1] ~= side_b[1] then
+		local a0 = side_a[1]
+		local b0 = side_b[1]
+		local c0 = math.min(a0, b0)
+		local c1 = math.max(a0, b0)
+		local z1 = c0 - options.spacing / 2
+		local z4 = c1 - options.spacing / 2
+		local w = position
+		if vertical then
+			drawing.draw_path(panel.images.milling, mill, z1, w, z4, w)
+		else
+			drawing.draw_path(panel.images.milling, mill, w, z1, w, z4)
+		end
+	end
+	
 	-- iterate over sides
 	local a,b = 1,1
 	while a < #side_a and b < #side_b do
@@ -113,6 +129,22 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 			a = a + 2
 		else
 			b = b + 2
+		end
+	end
+	
+	-- if sub-boards dimension mis-match, cut a clean border on the longest one
+	if side_a[#side_a] ~= side_b[#side_b] then
+		local a1 = side_a[#side_a]
+		local b1 = side_b[#side_b]
+		local c0 = math.min(a1, b1)
+		local c1 = math.max(a1, b1)
+		local z1 = c0 + options.spacing / 2
+		local z4 = c1 + options.spacing / 2
+		local w = position
+		if vertical then
+			drawing.draw_path(panel.images.milling, mill, z1, w, z4, w)
+		else
+			drawing.draw_path(panel.images.milling, mill, w, z1, w, z4)
 		end
 	end
 end
