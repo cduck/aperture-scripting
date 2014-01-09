@@ -59,10 +59,27 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 	-- draw cut lines and break tabs
 	-- see http://blogs.mentor.com/tom-hausherr/blog/2011/06/23/pcb-design-perfection-starts-in-the-cad-library-part-19/
 	
+	local mill,drill
+	if vertical then
+		function mill(image, aperture, w, z1, z2)
+			drawing.draw_path(image, aperture, z1, w, z2, w)
+		end
+		function drill(image, aperture, w, z)
+			drawing.draw_path(image, aperture, z, w)
+		end
+	else
+		function mill(image, aperture, w, z1, z2)
+			drawing.draw_path(image, aperture, w, z1, w, z2)
+		end
+		function drill(image, aperture, w, z)
+			drawing.draw_path(image, aperture, w, z)
+		end
+	end
+	
 	-- prepare routing and tab-separation drills
 	-- :FIXME: for some reason the diameter needs to be scaled here, this is wrong
-	local mill = { shape = 'circle', parameters = { options.spacing / 25.4 / 1e9 } }
-	local drill = { shape = 'circle', parameters = { options.break_hole_diameter / 25.4 / 1e9 } }
+	local spacer = { shape = 'circle', parameters = { options.spacing / 25.4 / 1e9 } }
+	local breaker = { shape = 'circle', parameters = { options.break_hole_diameter / 25.4 / 1e9 } }
 	
 	-- if sub-boards dimension mis-match, cut a clean border on the longest one
 	if side_a[1] ~= side_b[1] then
@@ -73,11 +90,7 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 		local z1 = c0 - options.spacing / 2
 		local z4 = c1 - options.spacing / 2
 		local w = position
-		if vertical then
-			drawing.draw_path(panel.images.milling, mill, z1, w, z4, w)
-		else
-			drawing.draw_path(panel.images.milling, mill, w, z1, w, z4)
-		end
+		mill(panel.images.milling, spacer, w, z1, z4)
 	end
 	
 	-- iterate over sides
@@ -96,33 +109,19 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 			local z4 = c1 + options.spacing / 2
 			local w = position
 			-- a half-line before the tab and a half-line after
-			if vertical then
-				drawing.draw_path(panel.images.milling, mill, z1, w, z2, w)
-				drawing.draw_path(panel.images.milling, mill, z3, w, z4, w)
-				drawing.draw_path(panel.images.top_soldermask, drill, z2, w - options.spacing / 2, z3, w - options.spacing / 2)
-				drawing.draw_path(panel.images.top_soldermask, drill, z2, w + options.spacing / 2, z3, w + options.spacing / 2)
-				drawing.draw_path(panel.images.bottom_soldermask, drill, z2, w - options.spacing / 2, z3, w - options.spacing / 2)
-				drawing.draw_path(panel.images.bottom_soldermask, drill, z2, w + options.spacing / 2, z3, w + options.spacing / 2)
-			else
-				drawing.draw_path(panel.images.milling, mill, w, z1, w, z2)
-				drawing.draw_path(panel.images.milling, mill, w, z3, w, z4)
-				drawing.draw_path(panel.images.top_soldermask, drill, w - options.spacing / 2, z2, w - options.spacing / 2, z3)
-				drawing.draw_path(panel.images.top_soldermask, drill, w + options.spacing / 2, z2, w + options.spacing / 2, z3)
-				drawing.draw_path(panel.images.bottom_soldermask, drill, w - options.spacing / 2, z2, w - options.spacing / 2, z3)
-				drawing.draw_path(panel.images.bottom_soldermask, drill, w + options.spacing / 2, z2, w + options.spacing / 2, z3)
-			end
+			mill(panel.images.milling, spacer, w, z1, z2)
+			mill(panel.images.milling, spacer, w, z3, z4)
+			mill(panel.images.top_soldermask, breaker, w - options.spacing / 2, z2, z3)
+			mill(panel.images.top_soldermask, breaker, w + options.spacing / 2, z2, z3)
+			mill(panel.images.bottom_soldermask, breaker, w - options.spacing / 2, z2, z3)
+			mill(panel.images.bottom_soldermask, breaker, w + options.spacing / 2, z2, z3)
 			-- drill holes to make the tabs easy to break
 			local drill_count = math.floor(options.break_tab_width / options.break_hole_diameter / 2)
 			local min
 			for i=0,drill_count-1 do
 				local z = (i - (drill_count-1) / 2) * options.break_hole_diameter * 2
-				if vertical then
-					drawing.draw_path(panel.images.milling, drill, c + z, w - options.spacing / 2)
-					drawing.draw_path(panel.images.milling, drill, c + z, w + options.spacing / 2)
-				else
-					drawing.draw_path(panel.images.milling, drill, w - options.spacing / 2, c + z)
-					drawing.draw_path(panel.images.milling, drill, w + options.spacing / 2, c + z)
-				end
+				drill(panel.images.milling, breaker, w - options.spacing / 2, c + z)
+				drill(panel.images.milling, breaker, w + options.spacing / 2, c + z)
 			end
 		end
 		if a1 < b1 then
@@ -141,11 +140,7 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 		local z1 = c0 + options.spacing / 2
 		local z4 = c1 + options.spacing / 2
 		local w = position
-		if vertical then
-			drawing.draw_path(panel.images.milling, mill, z1, w, z4, w)
-		else
-			drawing.draw_path(panel.images.milling, mill, w, z1, w, z4)
-		end
+		mill(panel.images.milling, spacer, w, z1, z4)
 	end
 end
 
