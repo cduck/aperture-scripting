@@ -46,10 +46,10 @@ function _M.empty_board(width, height)
 			path = {
 				extents = extents,
 				{ x = 0, y = 0 },
-				{ x = width, y = 0 },
-				{ x = width, y = height },
-				{ x = 0, y = height },
-				{ x = 0, y = 0 },
+				{ x = width, y = 0, interpolation = 'linear' },
+				{ x = width, y = height, interpolation = 'linear' },
+				{ x = 0, y = height, interpolation = 'linear' },
+				{ x = 0, y = 0, interpolation = 'linear' },
 			},
 		},
 	}

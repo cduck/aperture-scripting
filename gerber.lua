@@ -828,9 +828,12 @@ function _M.save(image, file_path, verbose)
 						end
 						local D = i == 1 and 2 or 1
 						local interpolation_changed = false
-						if D==1 and point.interpolation ~= interpolation then
-							interpolation = point.interpolation
-							interpolation_changed = true
+						if D==1 then
+							assert(point.interpolation)
+							if point.interpolation ~= interpolation then
+								interpolation = point.interpolation
+								interpolation_changed = true
+							end
 						end
 						local G
 						if verbose then

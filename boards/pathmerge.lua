@@ -30,6 +30,7 @@ local function append_path(parent, child)
 	local nparent = #parent
 	if (child[1].x==child[2].x or child[1].y==child[2].y) and parent[nparent].x~=parent[nparent-1].x and parent[nparent].y~=parent[nparent-1].y then
 		parent[nparent] = child[1]
+		parent[nparent].interpolation = 'linear'
 	end
 	for i=2,#child do
 		parent[nparent+i-1] = child[i]
@@ -40,6 +41,7 @@ end
 local function prepend_path(parent, child)
 	local nparent = #parent
 	local nchild = #child
+	parent[1].interpolation = 'linear'
 	for i=nparent+nchild-1,nchild,-1 do
 		parent[i] = parent[i-(nchild-1)]
 	end
