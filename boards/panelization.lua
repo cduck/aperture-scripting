@@ -81,48 +81,46 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 	local spacer = { shape = 'circle', parameters = { options.spacing / 25.4 / 1e9 } }
 	local breaker = { shape = 'circle', parameters = { options.break_hole_diameter / 25.4 / 1e9 } }
 	
-	-- if sub-boards dimension mis-match, cut a clean border on the longest one
-	if side_a[1] ~= side_b[1] then
-		local a0 = side_a[1]
-		local b0 = side_b[1]
-		local c0 = math.min(a0, b0)
-		local c1 = math.max(a0, b0)
-		local z1 = c0 - options.spacing / 2
-		local z4 = c1 - options.spacing / 2
-		local w = position
-		mill(panel.images.milling, spacer, w, z1, z4)
+	assert(#side_b % 2 == 0)
+	assert(#side_a % 2 == 0)
+	
+	-- remember the cut total dimension
+	local from = math.min(side_a[1], side_b[1]) - options.spacing / 2
+	local to = math.max(side_a[#side_a], side_b[#side_b]) + options.spacing / 2
+	
+	-- remove A segments too short for a tab
+	local side_a2 = {}
+	for a=1,#side_a,2 do
+		local on = side_a[a]
+		local off = side_a[a+1]
+		if off - on >= options.break_tab_width + options.spacing then
+			table.insert(side_a2, on)
+			table.insert(side_a2, off)
+		end
 	end
 	
-	-- iterate over sides
+	-- remove B segments too short for a tab
+	local side_b2 = {}
+	for b=1,#side_b,2 do
+		local on = side_b[b]
+		local off = side_b[b+1]
+		if off - on >= options.break_tab_width + options.spacing then
+			table.insert(side_b2, on)
+			table.insert(side_b2, off)
+		end
+	end
+	
+	-- merge sides into segments where we can put tabs between boards
+	local side = {}
 	local a,b = 1,1
 	while a < #side_a and b < #side_b do
 		local a0,a1 = side_a[a],side_a[a+1]
 		local b0,b1 = side_b[b],side_b[b+1]
 		local c0 = math.max(a0, b0)
 		local c1 = math.min(a1, b1)
-		-- :TODO: add multiple tabs on long edges
-		if c1 - c0 > options.break_tab_width + options.spacing then
-			local c = (c0 + c1) / 2
-			local z1 = c0 - options.spacing / 2
-			local z2 = c - (options.break_tab_width + options.spacing) / 2
-			local z3 = c + (options.break_tab_width + options.spacing) / 2
-			local z4 = c1 + options.spacing / 2
-			local w = position
-			-- a half-line before the tab and a half-line after
-			mill(panel.images.milling, spacer, w, z1, z2)
-			mill(panel.images.milling, spacer, w, z3, z4)
-			mill(panel.images.top_soldermask, breaker, w - options.spacing / 2, z2, z3)
-			mill(panel.images.top_soldermask, breaker, w + options.spacing / 2, z2, z3)
-			mill(panel.images.bottom_soldermask, breaker, w - options.spacing / 2, z2, z3)
-			mill(panel.images.bottom_soldermask, breaker, w + options.spacing / 2, z2, z3)
-			-- drill holes to make the tabs easy to break
-			local drill_count = math.floor(options.break_tab_width / options.break_hole_diameter / 2)
-			local min
-			for i=0,drill_count-1 do
-				local z = (i - (drill_count-1) / 2) * options.break_hole_diameter * 2
-				drill(panel.images.milling, breaker, w - options.spacing / 2, c + z)
-				drill(panel.images.milling, breaker, w + options.spacing / 2, c + z)
-			end
+		if c1 - c0 >= options.break_tab_width + options.spacing then
+			table.insert(side, c0)
+			table.insert(side, c1)
 		end
 		if a1 < b1 then
 			a = a + 2
@@ -131,17 +129,72 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 		end
 	end
 	
-	-- if sub-boards dimension mis-match, cut a clean border on the longest one
-	if side_a[#side_a] ~= side_b[#side_b] then
-		local a1 = side_a[#side_a]
-		local b1 = side_b[#side_b]
-		local c0 = math.min(a1, b1)
-		local c1 = math.max(a1, b1)
-		local z1 = c0 + options.spacing / 2
-		local z4 = c1 + options.spacing / 2
+	-- we may not have anywhere to put tabs
+	if #side == 0 then
+		-- nowhere to put tabs, just cut (assume outer parts will connect the two subpanels)
+		local z1 = from
+		local z4 = to
 		local w = position
 		mill(panel.images.milling, spacer, w, z1, z4)
+		return
 	end
+	
+	-- prepare cut
+	local w = position
+	
+	-- cut from edge to first tab-able segment
+	if from < side[1] then
+		mill(panel.images.milling, spacer, w, from, side[1])
+	end
+	
+	-- iterate over merged side
+	for i=1,#side-1 do
+		-- ends of this segment
+		local c0 = side[i]
+		local c1 = side[i+1]
+		-- tabs in odd segments
+		if i % 2 == 1 then
+			-- count how many tabs we can fit
+			local n = math.ceil(((c1 - c0) - (options.break_tab_width + options.spacing)) / options.tab_interval)
+			for i=0,n-1 do
+				-- determine tab position
+				local c = (c0 + c1) / 2 + (i - (n-1) / 2) * options.tab_interval
+				-- ends of the partial segment around this one tab
+				local c0 = math.max(c0, c - options.tab_interval / 2)
+				local c1 = math.min(c1, c + options.tab_interval / 2)
+				-- ends of the two cuts on either side of the tab
+				local z1 = c0
+				local z2 = c - (options.break_tab_width + options.spacing) / 2
+				local z3 = c + (options.break_tab_width + options.spacing) / 2
+				local z4 = c1
+				-- a half-line before the tab and a half-line after
+				mill(panel.images.milling, spacer, w, z1, z2)
+				mill(panel.images.milling, spacer, w, z3, z4)
+				-- small lines on the edge of the tab to ease breaking
+				mill(panel.images.top_soldermask, breaker, w - options.spacing / 2, z2, z3)
+				mill(panel.images.top_soldermask, breaker, w + options.spacing / 2, z2, z3)
+				mill(panel.images.bottom_soldermask, breaker, w - options.spacing / 2, z2, z3)
+				mill(panel.images.bottom_soldermask, breaker, w + options.spacing / 2, z2, z3)
+				-- drill holes to make the tabs easy to break
+				local drill_count = math.floor(options.break_tab_width / options.break_hole_diameter / 2)
+				for i=0,drill_count-1 do
+					local z = (i - (drill_count-1) / 2) * options.break_hole_diameter * 2
+					drill(panel.images.milling, breaker, w - options.spacing / 2, c + z)
+					drill(panel.images.milling, breaker, w + options.spacing / 2, c + z)
+				end
+			end
+		else
+			-- just bridge the gap
+			mill(panel.images.milling, spacer, w, c0, c1)
+		end
+	end
+	
+	-- cut from last tab-able segment to the edge
+	if side[#side] < to then
+		mill(panel.images.milling, spacer, w, side[#side], to)
+	end
+	
+	-- :TODO: route corners
 end
 
 local function find_sides(outline)
@@ -312,6 +365,9 @@ function _M.panelize(layout, options, vertical)
 	end
 	if not options.break_tab_width then
 		options.break_tab_width = 5*mm
+	end
+	if not options.tab_interval then
+		options.tab_interval = 77*mm
 	end
 	if #layout == 0 then
 		-- this is not a layout but a board
