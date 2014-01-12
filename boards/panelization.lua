@@ -291,6 +291,14 @@ local function merge_panels(panel_a, panel_b, options, vertical)
 		end
 	end
 	
+	for i,point in ipairs(merged.outline.path) do
+		if i > 1 then
+			if not point.interpolation then
+				merged.outline.path[i] = {x=point.x, y=point.y, interpolation='linear'}
+			end
+		end
+	end
+	
 	return merged
 end
 
