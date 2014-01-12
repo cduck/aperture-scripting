@@ -420,7 +420,7 @@ function _M.merge_images(image_a, image_b)
 		end
 	end
 	for i=#image_a.layers+1,#image_b.layers do
-		merged.layers[i] = _M.copy_layer(#image_b.layers[i])
+		merged.layers[i] = _M.copy_layer(image_b.layers[i])
 	end
 	
 	return merged
