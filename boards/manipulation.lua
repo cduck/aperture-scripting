@@ -382,7 +382,7 @@ function _M.merge_layers(layer_a, layer_b)
 end
 
 function _M.merge_images(image_a, image_b)
-	assert(image_a.unit == image_b.unit, "image unit mismatch")
+	assert(image_a.unit == image_b.unit, "image unit mismatch ("..tostring(image_a.unit).." vs. "..tostring(image_b.unit)..")")
 	local merged = {
 		file_path = nil,
 		name = nil,
