@@ -692,6 +692,7 @@ _M.rotate180 = manipulation.rotate180_board
 _M.merge = manipulation.merge_boards
 
 _M.draw_path = drawing.draw_path
+_M.draw_text = drawing.draw_text
 _M.empty_board = panelization.empty_board
 _M.panelize = panelization.panelize
 
