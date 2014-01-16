@@ -187,7 +187,7 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 				end
 			end
 			local clockwise_outline = not glyph.flags.REVERSE_FILL
-			local outline = clockwise(path) == clockwise_outline -- compare before negating x
+			local outline = clockwise(path) == clockwise_outline -- compare before mirror
 			local path_polarity = outline and polarity or (polarity=='clear' and 'dark' or 'clear')
 			if mirror then
 				for _,point in ipairs(path) do
