@@ -18,9 +18,19 @@ end
 
 ------------------------------------------------------------------------------
 
-local FT,library
+local success,result = pcall(require, 'freetype.core')
+if not success then
+	if not result:match("module 'freetype.core' not found") then
+		error(result)
+	end
+else
+
+local FT = result
+local library = assert(FT.Init_FreeType())
+
 local font_scale = 1000 -- to account for Freetype fixed point data, and the minimum font size of 1
 local face_cache = {}
+local glyph_cache = {}
 
 local function get_face(fontname, size)
 	local face_key = fontname..'\0'..size
@@ -32,8 +42,6 @@ local function get_face(fontname, size)
 	end
 	return face
 end
-
-local glyph_cache = {}
 
 local function get_glyph(fontname, size, char)
 	local glyph_key = fontname..'\0'..size..'\0'..char
@@ -207,10 +215,8 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 	end
 end
 
-function _M.draw_text(image, polarity, fontname, size, mirror, halign, x, y, text)
-	if not FT then FT = require 'freetype.core' end
-	if not library then library = assert(FT.Init_FreeType()) end
-	draw_text(image, polarity, fontname, size, mirror, halign, x, y, text)
+_M.draw_text = draw_text
+
 end
 
 ------------------------------------------------------------------------------
