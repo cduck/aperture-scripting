@@ -164,6 +164,8 @@ function _M.save(image, filepath)
 <svg
 	xmlns="http://www.w3.org/2000/svg"
 	version="1.1"
+	height="100%"
+	width="100%"
 ]]))
 	if image.name then
 		assert(file:write('\tid="'..image.name..'"\n'))
