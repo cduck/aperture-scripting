@@ -19,6 +19,7 @@ local templates = require 'boards.templates'
 local pathmerge = require 'boards.pathmerge'
 local manipulation = require 'boards.manipulation'
 local panelization = require 'boards.panelization'
+local interpolation = require 'boards.interpolation'
 
 pathlib.install()
 
@@ -626,6 +627,31 @@ end
 function _M.merge_apertures(board)
 	merge_board_apertures(board)
 end
+
+------------------------------------------------------------------------------
+
+local function interpolate_image_paths(image)
+	for _,layer in ipairs(image.layers) do
+		for ipath,path in ipairs(layer) do
+			local interpolated = { aperture = path.aperture }
+			for i,point in ipairs(path) do
+				if i == 1 then
+					table.insert(interpolated, point)
+				else
+					interpolation.interpolate(interpolated, point)
+				end
+			end
+			for i,point in ipairs(interpolated) do
+				point.interpolated = nil
+				point.i = nil
+				point.j = nil
+				if i > 1 then point.interpolation = 'linear' end
+			end
+			layer[ipath] = interpolated
+		end
+	end
+end
+_M.interpolate_image_paths = interpolate_image_paths
 
 ------------------------------------------------------------------------------
 
