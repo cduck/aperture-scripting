@@ -16,6 +16,7 @@ return {
 		{
 			dirs = {source=P'boards', build=P'boards', install=P'boards'},
 			"drawing.lua",
+			"interpolation.lua",
 			"manipulation.lua",
 			"panelization.lua",
 			"pathmerge.lua",
