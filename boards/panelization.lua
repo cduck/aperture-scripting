@@ -78,8 +78,8 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 	
 	-- prepare routing and tab-separation drills
 	-- :FIXME: for some reason the diameter needs to be scaled here, this is wrong
-	local spacer = { shape = 'circle', parameters = { options.spacing / 25.4 / 1e9 } }
-	local breaker = { shape = 'circle', parameters = { options.break_hole_diameter / 25.4 / 1e9 } }
+	local spacer = drawing.circle_aperture(options.spacing / 25.4 / 1e9)
+	local breaker = drawing.circle_aperture(options.break_hole_diameter / 25.4 / 1e9)
 	
 	assert(#side_b % 2 == 0)
 	assert(#side_a % 2 == 0)

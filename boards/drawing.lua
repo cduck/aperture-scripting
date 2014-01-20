@@ -4,6 +4,12 @@ local table = require 'table'
 
 ------------------------------------------------------------------------------
 
+function _M.circle_aperture(diameter)
+	return { shape = 'circle', parameters = { diameter } }
+end
+
+------------------------------------------------------------------------------
+
 function _M.draw_path(image, aperture, ...)
 	local path = {
 		aperture = aperture,
