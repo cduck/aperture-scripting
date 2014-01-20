@@ -174,22 +174,116 @@ function load_section.CLASSES(groupcodes)
 	return classes
 end
 
+local load_subclass = {}
+
+function load_subclass.AcDbSymbolTable(groupcodes)
+	-- :TODO: parse this subclass
+	return nil
+end
+
+function load_subclass.AcDbSymbolTableRecord(groupcodes)
+	-- :TODO: parse this subclass
+	return nil
+end
+
+function load_subclass.AcDbViewportTableRecord(groupcodes)
+	-- :TODO: parse this subclass
+	return nil
+end
+
+function load_subclass.AcDbLinetypeTableRecord(groupcodes)
+	-- :TODO: parse this subclass
+	return nil
+end
+
+function load_subclass.AcDbLayerTableRecord(groupcodes)
+	-- :TODO: parse this subclass
+	return nil
+end
+
+function load_subclass.AcDbTextStyleTableRecord(groupcodes)
+	-- :TODO: parse this subclass
+	return nil
+end
+
+function load_subclass.AcDbRegAppTableRecord(groupcodes)
+	-- :TODO: parse this subclass
+	return nil
+end
+
+function load_subclass.AcDbDimStyleTableRecord(groupcodes)
+	-- :TODO: parse this subclass
+	return nil
+end
+
+function load_subclass.AcDbBlockTableRecord(groupcodes)
+	-- :TODO: parse this subclass
+	return nil
+end
+
+function load_subclass.AcDbEntity(groupcodes)
+	-- :TODO: parse this subclass
+	return nil
+end
+
+function load_subclass.AcDbPolyline(groupcodes)
+	local subclass = {}
+	for _,group in ipairs(groupcodes) do
+		if group.code == 90 then
+			subclass.vertex_count = parse(group)
+		elseif group.code == 70 then
+			subclass.flags = parse(group)
+		end
+	end
+	local vertices = {}
+	for i=1,subclass.vertex_count do vertices[i] = {} end
+	local lastx,lasty,lastz = 0,0,0
+	for _,group in ipairs(groupcodes) do
+		if group.code == 10 then
+			lastx = lastx + 1
+			vertices[lastx].x = parse(group)
+		elseif group.code == 20 then
+			lasty = lasty + 1
+			vertices[lasty].y = parse(group)
+		elseif group.code == 30 then
+			lastz = lastz + 1
+			vertices[lastz].z = parse(group)
+		end
+	end
+	for i=1,subclass.vertex_count do
+		local vertex = vertices[i]
+		assert(vertex.x and vertex.y and vertex.z)
+	end
+	subclass.vertex_count = nil
+	subclass.vertices = vertices
+	return subclass
+end
+
+function load_subclass.AcDbDictionary(groupcodes)
+	return {}
+end
+
 local function load_object(type, groupcodes)
 	local object = {type=type, attributes={}}
+	local subclasses = {}
 	local subclass
 	for _,group in ipairs(groupcodes) do
 		local code = group.code
 		if code==100 then
 			local classname = group.data
 			subclass = {}
-			assert(object[classname]==nil, "object has two "..classname.." subclasses")
-			object[classname] = subclass
+			assert(subclasses[classname]==nil, "object has two "..classname.." subclasses")
+			subclasses[classname] = subclass
 		elseif subclass then
 			table.insert(subclass, group)
 		--	subclass[code] = parse(group)
 		else
 			object.attributes[code] = parse(group)
 		end
+	end
+	for name,groupcodes in pairs(subclasses) do
+		local subclass = assert(load_subclass[name], "no loader for subclass "..tostring(name))(groupcodes)
+		object[name] = subclass
 	end
 	return object
 end
@@ -370,18 +464,30 @@ function _M.load(filepath)
 	
 	local sections = load_DXF(groupcodes)
 	
+	local scale = 1e9
+	
+	local layers = {{}}
+	local layer = layers[1]
 	for _,entity in ipairs(sections.ENTITIES) do
 		local npoints = 0
-		for _,group in ipairs(entity.AcDbSpline or entity.AcDbPolyline or {}) do
-			if group.code==10 then npoints = npoints + 1 end
+		if entity.type == 'LWPOLYLINE' then
+			assert(entity.AcDbPolyline)
+			local path = {aperture={shape='circle', parameters={0}, unit='MM'}}
+			for i,point in ipairs(entity.AcDbPolyline.vertices) do
+				assert(point.z == 0, "3D entities are not yet supported")
+				table.insert(path, {x=point.x*scale, y=point.y*scale, interpolation=i>1 and 'linear' or nil})
+			end
+			table.insert(layer, path)
+		else
+			error("unsupported entity type "..tostring(entity.type))
 		end
-		print(entity.type, npoints)
 	end
---	print(require('dump').tostring(sections.ENTITIES))
 	
-	error("loading DXF is not yet implemented")
+	local image = {
+		layers = layers,
+	}
 	
-	return {}
+	return image
 end
 
 
