@@ -656,6 +656,28 @@ _M.interpolate_image_paths = interpolate_image_paths
 
 ------------------------------------------------------------------------------
 
+local function round(value, epsilon)
+	if not value then return value end
+	if not epsilon then epsilon = 1 end
+	return math.floor(value / epsilon + 0.5) * epsilon
+end
+
+local function round_image_paths(image, epsilon)
+	for _,layer in ipairs(image.layers) do
+		for _,path in ipairs(layer) do
+			local interpolated = { aperture = path.aperture }
+			for _,point in ipairs(path) do
+				for _,k in ipairs{'x', 'y', 'i', 'j'} do
+					point[k] = round(point[k], epsilon)
+				end
+			end
+		end
+	end
+end
+_M.round_image_paths = round_image_paths
+
+------------------------------------------------------------------------------
+
 local function value_to_pm(value, unit)
 	assert(value:match('^(%d+)%.(%d+)$') or value:match('^(%d+)$'), "malformed number '"..value.."'")
 	if unit=='pm' then
