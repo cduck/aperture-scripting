@@ -645,6 +645,7 @@ local function interpolate_image_paths(image)
 				point.interpolated = nil
 				point.i = nil
 				point.j = nil
+				point.quadrant = nil
 				if i > 1 then point.interpolation = 'linear' end
 			end
 			layer[ipath] = interpolated
