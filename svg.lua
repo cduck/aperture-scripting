@@ -35,6 +35,9 @@ local function style_polarity(style)
 end
 
 local function load_path(str)
+	local scale = 25.4e9 / 90 -- picometers per pixel
+	local xscale = scale
+	local yscale = -scale
 	local path = {}
 	for letter,params in str:gmatch('(%a)(%A*)') do
 		if letter=='M' then
@@ -43,17 +46,25 @@ local function load_path(str)
 			assert(x and y)
 			x,y = tonumber(x),tonumber(y)
 			assert(x and y)
+			x = x * xscale
+			y = y * yscale
 			table.insert(path, {x=x, y=y})
 		elseif letter=='L' then
 			local x,y = params:match('^([-0-9.]+)[^-0-9.]([-0-9.]+)$')
 			assert(x and y)
 			x,y = tonumber(x),tonumber(y)
 			assert(x and y)
+			x = x * xscale
+			y = y * yscale
 			table.insert(path, {x=x, y=y, interpolation='linear'})
 		elseif letter=='A' then
 			local rx,ry,angle,large,sweep,x,y = params:match('^([-0-9.]+)[^-0-9.]([-0-9.]+)[^-0-9.]([-0-9.]+)[^-0-9.]([-0-9.]+)[^-0-9.]([-0-9.]+)[^-0-9.]([-0-9.]+)[^-0-9.]([-0-9.]+)$')
 			assert(rx and ry and angle and large and sweep and x and y)
 			rx,ry,angle,large,sweep,x,y = tonumber(rx),tonumber(ry),tonumber(angle),tonumber(large),tonumber(sweep),tonumber(x),tonumber(y)
+			rx = rx * scale
+			ry = ry * scale
+			x = x * xscale
+			y = y * yscale
 			assert(rx and ry and angle and large and sweep and x and y)
 			large = large~=0
 			sweep = sweep~=0
@@ -185,7 +196,7 @@ function _M.save(image, filepath)
 			assert(file:write(' id="'..layer.name..'"'))
 		end
 		assert(file:write('>\n'))
-		local scale = 90 / 25.4e9 -- pixels per picometer
+		local scale = 25.4e9 / 90 -- picometers per pixel
 		local xscale = scale
 		local yscale = -scale
 		for _,path in ipairs(layer) do
@@ -211,20 +222,20 @@ function _M.save(image, filepath)
 			assert(file:write('\t\t\td="'))
 			for i,point in ipairs(path) do
 				if i==1 then
-					assert(file:write('M'..(point.x * xscale)..','..(point.y * yscale)..''))
+					assert(file:write('M'..(point.x / xscale)..','..(point.y / yscale)..''))
 				elseif point.interpolated then
 					-- skip
 				elseif point.interpolation=='linear' then
 					if i==#path and point.x==path[1].x and point.y==path[1].y then
 						assert(file:write('Z'))
 					else
-						assert(file:write('L'..(point.x * xscale)..','..(point.y * yscale)..''))
+						assert(file:write('L'..(point.x / xscale)..','..(point.y / yscale)..''))
 					end
 				elseif (point.interpolation=='clockwise' or point.interpolation=='counterclockwise') and point.quadrant=='single' then
 					local r = math.sqrt(point.i * point.i + point.j * point.j)
 					local large = false
 					local sweep = point.interpolation=='clockwise'
-					assert(file:write('A'..(r * scale)..','..(r * scale)..' 0 '..(large and '1' or '0')..','..(sweep and '1' or '0')..' '..(point.x * xscale)..','..(point.y * yscale)..''))
+					assert(file:write('A'..(r / scale)..','..(r / scale)..' 0 '..(large and '1' or '0')..','..(sweep and '1' or '0')..' '..(point.x / xscale)..','..(point.y / yscale)..''))
 					if i==#path and point.x==path[1].x and point.y==path[1].y then
 						assert(file:write('Z'))
 					end
@@ -242,7 +253,7 @@ function _M.save(image, filepath)
 					if da <= 0 then da = da + 2 * math.pi end
 					local large = da >= math.pi
 					local sweep = point.interpolation=='clockwise'
-					assert(file:write('A'..(r * scale)..','..(r * scale)..' 0 '..(large and '1' or '0')..','..(sweep and '1' or '0')..' '..(x1 * xscale)..','..(y1 * yscale)..''))
+					assert(file:write('A'..(r / scale)..','..(r / scale)..' 0 '..(large and '1' or '0')..','..(sweep and '1' or '0')..' '..(x1 / xscale)..','..(y1 / yscale)..''))
 					if i==#path and x1==path[1].x and y1==path[1].y then
 						assert(file:write('Z'))
 					end
