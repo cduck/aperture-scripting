@@ -107,6 +107,13 @@ local function style_aperture(style)
 		assert(style['stroke-linecap'] == 'round')
 		assert(style['stroke-linejoin'] == 'round')
 		assert(style['stroke-opacity'] == '1')
+		local name
+		if style['marker'] then
+			name = style['marker']:match('^url%((.*)%)$')
+			if name and name:match('^%d+$') then
+				name = tonumber(name)
+			end
+		end
 		local width = style['stroke-width']
 		local d,unit
 		if width=='0' then
@@ -119,7 +126,7 @@ local function style_aperture(style)
 			unit = unit:upper()
 			assert(unit=='MM' or unit=='IN')
 		end
-		return {shape='circle', parameters={d}, unit=unit}
+		return {name=name, shape='circle', parameters={d}, unit=unit}
 	else
 		error("unsupported style")
 	end
@@ -214,7 +221,11 @@ function _M.save(image, filepath)
 				--	width = d..'mm'
 					width = d..path.aperture.unit:lower()
 				end
-				assert(file:write('\t\t\tstyle="fill:none;stroke:'..color..';stroke-width:'..width..';stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"\n'))
+				assert(file:write('\t\t\tstyle="'))
+				if path.aperture.name then
+					assert(file:write('marker:url('..tostring(path.aperture.name)..');'))
+				end
+				assert(file:write('fill:none;stroke:'..color..';stroke-width:'..width..';stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"\n'))
 			else
 				-- fill
 				assert(file:write('\t\t\tstyle="fill:'..color..';stroke:none"\n'))
