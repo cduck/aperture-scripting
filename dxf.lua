@@ -442,10 +442,10 @@ local function load_DXF(groupcodes)
 	return sections
 end
 
-function _M.load(filepath)
+function _M.load(file_path)
 	-- load lines
 	local lines = {}
-	for line in io.lines(filepath) do
+	for line in io.lines(file_path) do
 		table.insert(lines, line)
 	end
 	assert(#lines % 2 == 0)
@@ -484,6 +484,10 @@ function _M.load(filepath)
 	end
 	
 	local image = {
+		file_path = file_path,
+		name = nil,
+		format = {},
+		unit = 'MM',
 		layers = layers,
 	}
 	

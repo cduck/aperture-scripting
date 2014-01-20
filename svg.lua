@@ -132,8 +132,8 @@ local function style_aperture(style)
 	end
 end
 
-function _M.load(filepath)
-	local file = assert(io.open(filepath, 'rb'))
+function _M.load(file_path)
+	local file = assert(io.open(file_path, 'rb'))
 	local content = assert(file:read('*all'))
 	assert(file:close())
 	local layers = {}
@@ -161,16 +161,11 @@ function _M.load(filepath)
 		end
 		table.insert(layers, layer)
 	end
-	local format = {
-		integer = 2,
-		decimal = 4,
-		zeroes = 'L',
-	}
 	return {
-		file_path = filepath,
-		format = format,
-		unit = 'IN',
+		file_path = file_path,
 		name = svg.id,
+		format = {},
+		unit = 'PX',
 		layers = layers,
 	}
 end
