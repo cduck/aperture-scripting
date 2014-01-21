@@ -285,6 +285,7 @@ local function load_object(type, groupcodes)
 		local subclass = assert(load_subclass[name], "no loader for subclass "..tostring(name))(groupcodes)
 		object[name] = subclass
 	end
+	if next(object.attributes)==nil then object.attributes = nil end
 	return object
 end
 
