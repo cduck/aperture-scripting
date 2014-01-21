@@ -273,55 +273,45 @@ end
 ------------------------------------------------------------------------------
 
 local load_subclass = {}
+local save_subclass = {}
 
-function load_subclass.AcDbSymbolTable(groupcodes)
-	-- :TODO: parse this subclass
-	return nil
+function load_subclass_generic(groupcodes)
+	local subclass = {}
+	for _,group in ipairs(groupcodes) do
+		local code = group.code
+		local value = parse(group)
+		assert(type(value)~='table')
+		local t = type(subclass[code])
+		if t=='nil' then
+			subclass[code] = value
+		elseif t=='table' then
+			table.insert(subclass[code], value)
+		else
+			subclass[code] = {subclass[code], value}
+		end
+	end
+	return subclass
 end
 
-function load_subclass.AcDbSymbolTableRecord(groupcodes)
-	-- :TODO: parse this subclass
-	return nil
-end
-
-function load_subclass.AcDbViewportTableRecord(groupcodes)
-	-- :TODO: parse this subclass
-	return nil
-end
-
-function load_subclass.AcDbLinetypeTableRecord(groupcodes)
-	-- :TODO: parse this subclass
-	return nil
-end
-
-function load_subclass.AcDbLayerTableRecord(groupcodes)
-	-- :TODO: parse this subclass
-	return nil
-end
-
-function load_subclass.AcDbTextStyleTableRecord(groupcodes)
-	-- :TODO: parse this subclass
-	return nil
-end
-
-function load_subclass.AcDbRegAppTableRecord(groupcodes)
-	-- :TODO: parse this subclass
-	return nil
-end
-
-function load_subclass.AcDbDimStyleTableRecord(groupcodes)
-	-- :TODO: parse this subclass
-	return nil
-end
-
-function load_subclass.AcDbBlockTableRecord(groupcodes)
-	-- :TODO: parse this subclass
-	return nil
-end
-
-function load_subclass.AcDbEntity(groupcodes)
-	-- :TODO: parse this subclass
-	return nil
+function save_subclass_generic(subclass)
+	local codes = {}
+	for code in pairs(subclass) do
+		table.insert(codes, code)
+	end
+	table.sort(codes)
+	local groupcodes = {}
+	for _,code in ipairs(codes) do
+		local value = subclass[code]
+		local t = type(value)
+		if t=='table' then
+			for _,value in ipairs(value) do
+				table.insert(groupcodes, unparse(value, code))
+			end
+		else
+			table.insert(groupcodes, unparse(value, code))
+		end
+	end
+	return groupcodes
 end
 
 function load_subclass.AcDbPolyline(groupcodes)
@@ -362,8 +352,8 @@ function load_subclass.AcDbPolyline(groupcodes)
 	return subclass
 end
 
-function load_subclass.AcDbDictionary(groupcodes)
-	return {}
+function save_subclass.AcDbPolyline(subclass)
+	error("saving AcDbPolyline is not yet implemented")
 end
 
 local function load_object(type, groupcodes)
@@ -385,7 +375,8 @@ local function load_object(type, groupcodes)
 		end
 	end
 	for name,groupcodes in pairs(subclasses) do
-		local subclass = assert(load_subclass[name], "no loader for subclass "..tostring(name))(groupcodes)
+		local loader = load_subclass[name] or load_subclass_generic
+		local subclass = loader(groupcodes)
 		object[name] = subclass
 	end
 	if next(object.attributes)==nil then object.attributes = nil end
@@ -403,7 +394,8 @@ local function save_object(type, object)
 	for classname,subclass in pairs(object) do
 		if classname ~= 'type' and classname ~= 'attributes' then
 			table.insert(groupcodes, {code=100, data=classname})
-			for _,group in ipairs(assert(save_subclass[name], "no saver for subclass "..tostring(name))(subclass)) do
+			local saver = save_subclass[name] or save_subclass_generic
+			for _,group in ipairs(saver(subclass)) do
 				table.insert(groupcodes, group)
 			end
 		end
