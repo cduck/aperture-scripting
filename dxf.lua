@@ -296,7 +296,9 @@ end
 function save_subclass_generic(subclass)
 	local codes = {}
 	for code in pairs(subclass) do
-		table.insert(codes, code)
+		if code~='type' then
+			table.insert(codes, code)
+		end
 	end
 	table.sort(codes)
 	local groupcodes = {}
@@ -353,20 +355,32 @@ function load_subclass.AcDbPolyline(groupcodes)
 end
 
 function save_subclass.AcDbPolyline(subclass)
-	error("saving AcDbPolyline is not yet implemented")
+	local groupcodes = {}
+	table.insert(groupcodes, {code=90, data=#subclass.vertices})
+	table.insert(groupcodes, {code=70, data=subclass.flags})
+	for _,vertex in ipairs(subclass.vertices) do
+		table.insert(groupcodes, {code=10, data=vertex.x})
+		table.insert(groupcodes, {code=20, data=vertex.y})
+		if vertex.z then
+			table.insert(groupcodes, {code=30, data=vertex.z})
+		end
+	end
+	return groupcodes
 end
 
 local function load_object(type, groupcodes)
-	local object = {type=type, attributes={}}
+	local object = {
+		type=type,
+		attributes={},
+	}
 	local subclasses = {}
 	local subclass
 	for _,group in ipairs(groupcodes) do
 		local code = group.code
 		if code==100 then
 			local classname = group.data
-			subclass = {}
-			assert(subclasses[classname]==nil, "object has two "..classname.." subclasses")
-			subclasses[classname] = subclass
+			subclass = { type = classname }
+			table.insert(subclasses, subclass)
 		elseif subclass then
 			table.insert(subclass, group)
 		--	subclass[code] = parse(group)
@@ -374,10 +388,12 @@ local function load_object(type, groupcodes)
 			object.attributes[code] = parse(group)
 		end
 	end
-	for name,groupcodes in pairs(subclasses) do
-		local loader = load_subclass[name] or load_subclass_generic
+	for _,groupcodes in ipairs(subclasses) do
+		local classname = groupcodes.type
+		local loader = load_subclass[classname] or load_subclass_generic
 		local subclass = loader(groupcodes)
-		object[name] = subclass
+		subclass.type = classname
+		table.insert(object, subclass)
 	end
 	if next(object.attributes)==nil then object.attributes = nil end
 	return object
@@ -391,13 +407,12 @@ local function save_object(type, object)
 			table.insert(groupcodes, unparse(value, code))
 		end
 	end
-	for classname,subclass in pairs(object) do
-		if classname ~= 'type' and classname ~= 'attributes' then
-			table.insert(groupcodes, {code=100, data=classname})
-			local saver = save_subclass[name] or save_subclass_generic
-			for _,group in ipairs(saver(subclass)) do
-				table.insert(groupcodes, group)
-			end
+	for _,subclass in ipairs(object) do
+		local classname = subclass.type
+		table.insert(groupcodes, {code=100, data=classname})
+		local saver = save_subclass[classname] or save_subclass_generic
+		for _,group in ipairs(saver(subclass)) do
+			table.insert(groupcodes, group)
 		end
 	end
 	return groupcodes
@@ -598,7 +613,7 @@ local function load_entity(type, groupcodes)
 end
 
 local function save_entity(type, entity)
-	return load_object(type, entity)
+	return save_object(type, entity)
 end
 
 function load_section.ENTITIES(groupcodes)
@@ -631,6 +646,7 @@ function save_section.ENTITIES(entities)
 	for _,entity in ipairs(entities) do
 		local chunk = save_entity(entity.type, entity)
 		table.insert(chunk, 1, {code=0, data=entity.type})
+		table.insert(chunks, chunk)
 	end
 	
 	local groupcodes = {}
@@ -803,9 +819,16 @@ function _M.load(file_path)
 	for _,entity in ipairs(sections.ENTITIES) do
 		local npoints = 0
 		if entity.type == 'LWPOLYLINE' then
-			assert(entity.AcDbPolyline)
+			local vertices
+			for _,subclass in ipairs(entity) do
+				if subclass.type=='AcDbPolyline' then
+					vertices = subclass.vertices
+					break
+				end
+			end
+			assert(vertices)
 			local path = {aperture=aperture}
-			for i,point in ipairs(entity.AcDbPolyline.vertices) do
+			for i,point in ipairs(vertices) do
 				assert(point.z == 0, "3D entities are not yet supported")
 				table.insert(path, {x=point.x*scale, y=point.y*scale, interpolation=i>1 and 'linear' or nil})
 			end
@@ -826,9 +849,11 @@ function _M.load(file_path)
 	return image
 end
 
-
 function _M.save(image, file_path)
+	assert(#image.layers == 1)
+	assert(image.layers[1].polarity == 'dark')
 	
+	-- assemble DXF sections
 	local sections = {}
 	
 	sections.HEADER = {
@@ -843,6 +868,36 @@ function _M.save(image, file_path)
 	
 	sections.ENTITIES = {}
 	
+	local scale = 1e9
+	
+	for ipath,path in ipairs(image.layers[1]) do
+		local vertices = {}
+		for i,point in ipairs(path) do
+			if i > 1 then
+				assert(not point.interpolated)
+				assert(point.interpolation == 'linear')
+			end
+			table.insert(vertices, {x=point.x/scale, y=point.y/scale, z=0})
+		end
+		local entity = {
+			type = 'LWPOLYLINE',
+			attributes = {
+				[5] = string.format("%x", 0x100 - 1 + ipath),
+			},
+			{
+				type = 'AcDbEntity',
+				[8] = "0", -- layer name
+				[62] = 7, -- color number
+			},
+			{
+				type = 'AcDbPolyline',
+				flags = 0,
+				vertices = vertices,
+			},
+		}
+		table.insert(sections.ENTITIES, entity)
+	end
+	
 	sections.OBJECTS = {
 		root_dictionary = {
 		--	type = 'DICTIONARY',
@@ -850,9 +905,10 @@ function _M.save(image, file_path)
 		},
 	}
 	
+	-- generate group codes
 	local groupcodes = save_DXF(sections)
 	
-	-- group code and data
+	-- write lines
 	local lines = {}
 	for i,group in ipairs(groupcodes) do
 		local code,data = group.code,group.data
