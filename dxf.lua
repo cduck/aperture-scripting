@@ -170,7 +170,7 @@ function load_section.CLASSES(groupcodes)
 		else
 			-- :TODO: save group code without interpreting it
 		end
-	end	
+	end
 	return classes
 end
 
