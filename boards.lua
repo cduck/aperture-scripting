@@ -648,6 +648,7 @@ local function interpolate_image_paths(image)
 				point.quadrant = nil
 				if i > 1 then point.interpolation = 'linear' end
 			end
+			region.recompute_path_extents(interpolated)
 			layer[ipath] = interpolated
 		end
 	end
