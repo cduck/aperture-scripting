@@ -566,7 +566,7 @@ function save_section.TABLES(tables)
 	local chunks = {}
 	for _,table in ipairs(tables) do
 		local chunk = save_table(table)
-		tinsert(chunk, 1, {code=2, name=table.type})
+		tinsert(chunk, 1, {code=2, data=table.type})
 		tinsert(chunks, chunk)
 	end
 	
