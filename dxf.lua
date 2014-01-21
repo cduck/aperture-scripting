@@ -676,10 +676,10 @@ function load_section.OBJECTS(groupcodes)
 	end
 	
 	local root_dictionary = table.remove(chunks, 1)
-	local type = table.remove(groupcodes, 1)
+	local type = table.remove(root_dictionary, 1)
 	assert(type.code==0)
 	assert(type.data=='DICTIONARY')
-	root_dictionary = load_object(nil, root_dictionary)
+	root_dictionary = load_object(type.data, root_dictionary)
 	
 	local objects = {root_dictionary=root_dictionary}
 	for _,groupcodes in ipairs(chunks) do
