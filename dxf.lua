@@ -466,7 +466,7 @@ function _M.load(file_path)
 	
 	local scale = 1e9
 	
-	local layers = {{}}
+	local layers = {{polarity='dark'}}
 	local layer = layers[1]
 	for _,entity in ipairs(sections.ENTITIES) do
 		local npoints = 0
