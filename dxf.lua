@@ -468,11 +468,12 @@ function _M.load(file_path)
 	
 	local layers = {{polarity='dark'}}
 	local layer = layers[1]
+	local aperture = {shape='circle', parameters={0}, unit='MM', name=10}
 	for _,entity in ipairs(sections.ENTITIES) do
 		local npoints = 0
 		if entity.type == 'LWPOLYLINE' then
 			assert(entity.AcDbPolyline)
-			local path = {aperture={shape='circle', parameters={0}, unit='MM'}}
+			local path = {aperture=aperture}
 			for i,point in ipairs(entity.AcDbPolyline.vertices) do
 				assert(point.z == 0, "3D entities are not yet supported")
 				table.insert(path, {x=point.x*scale, y=point.y*scale, interpolation=i>1 and 'linear' or nil})
