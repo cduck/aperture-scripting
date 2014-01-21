@@ -859,6 +859,8 @@ function _M.save(image, file_path)
 	local lines = {}
 	for i,group in ipairs(groupcodes) do
 		local code,data = group.code,group.data
+		assert(code, "group has no code")
+		assert(data, "group has no data")
 		table.insert(lines, string.format("%3d", code))
 		table.insert(lines, group.data)
 		if code==0 and data=='EOF' then
