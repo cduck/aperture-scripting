@@ -51,7 +51,7 @@ end
 
 function _M.offset_image(image, dx, dy)
 	local copy = {
-		file_path = nil,
+		file_path = image.file_path,
 		name = image.name,
 		format = {},
 		unit = image.unit,
@@ -238,7 +238,7 @@ function _M.rotate180_image(image, apertures, macros)
 	if not apertures then apertures = {} end
 	if not macros then macros = {} end
 	local copy = {
-		file_path = nil,
+		file_path = image.file_path,
 		name = image.name,
 		format = {},
 		unit = image.unit,
