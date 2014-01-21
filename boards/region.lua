@@ -75,7 +75,9 @@ function _MT:__call(...)
 	return ctor(...)
 end
 
-local function recompute_path_extents(path)
+------------------------------------------------------------------------------
+
+function _M.recompute_path_extents(path)
 	path.center_extents = ctor()
 	for _,point in ipairs(path) do
 		path.center_extents = path.center_extents + point
@@ -86,6 +88,7 @@ local function recompute_path_extents(path)
 		path.extents = path.extents * aperture.extents
 	end
 end
-_M.recompute_path_extents = recompute_path_extents
+
+------------------------------------------------------------------------------
 
 return _M
