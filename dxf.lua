@@ -310,8 +310,8 @@ local function load_table(groupcodes)
 		end
 	end
 	table.header = load_table_header(table.header)
-	for i=1,#table do
-		table[i] = load_table_entry(table[i].type, table[i])
+	for i,entry in ipairs(table) do
+		table[i] = load_table_entry(entry.type, entry)
 	end
 	return table
 end
