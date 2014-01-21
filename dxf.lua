@@ -327,10 +327,15 @@ end
 function load_subclass.AcDbPolyline(groupcodes)
 	local subclass = {}
 	for _,group in ipairs(groupcodes) do
-		if group.code == 90 then
+		local code = group.code
+		if code == 90 then
 			subclass.vertex_count = parse(group)
-		elseif group.code == 70 then
+		elseif code == 70 then
 			subclass.flags = parse(group)
+		elseif code == 10 or code == 20 or code == 30 then
+			-- treated below
+		else
+			error("unsupported code "..tostring(code).." in AcDbPolyline")
 		end
 	end
 	local vertices = {}
