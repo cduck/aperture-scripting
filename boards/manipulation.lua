@@ -28,9 +28,10 @@ function _M.offset_path(path, dx, dy)
 	local copy = {
 		unit = path.unit,
 	}
-	if path.extents then
-		copy.extents = _M.offset_extents(path.extents, dx, dy)
-	end
+	assert(path.extents)
+	copy.extents = _M.offset_extents(path.extents, dx, dy)
+	assert(path.center_extents)
+	copy.center_extents = _M.offset_extents(path.center_extents, dx, dy)
 	copy.aperture = path.aperture
 	for i,point in ipairs(path) do
 		copy[i] = _M.offset_point(point, dx, dy)
@@ -206,9 +207,10 @@ function _M.rotate180_path(path, apertures, macros)
 	local copy = {
 		unit = path.unit,
 	}
-	if path.extents then
-		copy.extents = _M.rotate180_extents(path.extents)
-	end
+	assert(path.extents)
+	copy.extents = _M.rotate180_extents(path.extents)
+	assert(path.center_extents)
+	copy.center_extents = _M.rotate180_extents(path.center_extents)
 	if path.aperture then
 		copy.aperture = apertures[path.aperture]
 		if not copy.aperture then
@@ -264,9 +266,10 @@ function _M.rotate180_outline_path(path)
 	local copy = {
 		unit = path.unit,
 	}
-	if path.extents then
-		copy.extents = _M.rotate180_extents(path.extents)
-	end
+	assert(path.extents)
+	copy.extents = _M.rotate180_extents(path.extents)
+	assert(path.center_extents)
+	copy.center_extents = _M.rotate180_extents(path.center_extents)
 	assert(not path.aperture)
 	-- find top-right point
 	local min = 1

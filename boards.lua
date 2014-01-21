@@ -283,7 +283,7 @@ local function exterior(path)
 end
 
 local function path_to_region(path)
-	local region = { extents = path.center_extents }
+	local region = { center_extents = path.center_extents, extents = path.center_extents }
 	
 	-- find bottom-left corner
 	local exterior = exterior(path)

@@ -45,6 +45,7 @@ function _M.empty_board(width, height)
 			extents = extents,
 			path = {
 				extents = extents,
+				center_extents = extents,
 				{ x = 0, y = 0 },
 				{ x = width, y = 0, interpolation = 'linear' },
 				{ x = width, y = height, interpolation = 'linear' },
@@ -343,6 +344,7 @@ local function merge_panels(panel_a, panel_b, options, vertical)
 			table.insert(merged.outline.path, outline_a.path[i])
 		end
 	end
+	region.recompute_path_extents(merged.outline.path)
 	
 	for i,point in ipairs(merged.outline.path) do
 		if i > 1 then

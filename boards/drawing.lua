@@ -1,11 +1,15 @@
 local _M = {}
 
 local table = require 'table'
+local region = require 'boards.region'
 
 ------------------------------------------------------------------------------
 
 function _M.circle_aperture(diameter)
-	return { shape = 'circle', parameters = { diameter } }
+	local aperture = { shape = 'circle', parameters = { diameter } }
+	local r = diameter / 2
+	aperture.extents = region{left=-r, right=r, bottom=-r, top=r}
+	return aperture
 end
 
 ------------------------------------------------------------------------------
@@ -19,6 +23,7 @@ function _M.draw_path(image, aperture, ...)
 		local x,y = select(i, ...)
 		table.insert(path, { x = x, y = y, interpolation = i > 1 and 'linear' or nil })
 	end
+	region.recompute_path_extents(path)
 	table.insert(image.layers[#image.layers], path)
 end
 
