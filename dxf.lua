@@ -368,6 +368,36 @@ function save_subclass.AcDbPolyline(subclass)
 	return groupcodes
 end
 
+function load_subclass.AcDbDictionary(groupcodes)
+	local keys = {}
+	local values = {}
+	for _,group in ipairs(groupcodes) do
+		local code = group.code
+		if code == 3 then
+			table.insert(keys, parse(group))
+		elseif code == 350 then
+			table.insert(values, parse(group))
+		else
+			error("unsupported code "..tostring(code).." in AcDbDictionary")
+		end
+	end
+	assert(#keys == #values, "number of keys and values don't match in AcDbDictionary")
+	local subclass = {type='AcDbDictionary'}
+	for i=1,#keys do
+		table.insert(subclass, {key=keys[i], value=values[i]})
+	end
+	return subclass
+end
+
+function save_subclass.AcDbDictionary(subclass)
+	local groupcodes = {}
+	for _,pair in ipairs(subclass) do
+		table.insert(groupcodes, {code=3, data=pair.key})
+		table.insert(groupcodes, {code=350, data=pair.value})
+	end
+	return groupcodes
+end
+
 local function load_object(type, groupcodes)
 	local object = {
 		type=type,
