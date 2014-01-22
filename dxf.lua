@@ -868,6 +868,7 @@ function _M.load(file_path)
 			error("unsupported entity type "..tostring(entity.type))
 		end
 	end
+	sections.ENTITIES = nil
 	
 	local image = {
 		file_path = file_path,
@@ -875,6 +876,7 @@ function _M.load(file_path)
 		format = {},
 		unit = 'MM',
 		layers = layers,
+		dxf_sections = sections,
 	}
 	
 	return image
@@ -887,16 +889,11 @@ function _M.save(image, file_path)
 	-- assemble DXF sections
 	local sections = {}
 	
-	sections.HEADER = {
-		ACADVER = "AC1014",
-		HANDSEED = "FFFF",
-		MEASUREMENT = 1,
-	}
-	
-	sections.TABLES = {}
-	
-	sections.BLOCKS = {}
-	
+	if image.dxf_sections then
+		for k,v in pairs(image.dxf_sections) do
+			sections[k] = v
+		end
+	end
 	sections.ENTITIES = {}
 	
 	local scale = 1e9
@@ -928,13 +925,6 @@ function _M.save(image, file_path)
 		}
 		table.insert(sections.ENTITIES, entity)
 	end
-	
-	sections.OBJECTS = {
-		root_dictionary = {
-		--	type = 'DICTIONARY',
-			attributes = {},
-		},
-	}
 	
 	-- generate group codes
 	local groupcodes = save_DXF(sections)
