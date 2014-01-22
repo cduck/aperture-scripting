@@ -132,7 +132,7 @@ local function parse(group)
 	end
 end
 
-local function unparse(value, code)
+local function groupcode(code, value)
 	local data
 	if false then
 	elseif 0 <= code and code <= 9 then
@@ -307,10 +307,10 @@ function save_subclass_generic(subclass)
 		local t = type(value)
 		if t=='table' then
 			for _,value in ipairs(value) do
-				table.insert(groupcodes, unparse(value, code))
+				table.insert(groupcodes, groupcode(code, value))
 			end
 		else
-			table.insert(groupcodes, unparse(value, code))
+			table.insert(groupcodes, groupcode(code, value))
 		end
 	end
 	return groupcodes
@@ -356,13 +356,13 @@ end
 
 function save_subclass.AcDbPolyline(subclass)
 	local groupcodes = {}
-	table.insert(groupcodes, {code=90, data=#subclass.vertices})
-	table.insert(groupcodes, {code=70, data=subclass.flags})
+	table.insert(groupcodes, groupcode(90, #subclass.vertices))
+	table.insert(groupcodes, groupcode(70, subclass.flags))
 	for _,vertex in ipairs(subclass.vertices) do
-		table.insert(groupcodes, {code=10, data=vertex.x})
-		table.insert(groupcodes, {code=20, data=vertex.y})
+		table.insert(groupcodes, groupcode(10, vertex.x))
+		table.insert(groupcodes, groupcode(20, vertex.y))
 		if vertex.z then
-			table.insert(groupcodes, {code=30, data=vertex.z})
+			table.insert(groupcodes, groupcode(30, vertex.z))
 		end
 	end
 	return groupcodes
@@ -392,8 +392,8 @@ end
 function save_subclass.AcDbDictionary(subclass)
 	local groupcodes = {}
 	for _,pair in ipairs(subclass) do
-		table.insert(groupcodes, {code=3, data=pair.key})
-		table.insert(groupcodes, {code=350, data=pair.value})
+		table.insert(groupcodes, groupcode(3, pair.key))
+		table.insert(groupcodes, groupcode(350, pair.value))
 	end
 	return groupcodes
 end
@@ -433,12 +433,12 @@ local function save_object(type, object)
 	local groupcodes = {}
 	if object.attributes then
 		for code,value in pairs(object.attributes) do
-			table.insert(groupcodes, unparse(value, code))
+			table.insert(groupcodes, groupcode(code, value))
 		end
 	end
 	for _,subclass in ipairs(object) do
 		local classname = subclass.type
-		table.insert(groupcodes, {code=100, data=classname})
+		table.insert(groupcodes, groupcode(100, classname))
 		local saver = save_subclass[classname] or save_subclass_generic
 		for _,group in ipairs(saver(subclass)) do
 			table.insert(groupcodes, group)
@@ -485,8 +485,8 @@ function save_section.HEADER(header)
 	for _,name in ipairs(header_order) do
 		local value = header[name]
 		if value ~= nil then
-			table.insert(groupcodes, {code=9, data='$'..name})
-			table.insert(groupcodes, unparse(value, header_codes[name]))
+			table.insert(groupcodes, groupcode(9, '$'..name))
+			table.insert(groupcodes, groupcode(header_codes[name], value))
 		end
 	end
 	return groupcodes
@@ -570,7 +570,7 @@ local function save_table(table)
 		tinsert(groupcodes, group)
 	end
 	for _,entry in ipairs(table) do
-		tinsert(groupcodes, {code=0, data=table.type})
+		tinsert(groupcodes, groupcode(0, table.type))
 		for _,group in ipairs(save_table_entry(table.type, entry)) do
 			tinsert(groupcodes, group)
 		end
@@ -610,17 +610,17 @@ function save_section.TABLES(tables)
 	local chunks = {}
 	for _,table in ipairs(tables) do
 		local chunk = save_table(table)
-		tinsert(chunk, 1, {code=2, data=table.type})
+		tinsert(chunk, 1, groupcode(2, table.type))
 		tinsert(chunks, chunk)
 	end
 	
 	local groupcodes = {}
 	for _,chunk in ipairs(chunks) do
-		table.insert(groupcodes, {code=0, data='TABLE'})
+		table.insert(groupcodes, groupcode(0, 'TABLE'))
 		for _,group in ipairs(chunk) do
 			table.insert(groupcodes, group)
 		end
-		table.insert(groupcodes, {code=0, data='ENDTAB'})
+		table.insert(groupcodes, groupcode(0, 'ENDTAB'))
 	end
 	
 	return groupcodes
@@ -675,7 +675,7 @@ function save_section.ENTITIES(entities)
 	local chunks = {}
 	for _,entity in ipairs(entities) do
 		local chunk = save_entity(entity.type, entity)
-		table.insert(chunk, 1, {code=0, data=entity.type})
+		table.insert(chunk, 1, groupcode(0, entity.type))
 		table.insert(chunks, chunk)
 	end
 	
@@ -726,12 +726,12 @@ function save_section.OBJECTS(objects)
 	local chunks = {}
 	
 	local chunk = save_object(nil, objects.root_dictionary)
-	table.insert(chunk, 1, {code=0, data='DICTIONARY'})
+	table.insert(chunk, 1, groupcode(0, 'DICTIONARY'))
 	table.insert(chunks, chunk)
 	
 	for _,object in ipairs(objects) do
 		local chunk = save_object(object.type, object)
-		table.insert(chunk, 1, {code=0, data=object.type})
+		table.insert(chunk, 1, groupcode(0, object.type))
 		table.insert(chunks, chunk)
 	end
 	
@@ -799,7 +799,7 @@ local function save_DXF(sections)
 		if section then
 			local groupcodes = {}
 			local groupcodes = assert(save_section[name], "no saver for section "..tostring(name))(section)
-			table.insert(groupcodes, 1, {code=2, data=name})
+			table.insert(groupcodes, 1, groupcode(2, name))
 			table.insert(chunks, groupcodes)
 		end
 	end
@@ -807,13 +807,13 @@ local function save_DXF(sections)
 	-- unparse top level
 	local groupcodes = {}
 	for _,chunk in ipairs(chunks) do
-		table.insert(groupcodes, {code=0, data='SECTION'})
+		table.insert(groupcodes, groupcode(0, 'SECTION'))
 		for _,group in ipairs(chunk) do
 			table.insert(groupcodes, group)
 		end
-		table.insert(groupcodes, {code=0, data='ENDSEC'})
+		table.insert(groupcodes, groupcode(0, 'ENDSEC'))
 	end
-	table.insert(groupcodes, {code=0, data='EOF'})
+	table.insert(groupcodes, groupcode(0, 'EOF'))
 	
 	return groupcodes
 end
