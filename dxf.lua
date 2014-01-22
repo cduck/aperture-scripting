@@ -734,6 +734,7 @@ function save_section.OBJECTS(objects)
 	for _,object in ipairs(objects) do
 		local chunk = save_object(object.type, object)
 		table.insert(chunk, 1, {code=0, data=object.type})
+		table.insert(chunks, chunk)
 	end
 	
 	local groupcodes = {}
