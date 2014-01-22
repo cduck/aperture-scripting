@@ -541,8 +541,8 @@ local function save_table_entry(type, entry)
 	return save_object(type, entry)
 end
 
-local function load_table(groupcodes)
-	local table = {header={}}
+local function load_table(type, groupcodes)
+	local table = {type=type, header={}}
 	local entry = table.header
 	for _,groupcode in ipairs(groupcodes) do
 		local code = groupcode.code
@@ -556,7 +556,11 @@ local function load_table(groupcodes)
 	end
 	table.header = load_table_header(table.header)
 	for i,entry in ipairs(table) do
-		table[i] = load_table_entry(entry.type, entry)
+		assert(entry.type == type, "record type "..tostring(entry.type).." differ from table type "..tostring(type))
+		entry = load_table_entry(entry.type, entry)
+		assert(entry.type == type)
+		entry.type = nil
+		table[i] = entry
 	end
 	return table
 end
@@ -567,8 +571,8 @@ local function save_table(table)
 		tinsert(groupcodes, group)
 	end
 	for _,entry in ipairs(table) do
-		tinsert(groupcodes, {code=0, data=entry.type})
-		for _,group in ipairs(save_table_entry(entry.type, entry)) do
+		tinsert(groupcodes, {code=0, data=table.type})
+		for _,group in ipairs(save_table_entry(table.type, entry)) do
 			tinsert(groupcodes, group)
 		end
 	end
@@ -596,8 +600,7 @@ function load_section.TABLES(groupcodes)
 		local name = tremove(groupcodes, 1)
 		assert(name.code==2)
 		name = name.data
-		local table = load_table(groupcodes)
-		table.type = name
+		local table = load_table(name, groupcodes)
 		tinsert(tables, table)
 	end
 	
