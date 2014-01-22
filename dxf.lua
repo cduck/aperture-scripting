@@ -430,7 +430,6 @@ local function load_object(type, groupcodes)
 end
 
 local function save_object(type, object)
-	assert(object.type == type, "object has type "..tostring(object.type).." but is being saved as "..tostring(type))
 	local groupcodes = {}
 	if object.attributes then
 		for code,value in pairs(object.attributes) do
