@@ -629,13 +629,11 @@ end
 --............................................................................
 
 function load_section.BLOCKS(groupcodes)
-	local section = {}
-	return section
+	return groupcodes
 end
 
 function save_section.BLOCKS(section)
-	local groupcodes = {}
-	return groupcodes
+	return section
 end
 
 --............................................................................
