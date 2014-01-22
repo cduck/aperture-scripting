@@ -544,14 +544,14 @@ end
 local function load_table(type, groupcodes)
 	local table = {type=type, header={}}
 	local entry = table.header
-	for _,groupcode in ipairs(groupcodes) do
-		local code = groupcode.code
-		local data = groupcode.data
+	for _,group in ipairs(groupcodes) do
+		local code = group.code
+		local data = group.data
 		if code==0 then
 			entry = {type=data}
 			tinsert(table, entry)
 		else
-			tinsert(entry, groupcode)
+			tinsert(entry, group)
 		end
 	end
 	table.header = load_table_header(table.header)
