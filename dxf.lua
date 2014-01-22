@@ -149,7 +149,7 @@ local function groupcode(code, value)
 		assert(tonumber(data) == value and data:match('^[%d.]+$'))
 	elseif 60 <= code and code <= 79 then
 		-- 16-bit integer value
-		data = string.format('%6d', value)
+		data = tostring(value)
 		assert(tonumber(data) == value and data:match('^%s*[%d]+$'))
 	elseif 90 <= code and code <= 99 then
 		-- 32-bit integer value
@@ -269,6 +269,56 @@ local function groupcode(code, value)
 	end
 	return {code=code, data=data}
 end
+
+------------------------------------------------------------------------------
+
+local function groupcode_inkscape(code, value)
+	local data
+	if false then
+	elseif code == 30 and value == 0 then
+		data = "0.0"
+	elseif 0 <= code and code <= 9 then
+		-- String (with the introduction of extended symbol names in AutoCAD 2000, the 255-character limit has been increased to 2049 single-byte characters not including the newline at the end of the line)
+		assert(#value <= 2049)
+		data = value
+	elseif 10 <= code and code <= 39 then -- Double precision 3D point value
+		data = string.format("%.6f", value)
+		assert(tonumber(data) == value and data:match('^[%d.]+$'))
+	elseif 40 <= code and code <= 59 then -- Double-precision floating-point value
+		data = string.format('%f', value)
+		assert(tonumber(data) == value and data:match('^[%d.]+$'))
+	elseif 60 <= code and code <= 79 then -- 16-bit integer value
+		data = string.format('%d', value)
+		assert(tonumber(data) == value and data:match('^%s*[%d]+$'))
+	elseif 90 <= code and code <= 99 then -- 32-bit integer value
+		data = tostring(value)
+		assert(tonumber(data) == value and data:match('^[%d]+$'))
+	elseif code == 100 then -- String (255-character maximum; less for Unicode strings)
+		assert(#value <= 255)
+		data = value
+	elseif code == 105 then -- String representing hexadecimal (hex) handle value
+		assert(value:match('^%x+$'))
+		data = value
+	elseif 140 <= code and code <= 149 then -- Double precision scalar floating-point value
+		data = tostring(value)
+		assert(tonumber(data) == value and data:match('^[%d.]+$'))
+	elseif 170 <= code and code <= 179 then -- 16-bit integer value
+		data = string.format('%6d', value)
+		assert(tonumber(data) == value and data:match('^%s*[%d]+$'))
+	elseif 270 <= code and code <= 279 then -- 16-bit integer value
+		data = string.format('%6d', value)
+		assert(tonumber(data) == value and data:match('^%s*[%d]+$'))
+	elseif 280 <= code and code <= 289 then -- 16-bit integer value
+		data = string.format('%6d', value)
+		assert(tonumber(data) == value and data:match('^%s*[%d]+$'))
+	elseif 330 <= code and code <= 369 then -- String representing hex object IDs
+		assert(value:match('^%x+$'))
+		data = value
+	end
+	return {code=code, data=data}
+end
+
+groupcode = groupcode_inkscape
 
 ------------------------------------------------------------------------------
 
