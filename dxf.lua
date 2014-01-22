@@ -448,6 +448,374 @@ function save_subclass.AcDbDictionary(subclass)
 	return groupcodes
 end
 
+function load_subclass.AcDbTextStyleTableRecord(groupcodes)
+	local subclass = {type='AcDbTextStyleTableRecord'}
+	for _,group in ipairs(groupcodes) do
+		local code = group.code
+		if code == 2 then
+			subclass.name = parse(group)
+		elseif code == 70 then
+			subclass.flags = parse(group)
+		elseif code == 40 then
+			subclass.text_height = parse(group)
+		elseif code == 41 then
+			subclass.width_factor = parse(group)
+		elseif code == 50 then
+			subclass.oblique_angle = parse(group)
+		elseif code == 71 then
+			subclass.generation_flags = parse(group)
+		elseif code == 42 then
+			subclass.last_height_used = parse(group)
+		elseif code == 3 then
+			subclass.primary_font_filename = parse(group)
+		elseif code == 4 then
+			subclass.big_font_filename = parse(group)
+		else
+			error("unsupported code "..tostring(code).." in AcDbTextStyleTableRecord")
+		end
+	end
+	return subclass
+end
+
+function save_subclass.AcDbTextStyleTableRecord(subclass)
+	local groupcodes = {}
+	if subclass.name then
+		table.insert(groupcodes, groupcode(2, subclass.name))
+	end
+	if subclass.flags then
+		table.insert(groupcodes, groupcode(70, subclass.flags))
+	end
+	if subclass.text_height then
+		table.insert(groupcodes, groupcode(40, subclass.text_height))
+	end
+	if subclass.width_factor then
+		table.insert(groupcodes, groupcode(41, subclass.width_factor))
+	end
+	if subclass.oblique_angle then
+		table.insert(groupcodes, groupcode(50, subclass.oblique_angle))
+	end
+	if subclass.generation_flags then
+		table.insert(groupcodes, groupcode(71, subclass.generation_flags))
+	end
+	if subclass.last_height_used then
+		table.insert(groupcodes, groupcode(42, subclass.last_height_used))
+	end
+	if subclass.primary_font_filename then
+		table.insert(groupcodes, groupcode(3, subclass.primary_font_filename))
+	end
+	if subclass.big_font_filename then
+		table.insert(groupcodes, groupcode(4, subclass.big_font_filename))
+	end
+	return groupcodes
+end
+
+function load_subclass.AcDbViewportTableRecord(groupcodes)
+	local subclass = {type='AcDbViewportTableRecord'}
+	for _,group in ipairs(groupcodes) do
+		local code = group.code
+		if code == 2 then
+			subclass.name = parse(group)
+		elseif code == 70 then
+			subclass.flags = parse(group)
+		elseif code == 10 then
+			subclass.left = parse(group)
+		elseif code == 20 then
+			subclass.bottom = parse(group)
+		elseif code == 11 then
+			subclass.right = parse(group)
+		elseif code == 21 then
+			subclass.top = parse(group)
+		elseif code == 12 then
+			subclass.center = subclass.center or {}
+			subclass.center.x = parse(group)
+		elseif code == 22 then
+			subclass.center = subclass.center or {}
+			subclass.center.y = parse(group)
+		elseif code == 13 then
+			subclass.snap_base_point = subclass.snap_base_point or {}
+			subclass.snap_base_point.x = parse(group)
+		elseif code == 23 then
+			subclass.snap_base_point = subclass.snap_base_point or {}
+			subclass.snap_base_point.y = parse(group)
+		elseif code == 14 then
+			subclass.snap_spacing = subclass.snap_spacing or {}
+			subclass.snap_spacing.x = parse(group)
+		elseif code == 24 then
+			subclass.snap_spacing = subclass.snap_spacing or {}
+			subclass.snap_spacing.y = parse(group)
+		elseif code == 15 then
+			subclass.grid_spacing = subclass.grid_spacing or {}
+			subclass.grid_spacing.x = parse(group)
+		elseif code == 25 then
+			subclass.grid_spacing = subclass.grid_spacing or {}
+			subclass.grid_spacing.y = parse(group)
+		elseif code == 16 then
+			subclass.view_direction = subclass.view_direction or {}
+			subclass.view_direction.x = parse(group)
+		elseif code == 26 then
+			subclass.view_direction = subclass.view_direction or {}
+			subclass.view_direction.y = parse(group)
+		elseif code == 36 then
+			subclass.view_direction = subclass.view_direction or {}
+			subclass.view_direction.z = parse(group)
+		elseif code == 17 then
+			subclass.view_target_point = subclass.view_target_point or {}
+			subclass.view_target_point.x = parse(group)
+		elseif code == 27 then
+			subclass.view_target_point = subclass.view_target_point or {}
+			subclass.view_target_point.y = parse(group)
+		elseif code == 37 then
+			subclass.view_target_point = subclass.view_target_point or {}
+			subclass.view_target_point.z = parse(group)
+		elseif code == 40 then
+			subclass.view_height = parse(group)
+		elseif code == 41 then
+			subclass.viewport_aspect_ratio = parse(group)
+		elseif code == 42 then
+			subclass.lens_length = parse(group)
+		elseif code == 43 then
+			subclass.front_clipping_plane = parse(group)
+		elseif code == 44 then
+			subclass.back_clipping_plane = parse(group)
+		elseif code == 50 then
+			subclass.snap_rotation_angle = parse(group)
+		elseif code == 51 then
+			subclass.view_twist_angle = parse(group)
+		elseif code == 71 then
+			subclass.view_mode = parse(group)
+		elseif code == 72 then
+			subclass.circle_zoom_percent = parse(group)
+		elseif code == 73 then
+			subclass.fast_zoom_setting = parse(group)
+		elseif code == 74 then
+			subclass.ucsicon_setting = parse(group)
+		elseif code == 75 then
+			subclass.snap_on_off = parse(group)
+		elseif code == 76 then
+			subclass.grid_on_off = parse(group)
+		elseif code == 77 then
+			subclass.snap_style = parse(group)
+		elseif code == 78 then
+			subclass.snap_isopair = parse(group)
+		elseif code == 281 then
+			subclass.render_mode = parse(group)
+		elseif code == 65 then
+			subclass.ucsvp = parse(group)
+		elseif code == 110 then
+			subclass.ucs_origin = subclass.ucs_origin or {}
+			subclass.ucs_origin.x = parse(group)
+		elseif code == 120 then
+			subclass.ucs_origin = subclass.ucs_origin or {}
+			subclass.ucs_origin.y = parse(group)
+		elseif code == 130 then
+			subclass.ucs_origin = subclass.ucs_origin or {}
+			subclass.ucs_origin.z = parse(group)
+		elseif code == 111 then
+			subclass.ucs_x_axis = subclass.ucs_x_axis or {}
+			subclass.ucs_x_axis.x = parse(group)
+		elseif code == 121 then
+			subclass.ucs_x_axis = subclass.ucs_x_axis or {}
+			subclass.ucs_x_axis.y = parse(group)
+		elseif code == 131 then
+			subclass.ucs_x_axis = subclass.ucs_x_axis or {}
+			subclass.ucs_x_axis.z = parse(group)
+		elseif code == 112 then
+			subclass.ucs_y_axis = subclass.ucs_y_axis or {}
+			subclass.ucs_y_axis.x = parse(group)
+		elseif code == 122 then
+			subclass.ucs_y_axis = subclass.ucs_y_axis or {}
+			subclass.ucs_y_axis.y = parse(group)
+		elseif code == 132 then
+			subclass.ucs_y_axis = subclass.ucs_y_axis or {}
+			subclass.ucs_y_axis.z = parse(group)
+		elseif code == 79 then
+			subclass.orthographic_type_of_ucs = parse(group)
+		elseif code == 146 then
+			subclass.elevation = parse(group)
+		elseif code == 345 then
+			subclass.named_ucs_record = parse(group)
+		elseif code == 346 then
+			subclass.orthographic_ucs_record = parse(group)
+		else
+			error("unsupported code "..tostring(code).." in AcDbViewportTableRecord")
+		end
+	end
+	return subclass
+end
+
+function save_subclass.AcDbViewportTableRecord(subclass)
+	local groupcodes = {}
+	if subclass.name then
+		table.insert(groupcodes, groupcode(2, subclass.name))
+	end
+	if subclass.flags ~= nil then
+		table.insert(groupcodes, groupcode(70, subclass.flags))
+	end
+	if subclass.left ~= nil then
+		table.insert(groupcodes, groupcode(10, subclass.left))
+	end
+	if subclass.bottom ~= nil then
+		table.insert(groupcodes, groupcode(20, subclass.bottom))
+	end
+	if subclass.right ~= nil then
+		table.insert(groupcodes, groupcode(11, subclass.right))
+	end
+	if subclass.top ~= nil then
+		table.insert(groupcodes, groupcode(21, subclass.top))
+	end
+	if subclass.center ~= nil then
+		if subclass.center.x ~= nil then
+			table.insert(groupcodes, groupcode(12, subclass.center.x))
+		end
+		if subclass.center.y ~= nil then
+			table.insert(groupcodes, groupcode(22, subclass.center.y))
+		end
+	end
+	if subclass.snap_base_point ~= nil then
+		if subclass.snap_base_point.x ~= nil then
+			table.insert(groupcodes, groupcode(13, subclass.snap_base_point.x))
+		end
+		if subclass.snap_base_point.y ~= nil then
+			table.insert(groupcodes, groupcode(23, subclass.snap_base_point.y))
+		end
+	end
+	if subclass.snap_spacing ~= nil then
+		if subclass.snap_spacing.x ~= nil then
+			table.insert(groupcodes, groupcode(14, subclass.snap_spacing.x))
+		end
+		if subclass.snap_spacing.y ~= nil then
+			table.insert(groupcodes, groupcode(24, subclass.snap_spacing.y))
+		end
+	end
+	if subclass.grid_spacing ~= nil then
+		if subclass.grid_spacing.x ~= nil then
+			table.insert(groupcodes, groupcode(15, subclass.grid_spacing.x))
+		end
+		if subclass.grid_spacing.y ~= nil then
+			table.insert(groupcodes, groupcode(25, subclass.grid_spacing.y))
+		end
+	end
+	if subclass.view_direction ~= nil then
+		if subclass.view_direction.x ~= nil then
+			table.insert(groupcodes, groupcode(16, subclass.view_direction.x))
+		end
+		if subclass.view_direction.y ~= nil then
+			table.insert(groupcodes, groupcode(26, subclass.view_direction.y))
+		end
+		if subclass.view_direction.z ~= nil then
+			table.insert(groupcodes, groupcode(36, subclass.view_direction.z))
+		end
+	end
+	if subclass.view_target_point ~= nil then
+		if subclass.view_target_point.x ~= nil then
+			table.insert(groupcodes, groupcode(17, subclass.view_target_point.x))
+		end
+		if subclass.view_target_point.y ~= nil then
+			table.insert(groupcodes, groupcode(27, subclass.view_target_point.y))
+		end
+		if subclass.view_target_point.z ~= nil then
+			table.insert(groupcodes, groupcode(37, subclass.view_target_point.z))
+		end
+	end
+	if subclass.view_height ~= nil then
+		table.insert(groupcodes, groupcode(40, subclass.view_height))
+	end
+	if subclass.viewport_aspect_ratio ~= nil then
+		table.insert(groupcodes, groupcode(41, subclass.viewport_aspect_ratio))
+	end
+	if subclass.lens_length ~= nil then
+		table.insert(groupcodes, groupcode(42, subclass.lens_length))
+	end
+	if subclass.front_clipping_plane ~= nil then
+		table.insert(groupcodes, groupcode(43, subclass.front_clipping_plane))
+	end
+	if subclass.back_clipping_plane ~= nil then
+		table.insert(groupcodes, groupcode(44, subclass.back_clipping_plane))
+	end
+	if subclass.snap_rotation_angle ~= nil then
+		table.insert(groupcodes, groupcode(50, subclass.snap_rotation_angle))
+	end
+	if subclass.view_twist_angle ~= nil then
+		table.insert(groupcodes, groupcode(51, subclass.view_twist_angle))
+	end
+	if subclass.view_mode ~= nil then
+		table.insert(groupcodes, groupcode(71, subclass.view_mode))
+	end
+	if subclass.circle_zoom_percent ~= nil then
+		table.insert(groupcodes, groupcode(72, subclass.circle_zoom_percent))
+	end
+	if subclass.fast_zoom_setting ~= nil then
+		table.insert(groupcodes, groupcode(73, subclass.fast_zoom_setting))
+	end
+	if subclass.ucsicon_setting ~= nil then
+		table.insert(groupcodes, groupcode(74, subclass.ucsicon_setting))
+	end
+	if subclass.snap_on_off ~= nil then
+		table.insert(groupcodes, groupcode(75, subclass.snap_on_off))
+	end
+	if subclass.grid_on_off ~= nil then
+		table.insert(groupcodes, groupcode(76, subclass.grid_on_off))
+	end
+	if subclass.snap_style ~= nil then
+		table.insert(groupcodes, groupcode(77, subclass.snap_style))
+	end
+	if subclass.snap_isopair ~= nil then
+		table.insert(groupcodes, groupcode(78, subclass.snap_isopair))
+	end
+	if subclass.render_mode ~= nil then
+		table.insert(groupcodes, groupcode(281, subclass.render_mode))
+	end
+	if subclass.ucsvp ~= nil then
+		table.insert(groupcodes, groupcode(65, subclass.ucsvp))
+	end
+	if subclass.ucs_origin ~= nil then
+		if subclass.ucs_origin.x ~= nil then
+			table.insert(groupcodes, groupcode(110, subclass.ucs_origin.x))
+		end
+		if subclass.ucs_origin.y ~= nil then
+			table.insert(groupcodes, groupcode(120, subclass.ucs_origin.y))
+		end
+		if subclass.ucs_origin.z ~= nil then
+			table.insert(groupcodes, groupcode(130, subclass.ucs_origin.z))
+		end
+	end
+	if subclass.ucs_x_axis ~= nil then
+		if subclass.ucs_x_axis.x ~= nil then
+			table.insert(groupcodes, groupcode(111, subclass.ucs_x_axis.x))
+		end
+		if subclass.ucs_x_axis.y ~= nil then
+			table.insert(groupcodes, groupcode(121, subclass.ucs_x_axis.y))
+		end
+		if subclass.ucs_x_axis.z ~= nil then
+			table.insert(groupcodes, groupcode(131, subclass.ucs_x_axis.z))
+		end
+	end
+	if subclass.ucs_y_axis ~= nil then
+		if subclass.ucs_y_axis.x ~= nil then
+			table.insert(groupcodes, groupcode(112, subclass.ucs_y_axis.x))
+		end
+		if subclass.ucs_y_axis.y ~= nil then
+			table.insert(groupcodes, groupcode(122, subclass.ucs_y_axis.y))
+		end
+		if subclass.ucs_y_axis.z ~= nil then
+			table.insert(groupcodes, groupcode(132, subclass.ucs_y_axis.z))
+		end
+	end
+	if subclass.orthographic_type_of_ucs ~= nil then
+		table.insert(groupcodes, groupcode(79, subclass.orthographic_type_of_ucs))
+	end
+	if subclass.elevation ~= nil then
+		table.insert(groupcodes, groupcode(146, subclass.elevation))
+	end
+	if subclass.named_ucs_record ~= nil then
+		table.insert(groupcodes, groupcode(345, subclass.named_ucs_record))
+	end
+	if subclass.orthographic_ucs_record ~= nil then
+		table.insert(groupcodes, groupcode(346, subclass.orthographic_ucs_record))
+	end
+	return groupcodes
+end
+
 local function load_object(type, groupcodes)
 	local object = {
 		type=type,
