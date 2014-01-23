@@ -132,7 +132,7 @@ local function parse(group)
 	end
 end
 
-local function groupcode(code, value)
+local function groupcode_default(code, value)
 	local data
 	if false then
 	elseif 0 <= code and code <= 9 then
@@ -270,8 +270,6 @@ local function groupcode(code, value)
 	return {code=code, data=data}
 end
 
-------------------------------------------------------------------------------
-
 local function groupcode_inkscape(code, value)
 	local data
 	if false then
@@ -318,7 +316,14 @@ local function groupcode_inkscape(code, value)
 	return {code=code, data=data}
 end
 
-groupcode = groupcode_inkscape
+_M.format = nil
+local function groupcode(...)
+	if _M.format == 'inkscape' then
+		return groupcode_inkscape(...)
+	else
+		return groupcode_default(...)
+	end
+end
 
 ------------------------------------------------------------------------------
 
@@ -1345,7 +1350,9 @@ function _M.save(image, file_path)
 	end
 	
 	-- generate group codes
+	_M.format = image.format.dxf
 	local groupcodes = save_DXF(sections)
+	_M.format = nil
 	
 	-- write lines
 	local lines = {}
