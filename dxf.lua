@@ -423,6 +423,87 @@ function save_subclass.AcDbPolyline(subclass)
 	return groupcodes
 end
 
+function load_subclass.AcDbLine(groupcodes)
+	local subclass = {}
+	for _,group in ipairs(groupcodes) do
+		local code = group.code
+		if code == 39 then
+			subclass.thickness = parse(group)
+		elseif code == 10 then
+			subclass.start_point = subclass.start_point or {}
+			subclass.start_point.x = parse(group)
+		elseif code == 20 then
+			subclass.start_point = subclass.start_point or {}
+			subclass.start_point.y = parse(group)
+		elseif code == 30 then
+			subclass.start_point = subclass.start_point or {}
+			subclass.start_point.z = parse(group)
+		elseif code == 11 then
+			subclass.end_point = subclass.end_point or {}
+			subclass.end_point.x = parse(group)
+		elseif code == 21 then
+			subclass.end_point = subclass.end_point or {}
+			subclass.end_point.y = parse(group)
+		elseif code == 31 then
+			subclass.end_point = subclass.end_point or {}
+			subclass.end_point.z = parse(group)
+		elseif code == 210 then
+			subclass.extrusion_direction = subclass.extrusion_direction or {}
+			subclass.extrusion_direction.x = parse(group)
+		elseif code == 220 then
+			subclass.extrusion_direction = subclass.extrusion_direction or {}
+			subclass.extrusion_direction.y = parse(group)
+		elseif code == 230 then
+			subclass.extrusion_direction = subclass.extrusion_direction or {}
+			subclass.extrusion_direction.z = parse(group)
+		else
+			error("unsupported code "..tostring(code).." in AcDbLine")
+		end
+	end
+	return subclass
+end
+
+function save_subclass.AcDbLine(subclass)
+	local groupcodes = {}
+	if subclass.thickness ~= nil then
+		table.insert(groupcodes, groupcode(39, subclass.thickness))
+	end
+	if subclass.start_point ~= nil then
+		if subclass.start_point.x ~= nil then
+			table.insert(groupcodes, groupcode(10, subclass.start_point.x))
+		end
+		if subclass.start_point.y ~= nil then
+			table.insert(groupcodes, groupcode(20, subclass.start_point.y))
+		end
+		if subclass.start_point.z ~= nil then
+			table.insert(groupcodes, groupcode(30, subclass.start_point.z))
+		end
+	end
+	if subclass.end_point ~= nil then
+		if subclass.end_point.x ~= nil then
+			table.insert(groupcodes, groupcode(11, subclass.end_point.x))
+		end
+		if subclass.end_point.y ~= nil then
+			table.insert(groupcodes, groupcode(21, subclass.end_point.y))
+		end
+		if subclass.end_point.z ~= nil then
+			table.insert(groupcodes, groupcode(31, subclass.end_point.z))
+		end
+	end
+	if subclass.extrusion_direction ~= nil then
+		if subclass.extrusion_direction.x ~= nil then
+			table.insert(groupcodes, groupcode(210, subclass.extrusion_direction.x))
+		end
+		if subclass.extrusion_direction.y ~= nil then
+			table.insert(groupcodes, groupcode(220, subclass.extrusion_direction.y))
+		end
+		if subclass.extrusion_direction.z ~= nil then
+			table.insert(groupcodes, groupcode(230, subclass.extrusion_direction.z))
+		end
+	end
+	return groupcodes
+end
+
 function load_subclass.AcDbDictionary(groupcodes)
 	local keys = {}
 	local values = {}
