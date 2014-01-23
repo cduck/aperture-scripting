@@ -1403,6 +1403,21 @@ function _M.load(file_path)
 				table.insert(path, {x=point.x*scale, y=point.y*scale, interpolation=i>1 and 'linear' or nil})
 			end
 			table.insert(layer, path)
+		elseif entity.type == 'LINE' then
+			local vertices
+			for _,subclass in ipairs(entity) do
+				if subclass.type=='AcDbLine' then
+					vertices = {subclass.start_point, subclass.end_point}
+					break
+				end
+			end
+			assert(vertices)
+			local path = {aperture=aperture}
+			for i,point in ipairs(vertices) do
+				assert(point.z == 0, "3D entities are not yet supported")
+				table.insert(path, {x=point.x*scale, y=point.y*scale, interpolation=i>1 and 'linear' or nil})
+			end
+			table.insert(layer, path)
 		else
 			error("unsupported entity type "..tostring(entity.type))
 		end
