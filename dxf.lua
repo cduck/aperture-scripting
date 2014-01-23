@@ -142,11 +142,11 @@ local function groupcode_default(code, value)
 	elseif 10 <= code and code <= 39 then
 		-- Double precision 3D point value
 		data = tostring(value)
-		assert(tonumber(data) == value and data:match('^[%d.]+$'))
+		assert((value == 0 or math.abs(tonumber(data) / value - 1) < 1e-9) and data:match('^[%d.]+$'))
 	elseif 40 <= code and code <= 59 then
 		-- Double-precision floating-point value
 		data = tostring(value)
-		assert(tonumber(data) == value and data:match('^[%d.]+$'))
+		assert((value == 0 or math.abs(tonumber(data) / value - 1) < 1e-9) and data:match('^[%d.]+$'))
 	elseif 60 <= code and code <= 79 then
 		-- 16-bit integer value
 		data = tostring(value)
@@ -178,7 +178,7 @@ local function groupcode_default(code, value)
 	elseif 140 <= code and code <= 149 then
 		-- Double precision scalar floating-point value
 		data = tostring(value)
-		assert(tonumber(data) == value and data:match('^[%d.]+$'))
+		assert((value == 0 or math.abs(tonumber(data) / value - 1) < 1e-9) and data:match('^[%d.]+$'))
 	elseif 160 <= code and code <= 169 then
 		-- 64-bit integer value
 		error("group code "..code.." unparsing not implemented")
@@ -281,10 +281,10 @@ local function groupcode_inkscape(code, value)
 		data = value
 	elseif 10 <= code and code <= 39 then -- Double precision 3D point value
 		data = string.format("%.6f", value)
-		assert(tonumber(data) == value and data:match('^[%d.]+$'))
+		assert((value == 0 or math.abs(tonumber(data) / value - 1) < 1e-9) and data:match('^[%d.]+$'))
 	elseif 40 <= code and code <= 59 then -- Double-precision floating-point value
 		data = string.format('%f', value)
-		assert(tonumber(data) == value and data:match('^[%d.]+$'))
+		assert((value == 0 or math.abs(tonumber(data) / value - 1) < 1e-9) and data:match('^[%d.]+$'))
 	elseif 60 <= code and code <= 79 then -- 16-bit integer value
 		data = string.format('%d', value)
 		assert(tonumber(data) == value and data:match('^%s*[%d]+$'))
@@ -299,7 +299,7 @@ local function groupcode_inkscape(code, value)
 		data = value
 	elseif 140 <= code and code <= 149 then -- Double precision scalar floating-point value
 		data = tostring(value)
-		assert(tonumber(data) == value and data:match('^[%d.]+$'))
+		assert((value == 0 or math.abs(tonumber(data) / value - 1) < 1e-9) and data:match('^[%d.]+$'))
 	elseif 170 <= code and code <= 179 then -- 16-bit integer value
 		data = string.format('%6d', value)
 		assert(tonumber(data) == value and data:match('^%s*[%d]+$'))
