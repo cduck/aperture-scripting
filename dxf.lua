@@ -1132,16 +1132,6 @@ end
 
 --............................................................................
 
-function load_section.BLOCKS(groupcodes)
-	return groupcodes
-end
-
-function save_section.BLOCKS(section)
-	return section
-end
-
---............................................................................
-
 local function load_entity(type, groupcodes)
 	return load_object(type, groupcodes)
 end
@@ -1176,6 +1166,51 @@ function load_section.ENTITIES(groupcodes)
 end
 
 function save_section.ENTITIES(entities)
+	local chunks = {}
+	for _,entity in ipairs(entities) do
+		local chunk = save_entity(entity.type, entity)
+		table.insert(chunk, 1, groupcode(0, entity.type))
+		table.insert(chunks, chunk)
+	end
+	
+	local groupcodes = {}
+	for _,chunk in ipairs(chunks) do
+		assert(chunk[1].code==0)
+		for _,group in ipairs(chunk) do
+			table.insert(groupcodes, group)
+		end
+	end
+	return groupcodes
+end
+
+--............................................................................
+
+function load_section.BLOCKS(groupcodes)
+	local chunks = {}
+	local chunk
+	for _,group in ipairs(groupcodes) do
+		local code = group.code
+		local data = group.data
+		if code==0 then
+			chunk = {group}
+			table.insert(chunks, chunk)
+		else
+			table.insert(chunk, group)
+		end
+	end
+	
+	local entities = {}
+	for _,groupcodes in ipairs(chunks) do
+		local type = tremove(groupcodes, 1)
+		assert(type.code==0)
+		local entity = load_entity(type.data, groupcodes)
+		table.insert(entities, entity)
+	end
+	
+	return entities
+end
+
+function save_section.BLOCKS(entities)
 	local chunks = {}
 	for _,entity in ipairs(entities) do
 		local chunk = save_entity(entity.type, entity)
