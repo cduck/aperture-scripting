@@ -31,6 +31,11 @@ return {
 			dirs = {source=P'excellon', build=P'excellon', install=P'excellon'},
 			"blocks.lua",
 		},
+		{
+			dirs = {source=P'dxf', build=P'dxf', install=P'dxf'},
+			"defaults.lua",
+			"defaults_inkscape.lua",
+		},
 	},
 }
 

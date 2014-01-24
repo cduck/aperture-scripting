@@ -1,6 +1,8 @@
 local _M = {}
 
 local table = require 'table'
+local defaults_generic = require 'dxf.defaults'
+local defaults_inkscape = require 'dxf.defaults_inkscape'
 
 local tinsert = table.insert
 local tremove = table.remove
@@ -1538,7 +1540,6 @@ function _M.load(file_path)
 			error("unsupported entity type "..tostring(entity.type))
 		end
 	end
-	sections.ENTITIES = nil
 	
 	local image = {
 		file_path = file_path,
@@ -1546,7 +1547,6 @@ function _M.load(file_path)
 		format = {},
 		unit = 'MM',
 		layers = layers,
-		dxf_sections = sections,
 	}
 	
 	return image
@@ -1559,12 +1559,27 @@ function _M.save(image, file_path)
 	-- assemble DXF sections
 	local sections = {}
 	
-	if image.dxf_sections then
-		for k,v in pairs(image.dxf_sections) do
-			sections[k] = v
-		end
+	local defaults
+	if image.format.dxf == 'inkscape' then
+		defaults = defaults_inkscape
+	else
+		defaults = defaults_generic
 	end
+	for k,v in pairs(defaults.sections) do
+		sections[k] = v
+	end
+	assert(not sections.HEADER)
+	assert(not sections.ENTITIES)
 	sections.ENTITIES = {}
+	sections.HEADER = {
+		ACADVER = 'AC1014',
+		HANDSEED = 'FFFF',
+	}
+	if image.unit == 'MM' then
+		sections.HEADER.MEASUREMENT = 1
+	elseif image.unit == 'IN' then
+		sections.HEADER.MEASUREMENT = 0
+	end
 	
 	local scale = 1e9
 	
