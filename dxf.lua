@@ -335,38 +335,15 @@ function load_subclass_generic(groupcodes)
 	for _,group in ipairs(groupcodes) do
 		local code = group.code
 		local value = parse(group)
-		assert(type(value)~='table')
-		local t = type(subclass[code])
-		if t=='nil' then
-			subclass[code] = value
-		elseif t=='table' then
-			table.insert(subclass[code], value)
-		else
-			subclass[code] = {subclass[code], value}
-		end
+		table.insert(subclass, {code=code, value=value})
 	end
 	return subclass
 end
 
 function save_subclass_generic(subclass)
-	local codes = {}
-	for code in pairs(subclass) do
-		if code~='type' then
-			table.insert(codes, code)
-		end
-	end
-	table.sort(codes)
 	local groupcodes = {}
-	for _,code in ipairs(codes) do
-		local value = subclass[code]
-		local t = type(value)
-		if t=='table' then
-			for _,value in ipairs(value) do
-				table.insert(groupcodes, groupcode(code, value))
-			end
-		else
-			table.insert(groupcodes, groupcode(code, value))
-		end
+	for _,group in ipairs(subclass) do
+		table.insert(groupcodes, groupcode(group.code, group.value))
 	end
 	return groupcodes
 end
@@ -919,7 +896,7 @@ local function load_object(type, groupcodes)
 			table.insert(subclass, group)
 		--	subclass[code] = parse(group)
 		else
-			object.attributes[code] = parse(group)
+			table.insert(object.attributes, {code=code, value=parse(group)})
 		end
 	end
 	for _,groupcodes in ipairs(subclasses) do
@@ -936,8 +913,8 @@ end
 local function save_object(type, object)
 	local groupcodes = {}
 	if object.attributes then
-		for code,value in pairs(object.attributes) do
-			table.insert(groupcodes, groupcode(code, value))
+		for _,group in ipairs(object.attributes) do
+			table.insert(groupcodes, groupcode(group.code, group.value))
 		end
 	end
 	for _,subclass in ipairs(object) do
@@ -1464,7 +1441,7 @@ function _M.save(image, file_path)
 		local entity = {
 			type = 'LWPOLYLINE',
 			attributes = {
-				[5] = string.format("%x", 0x100 - 1 + ipath),
+				{code=5, value=string.format("%x", 0x100 + #sections.ENTITIES)},
 			},
 			{
 				type = 'AcDbEntity',
