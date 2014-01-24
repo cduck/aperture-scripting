@@ -581,13 +581,17 @@ function load_subclass.AcDbViewportTableRecord(groupcodes)
 		elseif code == 70 then
 			subclass.flags = parse(group)
 		elseif code == 10 then
-			subclass.left = parse(group)
+			subclass.extents = subclass.extents or {}
+			subclass.extents.left = parse(group)
 		elseif code == 20 then
-			subclass.bottom = parse(group)
+			subclass.extents = subclass.extents or {}
+			subclass.extents.bottom = parse(group)
 		elseif code == 11 then
-			subclass.right = parse(group)
+			subclass.extents = subclass.extents or {}
+			subclass.extents.right = parse(group)
 		elseif code == 21 then
-			subclass.top = parse(group)
+			subclass.extents = subclass.extents or {}
+			subclass.extents.top = parse(group)
 		elseif code == 12 then
 			subclass.center = subclass.center or {}
 			subclass.center.x = parse(group)
@@ -653,9 +657,9 @@ function load_subclass.AcDbViewportTableRecord(groupcodes)
 		elseif code == 74 then
 			subclass.ucsicon_setting = parse(group)
 		elseif code == 75 then
-			subclass.snap_on_off = parse(group)
+			subclass.snap_on = parse(group) ~= 0
 		elseif code == 76 then
-			subclass.grid_on_off = parse(group)
+			subclass.grid_on = parse(group) ~= 0
 		elseif code == 77 then
 			subclass.snap_style = parse(group)
 		elseif code == 78 then
@@ -714,17 +718,19 @@ function save_subclass.AcDbViewportTableRecord(subclass)
 	if subclass.flags ~= nil then
 		table.insert(groupcodes, groupcode(70, subclass.flags))
 	end
-	if subclass.left ~= nil then
-		table.insert(groupcodes, groupcode(10, subclass.left))
-	end
-	if subclass.bottom ~= nil then
-		table.insert(groupcodes, groupcode(20, subclass.bottom))
-	end
-	if subclass.right ~= nil then
-		table.insert(groupcodes, groupcode(11, subclass.right))
-	end
-	if subclass.top ~= nil then
-		table.insert(groupcodes, groupcode(21, subclass.top))
+	if subclass.extents ~= nil then
+		if subclass.extents.left ~= nil then
+			table.insert(groupcodes, groupcode(10, subclass.extents.left))
+		end
+		if subclass.extents.bottom ~= nil then
+			table.insert(groupcodes, groupcode(20, subclass.extents.bottom))
+		end
+		if subclass.extents.right ~= nil then
+			table.insert(groupcodes, groupcode(11, subclass.extents.right))
+		end
+		if subclass.extents.top ~= nil then
+			table.insert(groupcodes, groupcode(21, subclass.extents.top))
+		end
 	end
 	if subclass.center ~= nil then
 		if subclass.center.x ~= nil then
@@ -813,11 +819,11 @@ function save_subclass.AcDbViewportTableRecord(subclass)
 	if subclass.ucsicon_setting ~= nil then
 		table.insert(groupcodes, groupcode(74, subclass.ucsicon_setting))
 	end
-	if subclass.snap_on_off ~= nil then
-		table.insert(groupcodes, groupcode(75, subclass.snap_on_off))
+	if subclass.snap_on then
+		table.insert(groupcodes, groupcode(75, 1))
 	end
-	if subclass.grid_on_off ~= nil then
-		table.insert(groupcodes, groupcode(76, subclass.grid_on_off))
+	if subclass.grid_on then
+		table.insert(groupcodes, groupcode(76, 1))
 	end
 	if subclass.snap_style ~= nil then
 		table.insert(groupcodes, groupcode(77, subclass.snap_style))
