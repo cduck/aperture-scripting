@@ -996,39 +996,65 @@ local save_section = {}
 
 --............................................................................
 
-function load_section.HEADER(groupcodes)
-	assert(#groupcodes % 2 == 0)
-	local header = {}
-	for i=1,#groupcodes,2 do
-		local name = groupcodes[i]
-		local value = groupcodes[i+1]
-		assert(name.code==9)
-		name = assert(name.data:match('^$(.*)$'))
-		value = parse(value)
-		header[name] = value
-	end
-	return header
-end
-
-local header_order = {'ACADVER', 'HANDSEED', 'MEASUREMENT'}
 local header_codes = {
 	ACADVER = 1,
 	HANDSEED = 5,
 	MEASUREMENT = 70,
 }
 
-function save_section.HEADER(header)
-	for name in pairs(header) do
-		local found = false
-		for _,name2 in ipairs(header_order) do if k2 == k then found = true; break end end
-		assert(found, "unsupported header field "..tostring(name))
+function load_section.HEADER(groupcodes)
+	local chunks = {}
+	local chunk
+	for _,group in ipairs(groupcodes) do
+		local code = group.code
+		if code == 9 then
+			chunk = {}
+			table.insert(chunk, group)
+			table.insert(chunks, chunk)
+		else
+			table.insert(chunk, group)
+		end
+	end
+	local headers = {}
+	for _,chunk in pairs(chunks) do
+		assert(#chunk >= 1)
+		local name = table.remove(chunk, 1)
+		assert(name.code == 9)
+		name = assert(parse(name):match('^$(.*)$'))
+		if header_codes[name] then
+			assert(#chunk == 1)
+			assert(chunk[1].code == header_codes[name])
+			headers[name] = parse(chunk[1])
+		else
+			headers[name] = chunk
+		end
+	end
+	return headers
+end
+
+function save_section.HEADER(headers)
+	local names = {}
+	for name in pairs(headers) do
+		table.insert(names, name)
+	end
+	table.sort(names)
+	local chunks = {}
+	for _,name in ipairs(names) do
+		local chunk = {}
+		table.insert(chunk, groupcode(9, '$'..name))
+		if header_codes[name] then
+			table.insert(chunk, groupcode(header_codes[name], headers[name]))
+		else
+			for _,group in ipairs(headers[name]) do
+				table.insert(chunk, group)
+			end
+		end
+		table.insert(chunks, chunk)
 	end
 	local groupcodes = {}
-	for _,name in ipairs(header_order) do
-		local value = header[name]
-		if value ~= nil then
-			table.insert(groupcodes, groupcode(9, '$'..name))
-			table.insert(groupcodes, groupcode(header_codes[name], value))
+	for _,chunk in ipairs(chunks) do
+		for _,group in ipairs(chunk) do
+			table.insert(groupcodes, group)
 		end
 	end
 	return groupcodes
