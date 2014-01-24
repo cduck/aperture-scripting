@@ -879,6 +879,67 @@ function save_subclass.AcDbViewportTableRecord(subclass)
 	return groupcodes
 end
 
+function load_subclass.AcDbEntity(groupcodes)
+	local subclass = {
+		type = 'AcDbEntity',
+		line_type_name = 'BYLAYER',
+		color = 'BYLAYER',
+		line_type_scale = 1.0,
+	}
+	for _,group in ipairs(groupcodes) do
+		local code = group.code
+		if code == 67 then
+			subclass.paper_space = parse(group) ~= 0
+		elseif code == 8 then
+			subclass.layer = parse(group)
+		elseif code == 6 then
+			subclass.line_type_name = parse(group)
+		elseif code == 62 then
+			local value = parse(group)
+			if value == 0 then
+				subclass.color = 'BYBLOCK'
+			elseif value == 255 then
+				assert(subclass.color == 'BYLAYER')
+			else
+				subclass.color = parse(group)
+			end
+		elseif code == 48 then
+			subclass.line_type_scale = parse(group)
+		elseif code == 60 then
+			subclass.hidden = parse(group) ~= 0
+		else
+			error("unsupported code "..tostring(code).." in AcDbEntity")
+		end
+	end
+	return subclass
+end
+
+function save_subclass.AcDbEntity(subclass)
+	local groupcodes = {}
+	if subclass.paper_space then
+		table.insert(groupcodes, groupcode(67, 1))
+	end
+	assert(subclass.layer, "entity has no layer defined")
+	table.insert(groupcodes, groupcode(8, subclass.layer))
+	if subclass.line_type_name and subclass.line_type_name ~= 'BYLAYER' then
+		table.insert(groupcodes, groupcode(6, subclass.line_type_name))
+	end
+	if subclass.color and subclass.color ~= 'BYLAYER' then
+		if subclass.color == 'BYBLOCK' then
+			table.insert(groupcodes, groupcode(62, 0))
+		else
+			table.insert(groupcodes, groupcode(62, subclass.color))
+		end
+	end
+	if subclass.line_type_scale and subclass.line_type_scale ~= 1.0 then
+		table.insert(groupcodes, groupcode(48, subclass.line_type_scale))
+	end
+	if subclass.hidden then
+		table.insert(groupcodes, groupcode(60, 1))
+	end
+	return groupcodes
+end
+
 local function load_object(type, groupcodes)
 	local object = {
 		type=type,
@@ -1445,8 +1506,8 @@ function _M.save(image, file_path)
 			},
 			{
 				type = 'AcDbEntity',
-				[8] = "0", -- layer name
-				[62] = 7, -- color number
+				layer = "0",
+				color = 7,
 			},
 			{
 				type = 'AcDbPolyline',
