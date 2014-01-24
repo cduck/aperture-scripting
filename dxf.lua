@@ -946,6 +946,27 @@ function save_subclass.AcDbEntity(subclass)
 	return groupcodes
 end
 
+function load_subclass.AcDbSymbolTable(groupcodes)
+	local subclass = {type='AcDbSymbolTable'}
+	for _,group in ipairs(groupcodes) do
+		local code = group.code
+		if code == 70 then
+			subclass.length = parse(group)
+		else
+			error("unsupported code "..tostring(code).." in AcDbSymbolTable")
+		end
+	end
+	return subclass
+end
+
+function save_subclass.AcDbSymbolTable(subclass)
+	local groupcodes = {}
+	if subclass.length then
+		table.insert(groupcodes, groupcode(70, subclass.length))
+	end
+	return groupcodes
+end
+
 local function load_object(type, groupcodes)
 	local object = {
 		type=type,
@@ -1106,46 +1127,71 @@ local function save_table_header(header)
 	return save_object(nil, header)
 end
 
-local function load_table_entry(type, groupcodes)
+local function load_table_record(type, groupcodes)
 	return load_object(type, groupcodes)
 end
 
-local function save_table_entry(type, entry)
-	return save_object(type, entry)
+local function save_table_record(type, record)
+	return save_object(type, record)
 end
 
 local function load_table(type, groupcodes)
-	local table = {type=type, header={}}
-	local entry = table.header
+	local header = {}
+	local records = {}
+	local record = header
 	for _,group in ipairs(groupcodes) do
 		local code = group.code
 		local data = group.data
 		if code==0 then
-			entry = {type=data}
-			tinsert(table, entry)
+			assert(data == type, "record type "..tostring(data).." differ from table type "..tostring(type))
+			record = {}
+			table.insert(records, record)
 		else
-			tinsert(entry, group)
+			table.insert(record, group)
 		end
 	end
-	table.header = load_table_header(table.header)
-	for i,entry in ipairs(table) do
-		assert(entry.type == type, "record type "..tostring(entry.type).." differ from table type "..tostring(type))
-		entry = load_table_entry(entry.type, entry)
-		assert(entry.type == type)
-		entry.type = nil
-		table[i] = entry
+	
+	header = load_table_header(header)
+	local table = {type=type}
+	for _,group in ipairs(header.attributes) do
+		local code = group.code
+		if code == 5 then
+			table.handle = group.value
+		elseif code == 330 then
+			table.owner = group.value
+		else
+			error("unsupported code "..tostring(code).." in table header")
+		end
+	end
+	assert(#header == 1)
+	for _,subclass in ipairs(header) do
+		if subclass.type == 'AcDbSymbolTable' then
+		--	assert(subclass.length == #records) -- this is not required
+		end
+	end
+	for _,record in ipairs(records) do
+		record = load_table_record(type, record)
+		assert(record.type == type)
+		record.type = nil
+		tinsert(table, record)
 	end
 	return table
 end
 
 local function save_table(table)
 	local groupcodes = {}
-	for _,group in ipairs(save_table_header(table.header)) do
+	local header = {
+		attributes = {},
+		{ type = 'AcDbSymbolTable', length = #table },
+	}
+	if table.handle then tinsert(header.attributes, {code=5, value=table.handle}) end
+	if table.owner then tinsert(header.attributes, {code=330, value=table.owner}) end
+	for _,group in ipairs(save_table_header(header)) do
 		tinsert(groupcodes, group)
 	end
-	for _,entry in ipairs(table) do
+	for _,record in ipairs(table) do
 		tinsert(groupcodes, groupcode(0, table.type))
-		for _,group in ipairs(save_table_entry(table.type, entry)) do
+		for _,group in ipairs(save_table_record(table.type, record)) do
 			tinsert(groupcodes, group)
 		end
 	end
