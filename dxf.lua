@@ -1600,7 +1600,6 @@ function _M.save(image, file_path)
 			{
 				type = 'AcDbEntity',
 				layer = "0",
-				color = 7,
 			},
 			{
 				type = 'AcDbPolyline',
@@ -1608,6 +1607,9 @@ function _M.save(image, file_path)
 				vertices = vertices,
 			},
 		}
+		if image.format.dxf == 'inkscape' then
+			entity[2].color = 7
+		end
 		table.insert(sections.ENTITIES, entity)
 	end
 	
