@@ -350,14 +350,39 @@ function save_subclass_generic(subclass)
 	return groupcodes
 end
 
+local function number_to_bitset(n)
+	assert(n == math.floor(n) and n >= 0)
+	local t = {}
+	local i = 0
+	while n ~= 0 do
+		if n % 2 == 1 then
+			n = n - 1
+			flags[i] = true
+		end
+		i = i + 1
+		n = n / 2
+	end
+	return t
+end
+
+local function bitset_to_number(t)
+	local n = 0
+	for k,v in pairs(t) do
+		assert(v==true)
+		n = n + 2 ^ k
+	end
+	return n
+end
+
 function load_subclass.AcDbPolyline(groupcodes)
 	local subclass = {}
+	local vertex_count,flags
 	for _,group in ipairs(groupcodes) do
 		local code = group.code
 		if code == 90 then
-			subclass.vertex_count = parse(group)
+			vertex_count = parse(group)
 		elseif code == 70 then
-			subclass.flags = parse(group)
+			flags = parse(group)
 		elseif code == 10 or code == 20 or code == 30 then
 			-- treated below
 		else
@@ -365,7 +390,7 @@ function load_subclass.AcDbPolyline(groupcodes)
 		end
 	end
 	local vertices = {}
-	for i=1,subclass.vertex_count do vertices[i] = {} end
+	for i=1,vertex_count do vertices[i] = {} end
 	local lastx,lasty,lastz = 0,0,0
 	for _,group in ipairs(groupcodes) do
 		if group.code == 10 then
@@ -379,20 +404,39 @@ function load_subclass.AcDbPolyline(groupcodes)
 			vertices[lastz].z = parse(group)
 		end
 	end
-	for i=1,subclass.vertex_count do
+	for i=1,vertex_count do
 		local vertex = vertices[i]
 		assert(vertex.x and vertex.y and vertex.z)
 	end
-	subclass.vertex_count = nil
 	subclass.vertices = vertices
+	flags = number_to_bitset(flags)
+	for bit,v in pairs(flags) do
+		assert(v==true)
+		if bit == 0 then
+			subclass.closed = true
+		elseif bit == 7 then
+			subclass.plinegen = true
+		else
+			error("unsupported flag bit "..tonumber(bit).." is set")
+		end
+	end
 	return subclass
 end
 
 function save_subclass.AcDbPolyline(subclass)
+	local vertex_count = #subclass.vertices
+	local flags = {}
+	if subclass.closed then
+		flags[0] = true
+	elseif subclass.plinegen then
+		flags[7] = true
+	end
+	flags = bitset_to_number(flags)
 	local groupcodes = {}
-	table.insert(groupcodes, groupcode(90, #subclass.vertices))
-	table.insert(groupcodes, groupcode(70, subclass.flags))
-	for _,vertex in ipairs(subclass.vertices) do
+	table.insert(groupcodes, groupcode(90, vertex_count))
+	table.insert(groupcodes, groupcode(70, flags))
+	for i=1,vertex_count do
+		local vertex = subclass.vertices[i]
 		table.insert(groupcodes, groupcode(10, vertex.x))
 		table.insert(groupcodes, groupcode(20, vertex.y))
 		if vertex.z then
@@ -1511,6 +1555,10 @@ function _M.load(file_path)
 			for _,subclass in ipairs(entity) do
 				if subclass.type=='AcDbPolyline' then
 					vertices = subclass.vertices
+					if subclass.flags.closed then
+						assert(#vertices >= 1)
+						table.insert(vertices, {x=vertices[1].x, y=vertices[1].y, z=vertices[1].z})
+					end
 					break
 				end
 			end
@@ -1592,6 +1640,11 @@ function _M.save(image, file_path)
 			end
 			table.insert(vertices, {x=point.x/scale, y=point.y/scale, z=0})
 		end
+		local closed
+		if #vertices >= 2 and vertices[#vertices].x == vertices[1].x and vertices[#vertices].y == vertices[1].y and vertices[#vertices].z == vertices[1].z then
+			vertices[#vertices] = nil
+			closed = true
+		end
 		local entity = {
 			type = 'LWPOLYLINE',
 			attributes = {
@@ -1603,8 +1656,8 @@ function _M.save(image, file_path)
 			},
 			{
 				type = 'AcDbPolyline',
-				flags = 0,
 				vertices = vertices,
+				closed = closed,
 			},
 		}
 		if image.format.dxf == 'inkscape' then
