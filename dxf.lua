@@ -357,7 +357,7 @@ local function number_to_bitset(n)
 	while n ~= 0 do
 		if n % 2 == 1 then
 			n = n - 1
-			flags[i] = true
+			t[i] = true
 		end
 		i = i + 1
 		n = n / 2
@@ -1555,7 +1555,7 @@ function _M.load(file_path)
 			for _,subclass in ipairs(entity) do
 				if subclass.type=='AcDbPolyline' then
 					vertices = subclass.vertices
-					if subclass.flags.closed then
+					if subclass.closed then
 						assert(#vertices >= 1)
 						table.insert(vertices, {x=vertices[1].x, y=vertices[1].y, z=vertices[1].z})
 					end
