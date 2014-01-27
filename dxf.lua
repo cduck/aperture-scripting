@@ -3,6 +3,7 @@ local _M = {}
 local table = require 'table'
 local defaults_generic = require 'dxf.defaults'
 local defaults_inkscape = require 'dxf.defaults_inkscape'
+local interpolation = require 'boards.interpolation'
 
 local tinsert = table.insert
 local tremove = table.remove
@@ -523,6 +524,78 @@ function save_subclass.AcDbLine(subclass)
 		if subclass.extrusion_direction.z ~= nil then
 			table.insert(groupcodes, groupcode(230, subclass.extrusion_direction.z))
 		end
+	end
+	return groupcodes
+end
+
+function load_subclass.AcDbCircle(groupcodes)
+	local subclass = {}
+	for _,group in ipairs(groupcodes) do
+		local code = group.code
+		if code == 39 then
+			subclass.thickness = parse(group)
+		elseif code == 10 then
+			subclass.center = subclass.center or {}
+			subclass.center.x = parse(group)
+		elseif code == 20 then
+			subclass.center = subclass.center or {}
+			subclass.center.y = parse(group)
+		elseif code == 30 then
+			subclass.center = subclass.center or {}
+			subclass.center.z = parse(group)
+		elseif code == 40 then
+			subclass.radius = parse(group)
+		else
+			error("unsupported code "..tostring(code).." in AcDbCircle")
+		end
+	end
+	return subclass
+end
+
+function save_subclass.AcDbCircle(subclass)
+	local groupcodes = {}
+	if subclass.thickness ~= nil then
+		table.insert(groupcodes, groupcode(39, subclass.thickness))
+	end
+	if subclass.center ~= nil then
+		if subclass.center.x ~= nil then
+			table.insert(groupcodes, groupcode(10, subclass.center.x))
+		end
+		if subclass.center.y ~= nil then
+			table.insert(groupcodes, groupcode(20, subclass.center.y))
+		end
+		if subclass.center.z ~= nil then
+			table.insert(groupcodes, groupcode(30, subclass.center.z))
+		end
+	end
+	if subclass.radius ~= nil then
+		table.insert(groupcodes, groupcode(40, subclass.radius))
+	end
+	return groupcodes
+end
+
+function load_subclass.AcDbArc(groupcodes)
+	local subclass = {}
+	for _,group in ipairs(groupcodes) do
+		local code = group.code
+		if code == 50 then
+			subclass.start_angle = parse(group)
+		elseif code == 51 then
+			subclass.end_angle = parse(group)
+		else
+			error("unsupported code "..tostring(code).." in AcDbArc")
+		end
+	end
+	return subclass
+end
+
+function save_subclass.AcDbArc(subclass)
+	local groupcodes = {}
+	if subclass.start_angle ~= nil then
+		table.insert(groupcodes, groupcode(50, subclass.start_angle))
+	end
+	if subclass.end_angle ~= nil then
+		table.insert(groupcodes, groupcode(51, subclass.end_angle))
 	end
 	return groupcodes
 end
@@ -1570,19 +1643,56 @@ function _M.load(file_path)
 			end
 			table.insert(layer, path)
 		elseif entity.type == 'LINE' then
-			local vertices
+			local start_point,end_point
 			for _,subclass in ipairs(entity) do
 				if subclass.type=='AcDbLine' then
-					vertices = {subclass.start_point, subclass.end_point}
+					start_point = subclass.start_point
+					end_point = subclass.end_point
 					break
 				end
 			end
-			assert(vertices)
-			local path = {aperture=aperture}
-			for i,point in ipairs(vertices) do
-				assert(point.z == 0, "3D entities are not yet supported")
-				table.insert(path, {x=point.x*scale, y=point.y*scale, interpolation=i>1 and 'linear' or nil})
+			assert(start_point and end_point)
+			assert(start_point.z == 0 and end_point.z == 0, "3D entities are not yet supported")
+			start_point.x = start_point.x * scale
+			start_point.y = start_point.y * scale
+			end_point.x = end_point.x * scale
+			end_point.y = end_point.y * scale
+			local path = {
+				aperture = aperture,
+				{ x = start_point.x, y = start_point.y },
+				{ x = end_point.x, y = end_point.y, interpolation = 'linear' },
+			}
+			table.insert(layer, path)
+		elseif entity.type == 'ARC' then
+			local center,radius,angle0,angle1
+			for _,subclass in ipairs(entity) do
+				if subclass.type=='AcDbCircle' then
+					center = subclass.center
+					radius = subclass.radius
+				elseif subclass.type=='AcDbArc' then
+					angle0 = math.rad(subclass.start_angle)
+					angle1 = math.rad(subclass.end_angle)
+				end
 			end
+			assert(center)
+			assert(center.z == 0, "3D entities are not yet supported")
+			center.x = center.x * scale
+			center.y = center.y * scale
+			local dx0 = radius * math.cos(angle0)
+			local dy0 = radius * math.sin(angle0)
+			local dx1 = radius * math.cos(angle1)
+			local dy1 = radius * math.sin(angle1)
+			local quadrant
+			if angle1 - angle0 < math.pi / 2 then
+				quadrant = 'single'
+			else
+				quadrant = 'multi'
+			end
+			local path = {
+				aperture = aperture,
+				{ x = center.x + dx0, y = center.y + dy0 },
+				{ x = center.x + dx1, y = center.y + dy0, interpolation = 'counterclockwise', quadrant = quadrant },
+			}
 			table.insert(layer, path)
 		else
 			error("unsupported entity type "..tostring(entity.type))
@@ -1632,38 +1742,125 @@ function _M.save(image, file_path)
 	local scale = 1e9
 	
 	for ipath,path in ipairs(image.layers[1]) do
-		local vertices = {}
+		if #path == 1 then
+			error("aperture flashes are not yet supported in DXF files")
+		end
+		local dxf_paths = {}
+		local dxf_point0
 		for i,point in ipairs(path) do
-			if i > 1 then
-				assert(not point.interpolated)
-				assert(point.interpolation == 'linear')
+			local x,y = point.x/scale,point.y/scale
+			if i == 1 then
+				dxf_point0 = {x=x, y=y, z=0}
+			elseif point.interpolated then
+				-- skip
+			else
+				if point.interpolation == 'linear' then
+					local dxf_point1 = {x=x, y=y, z=0}
+					if #dxf_paths >= 1 and dxf_paths[#dxf_paths].type=='line' then
+						table.insert(dxf_paths[#dxf_paths], dxf_point1)
+					else
+						table.insert(dxf_paths, {type='line', dxf_point0, dxf_point1})
+					end
+					dxf_point0 = dxf_point1
+				elseif point.interpolation == 'clockwise' or point.interpolation == 'counterclockwise' then
+					local i = point.i / scale
+					local j = point.j / scale
+					local cx,cy
+					if point.quadrant == 'single' then
+						cx,cy = interpolation.single_quadrant_center(dxf_point0.x, dxf_point0.y, i, j, x, y, point.interpolation)
+					elseif point.quadrant == 'multi' then
+						cx = dxf_point0.x + i
+						cy = dxf_point0.y + j
+					else
+						error("unsupported circular interpolation quadrant "..tostring(quadrant))
+					end
+					local r,a0,a1
+					local dx0,dy0 = dxf_point0.x - cx, dxf_point0.y - cy
+					local r = math.sqrt(dx0^2 + dy0^2)
+					local a0 = math.deg(math.atan2(dy0, dx0))
+					local a1 = math.deg(math.atan2(y - cy, x - cx))
+					if point.interpolation == 'clockwise' then
+						a0,a1 = a1,a0
+					end
+					local dxf_point1 = {x=x, y=y, z=0}
+					table.insert(dxf_paths, {type='arc', c={x=cx, y=cy, z=0}, r=r, a0=a0, a1=a1})
+					dxf_point0 = dxf_point1
+				else
+					error("unsupported interpolation "..tostring(point.interpolation))
+				end
 			end
-			table.insert(vertices, {x=point.x/scale, y=point.y/scale, z=0})
 		end
-		local closed
-		if #vertices >= 2 and vertices[#vertices].x == vertices[1].x and vertices[#vertices].y == vertices[1].y and vertices[#vertices].z == vertices[1].z then
-			vertices[#vertices] = nil
-			closed = true
+		for _,dxf_path in ipairs(dxf_paths) do
+			if dxf_path.type == 'line' and #dxf_path == 2 then
+				local entity = {
+					type = 'LINE',
+					attributes = {
+						{code=5, value=string.format("%x", 0x100 + #sections.ENTITIES)},
+					},
+					{
+						type = 'AcDbEntity',
+						layer = "0",
+					},
+					{
+						type = 'AcDbLine',
+						start_point = dxf_path[1],
+						end_point = dxf_path[2],
+					},
+				}
+				table.insert(sections.ENTITIES, entity)
+			elseif dxf_path.type == 'line' then
+				local closed
+				local vertices = {}
+				for i,point in ipairs(dxf_path) do vertices[i] = point end
+				if #vertices >= 2 and vertices[#vertices].x == vertices[1].x and vertices[#vertices].y == vertices[1].y and vertices[#vertices].z == vertices[1].z then
+					vertices[#vertices] = nil
+					closed = true
+				end
+				local entity = {
+					type = 'LWPOLYLINE',
+					attributes = {
+						{code=5, value=string.format("%x", 0x100 + #sections.ENTITIES)},
+					},
+					{
+						type = 'AcDbEntity',
+						layer = "0",
+					},
+					{
+						type = 'AcDbPolyline',
+						vertices = vertices,
+						closed = closed,
+					},
+				}
+				if image.format.dxf == 'inkscape' then
+					entity[2].color = 7
+				end
+				table.insert(sections.ENTITIES, entity)
+			elseif dxf_path.type == 'arc' then
+				local entity = {
+					type = 'ARC',
+					attributes = {
+						{code=5, value=string.format("%x", 0x100 + #sections.ENTITIES)},
+					},
+					{
+						type = 'AcDbEntity',
+						layer = "0",
+					},
+					{
+						type = 'AcDbCircle',
+						center = dxf_path.c,
+						radius = dxf_path.r,
+					},
+					{
+						type = 'AcDbArc',
+						start_angle = dxf_path.a0,
+						end_angle = dxf_path.a1,
+					},
+				}
+				table.insert(sections.ENTITIES, entity)
+			else
+				error("unsupported DXF path type "..tostring(dxf_path.type))
+			end
 		end
-		local entity = {
-			type = 'LWPOLYLINE',
-			attributes = {
-				{code=5, value=string.format("%x", 0x100 + #sections.ENTITIES)},
-			},
-			{
-				type = 'AcDbEntity',
-				layer = "0",
-			},
-			{
-				type = 'AcDbPolyline',
-				vertices = vertices,
-				closed = closed,
-			},
-		}
-		if image.format.dxf == 'inkscape' then
-			entity[2].color = 7
-		end
-		table.insert(sections.ENTITIES, entity)
 	end
 	
 	-- generate group codes
