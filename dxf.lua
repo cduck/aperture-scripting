@@ -1682,16 +1682,23 @@ function _M.load(file_path)
 			local dy0 = radius * math.sin(angle0)
 			local dx1 = radius * math.cos(angle1)
 			local dy1 = radius * math.sin(angle1)
-			local quadrant
+			local quadrant,i,j
+			if angle1 < angle0 then
+				angle1 = angle1 + math.pi * 2
+			end
 			if angle1 - angle0 < math.pi / 2 then
 				quadrant = 'single'
+				i = math.abs(dx0)
+				j = math.abs(dy0)
 			else
 				quadrant = 'multi'
+				i = -dx0
+				j = -dy0
 			end
 			local path = {
 				aperture = aperture,
 				{ x = center.x + dx0, y = center.y + dy0 },
-				{ x = center.x + dx1, y = center.y + dy0, interpolation = 'counterclockwise', quadrant = quadrant },
+				{ x = center.x + dx1, y = center.y + dy0, i = i, j = j, interpolation = 'counterclockwise', quadrant = quadrant },
 			}
 			table.insert(layer, path)
 		else
