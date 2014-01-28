@@ -630,30 +630,47 @@ end
 
 ------------------------------------------------------------------------------
 
+local function interpolate_path(path)
+	local interpolated = { aperture = path.aperture }
+	for i,point in ipairs(path) do
+		if i == 1 then
+			table.insert(interpolated, point)
+		else
+			interpolation.interpolate(interpolated, point)
+		end
+	end
+	for i,point in ipairs(interpolated) do
+		point.interpolated = nil
+		point.i = nil
+		point.j = nil
+		point.quadrant = nil
+		if i > 1 then point.interpolation = 'linear' end
+	end
+	region.recompute_path_extents(interpolated)
+	return interpolated
+end
+
 local function interpolate_image_paths(image)
 	for _,layer in ipairs(image.layers) do
 		for ipath,path in ipairs(layer) do
-			local interpolated = { aperture = path.aperture }
-			for i,point in ipairs(path) do
-				if i == 1 then
-					table.insert(interpolated, point)
-				else
-					interpolation.interpolate(interpolated, point)
-				end
-			end
-			for i,point in ipairs(interpolated) do
-				point.interpolated = nil
-				point.i = nil
-				point.j = nil
-				point.quadrant = nil
-				if i > 1 then point.interpolation = 'linear' end
-			end
-			region.recompute_path_extents(interpolated)
-			layer[ipath] = interpolated
+			layer[ipath] = interpolate_path(path)
 		end
 	end
 end
 _M.interpolate_image_paths = interpolate_image_paths
+
+local function interpolate_board_paths(board)
+	for _,image in pairs(board.images) do
+		interpolate_image_paths(image)
+	end
+	if board.outline then
+		board.outline.path = interpolate_path(board.outline.path)
+	end
+end
+
+function _M.interpolate_paths(board)
+	interpolate_board_paths(board)
+end
 
 ------------------------------------------------------------------------------
 
