@@ -3,7 +3,6 @@ local _M = {}
 local math = require 'math'
 local table = require 'table'
 local dump = require 'dump'
-local interpolation = require 'boards.interpolation'
 _M.blocks = require 'gerber.blocks'
 
 ------------------------------------------------------------------------------
@@ -347,8 +346,6 @@ end
 
 ------------------------------------------------------------------------------
 
-local interpolate = interpolation.interpolate
-
 local ignored_parameter = {
 --	AA = true, -- Aperture Assignment
 --	AF = true, -- Auto Focus
@@ -532,7 +529,7 @@ function _M.load(file_path)
 						assert(quadrant, "circular interpolation before a quadrant mode is specified")
 						local i = (block.I or 0) * scale
 						local j = (block.J or 0) * scale
-						interpolate(path, {x=x, y=y, i=i, j=j, interpolation=interpolation, quadrant=quadrant})
+						table.insert(path, {x=x, y=y, i=i, j=j, interpolation=interpolation, quadrant=quadrant})
 					elseif interpolation then
 						error("unsupported interpolation mode "..interpolation)
 					else
