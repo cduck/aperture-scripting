@@ -459,19 +459,28 @@ function _M.load(file_path)
 				unit = block.value
 			elseif tp=='IJ' then
 				-- image justify
-				assert(block.value == 'ALBL')
+				assert(block.value == 'ALBL', "unsupported image justify "..tostring(block.value).." (Gerber IJ parameter")
+			elseif tp=='MI' then
+				-- mirror image
+				assert(block.value == 'A0B0', "unsupported non-trivial mirror image "..tostring(block.value).." (Gerber MI parameter")
 			elseif tp=='OF' then
 				-- offset
-				assert(block.value == 'A0B0', "unsupported non-null offset (Gerber OF parameter")
+				local a,b = block.value:match('^A([%d.]+)B([%d.]+)$')
+				assert(a and b, "unsupported offset "..tostring(block.value).." (Gerber OF parameter")
+				a,b = tonumber(a),tonumber(b)
+				assert(a == 0 and b == 0, "unsupported non-null offset "..tostring(block.value).." (Gerber OF parameter")
 			elseif tp=='SF' then
 				-- scale factor
-				assert(block.value == 'A1B1', "unsupported non-identity scale factor (Gerber SF parameter")
+				local a,b = block.value:match('^A([%d.]+)B([%d.]+)$')
+				assert(a and b, "unsupported scale factor "..tostring(block.value).." (Gerber SF parameter")
+				a,b = tonumber(a),tonumber(b)
+				assert(a == 1 and b == 1, "unsupported non-identity scale factor "..tostring(block.value).." (Gerber SF parameter")
 			elseif tp=='IR' then
 				-- image rotation
-				assert(tonumber(block.value) == 0, "unsupported non-identity image rotation (Gerber IR parameter)")
+				assert(tonumber(block.value) == 0, "unsupported non-identity image rotation "..tostring(block.value).." (Gerber IR parameter)")
 			elseif tp=='SR' then
 				-- step & repeat
-				assert(block.value == 'X1Y1I0J0', "unsupported non-trivial step & repeat (Gerber SR parameter)")
+				assert(block.value == 'X1Y1I0J0', "unsupported non-trivial step & repeat "..tostring(block.value).." (Gerber SR parameter)")
 			elseif tp=='IN' then
 				-- image name
 				image_name = block.value
