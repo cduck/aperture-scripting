@@ -99,12 +99,18 @@ function _M.offset_board(board, dx, dy)
 		unit = board.unit,
 		template = board.template,
 		extensions = {},
+		formats = {},
 		images = {},
 	}
 	
 	-- copy extensions
 	for type,extension in pairs(board.extensions) do
 		copy.extensions[type] = extension
+	end
+	
+	-- copy formats
+	for type,format in pairs(board.formats) do
+		copy.formats[type] = format
 	end
 	
 	-- move extents
@@ -317,12 +323,18 @@ function _M.rotate180_board(board)
 		unit = board.unit,
 		template = board.template,
 		extensions = {},
+		formats = {},
 		images = {},
 	}
 	
 	-- copy extensions
 	for type,extension in pairs(board.extensions) do
 		copy.extensions[type] = extension
+	end
+	
+	-- copy formats
+	for type,format in pairs(board.formats) do
+		copy.formats[type] = format
 	end
 	
 	-- rotate extents
@@ -436,6 +448,7 @@ function _M.merge_boards(board_a, board_b)
 		unit = board_a.unit,
 		template = board_a.template,
 		extensions = {},
+		formats = {},
 		images = {},
 	}
 	
@@ -447,6 +460,17 @@ function _M.merge_boards(board_a, board_b)
 		-- prefer extensions from A in case of conflict
 		if not merged.extensions[type] then
 			merged.extensions[type] = extension
+		end
+	end
+	
+	-- merge formats
+	for type,format in pairs(board_a.formats) do
+		merged.formats[type] = format
+	end
+	for type,format in pairs(board_b.formats) do
+		-- prefer formats from A in case of conflict
+		if not merged.formats[type] then
+			merged.formats[type] = format
 		end
 	end
 	

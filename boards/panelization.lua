@@ -39,6 +39,7 @@ function _M.empty_board(width, height)
 			bottom_soldermask = empty_image(),
 		},
 		extensions = {},
+		formats = {},
 		extents = extents,
 		outline = {
 			apertures = {},

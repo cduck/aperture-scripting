@@ -334,6 +334,10 @@ local formats = setmetatable({
 	bom = 'bom',
 }, {__index=function() return 'gerber' end})
 
+function _M.detect_format(type, path)
+	return formats[type]
+end
+
 function _M.load(path, options)
 	if not options then options = {} end
 	
@@ -452,13 +456,16 @@ function _M.load(path, options)
 	
 	-- load images
 	local images = {}
+	local formats = {}
 	for type,path in pairs(paths) do
 		local hash = hashes[type]
-		local format = formats[type]
+		local format = _M.detect_format(type, path)
 		local image = load_image(path, format, board.unit, template)
 		images[type] = image
+		formats[type] = format
 	end
 	board.images = images
+	board.formats = formats
 	
 	-- extract outline
 	local outlines = _M.find_board_outlines(board)
@@ -523,7 +530,7 @@ function _M.save(board, filepath)
 		end
 		local pattern = assert(board.extensions[type], "no extension pattern for file of type "..type)
 		local filepath = filepath.dir / pattern:gsub('%%', filepath.file)
-		local format = formats[type]
+		local format = assert(board.formats[type], "no format for file of type "..type)
 		local success,msg = save_image(image, filepath, format, board.unit, board.template)
 		if not success then return nil,msg end
 	end
