@@ -27,7 +27,7 @@ function _M.empty_board(width, height)
 	}
 	return {
 		unit = 'pm',
-		template = templates.default_template,
+		template = templates.default,
 		images = {
 			milling = empty_image(),
 			drill = empty_image(),

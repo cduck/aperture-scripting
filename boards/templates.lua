@@ -2,7 +2,7 @@ local _M = {}
 
 ------------------------------------------------------------------------------
 
-_M.default_template = {
+_M.default = {
 	patterns = {
 		top_copper = '%.gtl',
 		top_soldermask = '%.gts',

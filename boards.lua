@@ -228,7 +228,7 @@ function _M.load_image(filepath, format, options)
 	if not options then options = {} end
 	
 	local unit = options.unit or 'pm'
-	local template = templates.default_template -- :TODO: make that configurable
+	local template = templates.default -- :TODO: make that configurable
 	
 	return load_image(filepath, format, unit, template)
 end
@@ -255,7 +255,7 @@ function _M.save_image(image, filepath, format, options)
 	if not options then options = {} end
 	
 	local unit = options.unit or 'pm'
-	local template = templates.default_template -- :TODO: make that configurable
+	local template = templates.default -- :TODO: make that configurable
 	
 	return save_image(image, filepath, format, unit, template)
 end
@@ -340,7 +340,38 @@ function _M.load(path, options)
 	local board = {}
 	
 	board.unit = options.unit or 'pm'
-	local template = templates.default_template -- :TODO: make that configurable
+	
+	-- look for a template
+	local template
+	-- - 1. look for a .conf file in the input
+	if type(path)=='string' and lfs.attributes(path, 'mode') and path:match('%.conf$') then
+		template = dofile(path)
+	elseif type(path)=='string' and lfs.attributes(path..".conf", 'mode') then
+		template = dofile(path..".conf")
+	elseif type(path)=='table' then
+		for _,path in ipairs(path) do
+			if lfs.attributes(path, 'mode') and path:match('%.conf$') then
+				template = dofile(path)
+				break
+			end
+		end
+	end
+	-- - 2. try option as a filename
+	if not template and options.template and lfs.attributes(options.template, 'mode') then
+		template = dofile(options.template)
+	end
+	-- - 3. try option as standard template name
+	if not template and options.template and templates[options.template] then
+		template = templates[options.template]
+	end
+	-- - 4. use default template
+	if not template then
+		template = templates.default -- :TODO: make that configurable
+	end
+	
+	if not template then
+		return nil,"no template found"
+	end
 	board.template = template
 	
 	-- single file special case
