@@ -431,7 +431,7 @@ end
 
 function _M.merge_boards(board_a, board_b)
 	assert(board_a.unit == board_b.unit, "board unit mismatch")
-	assert(board_a.template == board_b.template, "board template mismatch")
+	assert(board_a.template == board_b.template, "board template mismatch ("..tostring(board_a.template).." vs. "..tostring(board_b.template)..")")
 	local merged = {
 		unit = board_a.unit,
 		template = board_a.template,
