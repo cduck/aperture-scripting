@@ -361,13 +361,14 @@ function _M.load(path, options)
 			for image,patterns in pairs(template.patterns) do
 				if type(patterns)=='string' then patterns = { patterns } end
 				for _,pattern in ipairs(patterns) do
-					local lpattern = '^'..pattern:gsub('[%%%.()]', {
+					local lpattern = '^'..pattern:gsub('[-%.()%%]', {
+						['-'] = '%-',
 						['.'] = '%.',
 						['('] = '%(',
 						[')'] = '%)',
 						['%'] = '(.*)',
 					})..'$'
-					local basename = path.file:lower():match(lpattern)
+					local basename = path.file:match(lpattern) or path.file:lower():match(lpattern:lower())
 					if basename then
 						paths[image] = path
 						extensions[image] = pattern
