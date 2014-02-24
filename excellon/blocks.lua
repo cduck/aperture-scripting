@@ -175,10 +175,13 @@ function _M.load(filename)
 					local unit,zeroes = block:match('^(.*),(.*)$')
 					if zeroes == 'LZ' then -- header is what is present
 						data.format.zeroes = 'T' -- format is what we omit
+						table.insert(data.headers, load_header(unit))
 					elseif zeroes == 'TZ' then
 						data.format.zeroes = 'L'
+						table.insert(data.headers, load_header(unit))
+					else
+						table.insert(data.headers, load_header(block))
 					end
-					table.insert(data.headers, load_header(block))
 				else
 					-- this is a very basic parameter parsing
 					table.insert(data.headers, load_header(block))
