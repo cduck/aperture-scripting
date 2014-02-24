@@ -329,13 +329,21 @@ local function path_to_region(path)
 	return region
 end
 
-local formats = setmetatable({
-	drill = 'excellon',
-	bom = 'bom',
-}, {__index=function() return 'gerber' end})
-
 function _M.detect_format(type, path)
-	return formats[type]
+	local file = io.open(path, 'rb')
+	if not file then return nil end
+	local k = file:read(1024)
+	assert(file:close())
+	if not k then return nil end
+	if k:match('FS[LT][AI]X%d%dY%d%d%*') or k:match('%%ADD10') then
+		return 'gerber'
+	elseif k:match('T01') then
+		return 'excellon'
+	elseif k:match('%s+0%s+SECTION%s') then
+		return 'dxf'
+	elseif k:match('^[^\n]*\t[^\n]*\n') then
+		return 'bom'
+	end
 end
 
 function _M.load(path, options)
@@ -459,7 +467,7 @@ function _M.load(path, options)
 	local formats = {}
 	for type,path in pairs(paths) do
 		local hash = hashes[type]
-		local format = _M.detect_format(type, path)
+		local format = assert(_M.detect_format(type, path), "could not detect format of file "..tostring(path))
 		local image = load_image(path, format, board.unit, template)
 		images[type] = image
 		formats[type] = format
