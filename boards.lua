@@ -337,7 +337,7 @@ function _M.detect_format(type, path)
 	if not k then return nil end
 	if k:match('FS[LT][AI]X%d%dY%d%d%*') or k:match('%%ADD10') then
 		return 'gerber'
-	elseif k:match('T01') then
+	elseif k:match('T01') or k:match('M48') then
 		return 'excellon'
 	elseif k:match('%s+0%s+SECTION%s') then
 		return 'dxf'
