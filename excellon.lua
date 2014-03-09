@@ -21,7 +21,7 @@ end
 local function load_tool(data, unit)
 	local tcode = data.tcode
 	local d = data.parameters.C
-	assert(d, "tools require at least a diameter (C parameter)")
+	assert(d, "tool "..tostring(tcode).." require at least a diameter (C parameter)")
 	return {
 		name = tcode,
 		unit = unit,
@@ -139,9 +139,14 @@ function _M.load(file_path)
 			assert(not block.X and not block.Y and not block.M)
 			tool = tools[name]
 			if not tool then
-				-- assume it's an inline tool definition
-				tool = load_tool(block, unit)
-				tools[name] = tool
+				if name==0 then
+					-- T0 seem to reset the tool
+					tool = nil
+				else
+					-- assume it's an inline tool definition
+					tool = load_tool(block, unit)
+					tools[name] = tool
+				end
 			end
 		elseif tb=='directive' then
 			if block.M==72 then
@@ -150,6 +155,10 @@ function _M.load(file_path)
 			elseif block.M==71 then
 				assert(not unit or unit=='MM', "excellon files with mixtures of units not supported")
 				unit = 'MM'
+			elseif block.G==5 then
+				-- drill mode, ignore
+			elseif block.G==90 then
+				-- absolute mode, ignore
 			elseif block.M==30 then
 				-- end of program, ignore
 			elseif block.X or block.Y then

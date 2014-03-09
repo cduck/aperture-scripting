@@ -194,7 +194,7 @@ function _M.load(filename)
 				header = true
 			elseif block:match('^T') then
 				table.insert(data, load_tool(block, data.format))
-			elseif block:match('^[MXY]') then
+			elseif block:match('^[MXYG]') then
 				table.insert(data, load_directive(block, data.format))
 			else
 				table.insert(data, block)
