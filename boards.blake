@@ -1,4 +1,4 @@
-local pathlib = require 'blake.path'
+local pathlib = require 'path'
 local P = pathlib.split
 
 return {
