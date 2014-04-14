@@ -1,5 +1,7 @@
 local _M = {}
 
+local io = require 'io'
+local math = require 'math'
 local table = require 'table'
 local defaults_generic = require 'dxf.defaults'
 local defaults_inkscape = require 'dxf.defaults_inkscape'
@@ -333,7 +335,7 @@ end
 local load_subclass = {}
 local save_subclass = {}
 
-function load_subclass_generic(groupcodes)
+local function load_subclass_generic(groupcodes)
 	local subclass = {}
 	for _,group in ipairs(groupcodes) do
 		local code = group.code
@@ -343,7 +345,7 @@ function load_subclass_generic(groupcodes)
 	return subclass
 end
 
-function save_subclass_generic(subclass)
+local function save_subclass_generic(subclass)
 	local groupcodes = {}
 	for _,group in ipairs(subclass) do
 		table.insert(groupcodes, groupcode(group.code, group.value))
@@ -1779,7 +1781,7 @@ function _M.save(image, file_path)
 						cx = dxf_point0.x + i
 						cy = dxf_point0.y + j
 					else
-						error("unsupported circular interpolation quadrant "..tostring(quadrant))
+						error("unsupported circular interpolation quadrant "..tostring(point.quadrant))
 					end
 					local r,a0,a1
 					local dx0,dy0 = dxf_point0.x - cx, dxf_point0.y - cy
