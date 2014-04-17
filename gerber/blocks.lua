@@ -72,10 +72,10 @@ end
 
 local function load_format(block)
 	local zeroes,mode,xi,xd,yi,yd = block:match('^FS(.)(.)X(%d)(%d)Y(%d)(%d)$')
-	assert(zeroes and (zeroes=='L' or zeroes=='T' or zeroes=='D'))
+	assert(zeroes, "unrecognized format '"..block.."'")
+	assert(zeroes=='L' or zeroes=='T' or zeroes=='D', "unsupported zeroes mode "..zeroes.." in format '"..block.."'")
 	assert(mode=='A', "only files with absolute coordinates are supported")
-	assert(xi and xd and yi and yd)
-	assert(xi==yi and xd==yd)
+	assert(xi==yi and xd==yd, "files with different precisions on X and Y axis are not yet supported")
 	return _M.format(zeroes, tonumber(xi), tonumber(xd))
 end
 
