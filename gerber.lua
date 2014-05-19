@@ -595,6 +595,10 @@ function _M.load(file_path)
 				region = false
 				-- terminate current path if any
 				path = nil
+			elseif block.M==0 then
+				-- program stop, deprecated, ignore
+			elseif block.M==1 then
+				-- optional stop, deprecated, ignore
 			elseif block.M==2 then
 				-- end of program, ignore
 			elseif block.G==4 then
