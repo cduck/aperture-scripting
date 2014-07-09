@@ -37,6 +37,8 @@ function _M.empty_board(width, height)
 			bottom_copper = empty_image(),
 			top_soldermask = empty_image(),
 			bottom_soldermask = empty_image(),
+			top_silkscreen = empty_image(),
+			bottom_silkscreen = empty_image(),
 		},
 		extensions = {},
 		formats = {},
