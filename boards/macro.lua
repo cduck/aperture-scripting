@@ -206,7 +206,6 @@ assert(compile_expression("1.08239X$1")=="1.08239*_VARS[1]")
 
 function _M.compile(macro, circle_steps)
 	local script = macro.script
---	assert(#script==1 and script[1].type=='primitive', "only macros with 1 primitive are supported")
 	local source = {}
 	local function write(s) table.insert(source, s) end
 	write("local _VARS = {...}\n")
@@ -227,14 +226,10 @@ function _M.compile(macro, circle_steps)
 		end
 	end
 	source = table.concat(source)
---	print("========================================")
---	print(source)
---	print("========================================")
 	local paths
 	local env = setmetatable({}, {
 		__index=function(_, k)
 			return function(...)
---				print("primitive", k, ...)
 				local path = assert(macro_primitives[k], "no generator function for primitive "..tostring(k))(...)
 				table.insert(paths, path)
 			end
