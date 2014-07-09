@@ -813,7 +813,7 @@ end
 ------------------------------------------------------------------------------
 
 _M.offset = manipulation.offset_board
-_M.rotate180 = manipulation.rotate180_board
+_M.rotate = manipulation.rotate_board
 _M.merge = manipulation.merge_boards
 
 _M.draw_path = drawing.draw_path

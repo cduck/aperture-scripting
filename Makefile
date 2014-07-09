@@ -53,7 +53,8 @@ test-merge:
 
 .PHONY:test-misc
 test-misc:
-	lua test.lua
+	lua boards/manipulation.lua
+	lua test-misc.lua
 
 .PHONY:clean
 clean:

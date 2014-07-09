@@ -1,4 +1,5 @@
 local _M = {}
+local _NAME = ... or 'test'
 
 local table = require 'table'
 local region = require 'boards.region'
@@ -131,16 +132,36 @@ end
 
 ------------------------------------------------------------------------------
 
-function _M.rotate180_extents(extents)
+function _M.rotate_extents(extents, angle)
+	angle = angle % 360
 	local copy = {}
-	copy.left = -extents.right
-	copy.right = -extents.left
-	copy.bottom = -extents.top
-	copy.top = -extents.bottom
+	if angle==0 then
+		copy.left = extents.left
+		copy.right = extents.right
+		copy.bottom = extents.bottom
+		copy.top = extents.top
+	elseif angle==90 then
+		copy.left = -extents.top
+		copy.right = -extents.bottom
+		copy.bottom = extents.left
+		copy.top = extents.right
+	elseif angle==180 then
+		copy.left = -extents.right
+		copy.right = -extents.left
+		copy.bottom = -extents.top
+		copy.top = -extents.bottom
+	elseif angle==270 then
+		copy.left = extents.bottom
+		copy.right = extents.top
+		copy.bottom = -extents.right
+		copy.top = -extents.left
+	else
+		error("unsupported rotation angle")
+	end
 	return region(copy)
 end
 
-function _M.rotate180_macro(macro)
+function _M.rotate_macro(macro)
 	local copy = {
 		name = macro.name,
 		unit = macro.unit,
@@ -151,42 +172,59 @@ function _M.rotate180_macro(macro)
 	return copy
 end
 
-local symmetrical180_shapes = {
-	circle = true,
-	rectangle = true,
-	obround = true,
-}
+local function rotate_aperture_hole(a, b, angle)
+	if b then
+		assert(a)
+		if angle==0 or angle==180 then
+			-- symmetrical
+		elseif angle==90 or angle==270 then
+			a,b = b,a
+		else
+			error("unsupported rotation angle")
+		end
+	end
+	return a,b
+end
 
-function _M.rotate180_aperture(aperture, macros)
+function _M.rotate_aperture(aperture, angle, macros)
+	angle = angle % 360
 	local copy = {
 		name = aperture.name,
 		unit = aperture.unit,
 		shape = aperture.shape,
 		macro = nil,
-		parameters = {},
+		parameters = nil,
 	}
 	-- copy parameters
-	for k,v in pairs(aperture.parameters) do
-		copy.parameters[k] = v
+	if aperture.parameters then
+		copy.parameters = {}
+		for k,v in pairs(aperture.parameters) do
+			copy.parameters[k] = v
+		end
 	end
 	-- adjust parameters
 	assert(not (aperture.shape and aperture.macro), "aperture has a shape and a macro")
 	if aperture.macro then
 		copy.macro = macros[aperture.macro]
 		if not copy.macro then
-			copy.macro = _M.rotate180_macro(aperture.macro)
+			copy.macro = _M.rotate_macro(aperture.macro, angle)
 			macros[aperture.macro] = copy.macro
 		end
-	elseif symmetrical180_shapes[aperture.shape] then
-		-- keep it that way
+	elseif aperture.shape=='circle' then
+		copy.parameters[2],copy.parameters[3] = rotate_aperture_hole(copy.parameters[2], copy.parameters[3], angle)
+	elseif aperture.shape=='rectangle' or aperture.shape=='obround' then
+		assert(#copy.parameters >= 2)
+		copy.parameters[1],copy.parameters[2] = rotate_aperture_hole(copy.parameters[1], copy.parameters[2], angle)
+		copy.parameters[3],copy.parameters[4] = rotate_aperture_hole(copy.parameters[3], copy.parameters[4], angle)
 	elseif aperture.shape=='polygon' then
-		local angle = copy.parameters[3] or 0
-		angle = angle + 180
-		if #copy.parameters==3 and angle==0 then
+		local shape_angle = copy.parameters[3] or 0
+		shape_angle = (shape_angle + angle) % 360
+		if #copy.parameters<=3 and shape_angle==0 then
 			copy.parameters[3] = nil
 		else
-			copy.parameters[3] = angle
+			copy.parameters[3] = shape_angle
 		end
+		copy.parameters[4],copy.parameters[5] = rotate_aperture_hole(copy.parameters[4], copy.parameters[5], angle)
 	elseif aperture.device then
 		-- parts rotation is in the layer data
 		copy.device = true
@@ -196,51 +234,152 @@ function _M.rotate180_aperture(aperture, macros)
 	return copy
 end
 
-function _M.rotate180_point(point)
+local function rotate_xy(px, py, angle)
+	local a = math.rad(angle)
+	local c,s = math.cos(a),math.sin(a)
+	x = px*c - py*s
+	y = px*s + py*c
+	return x,y
+end
+
+if _NAME=='test' then
+	require 'test'
+	local function round(x, digits) return math.floor(x * 10^digits + 0.5) / 10^digits end
+	expect( 1, round(select(1, rotate_xy(1, 0, 0)), 12))
+	expect( 0, round(select(2, rotate_xy(1, 0, 0)), 12))
+	expect( 0, round(select(1, rotate_xy(1, 0, 90)), 12))
+	expect( 1, round(select(2, rotate_xy(1, 0, 90)), 12))
+	expect(-1, round(select(1, rotate_xy(1, 0, 180)), 12))
+	expect( 0, round(select(2, rotate_xy(1, 0, 180)), 12))
+	expect( 0, round(select(1, rotate_xy(1, 0, 270)), 12))
+	expect(-1, round(select(2, rotate_xy(1, 0, 270)), 12))
+	expect( 0, round(select(1, rotate_xy(0, 1, 0)), 12))
+	expect( 1, round(select(2, rotate_xy(0, 1, 0)), 12))
+	expect(-1, round(select(1, rotate_xy(0, 1, 90)), 12))
+	expect( 0, round(select(2, rotate_xy(0, 1, 90)), 12))
+	expect( 0, round(select(1, rotate_xy(0, 1, 180)), 12))
+	expect(-1, round(select(2, rotate_xy(0, 1, 180)), 12))
+	expect( 1, round(select(1, rotate_xy(0, 1, 270)), 12))
+	expect( 0, round(select(2, rotate_xy(0, 1, 270)), 12))
+end
+
+function _M.rotate_point(point, angle)
+	angle = angle % 360
 	local copy = {}
 	for k,v in pairs(point) do
 		copy[k] = v
 	end
-	if copy.x then copy.x = -copy.x end
-	if copy.y then copy.y = -copy.y end
-	if copy.i then copy.i = -copy.i end
-	if copy.j then copy.j = -copy.j end
-	if copy.angle then copy.angle = (copy.angle + 180) % 360 end
+	-- fix x,y
+	local x,y
+	if angle==0 then
+		x,y = point.x,point.y
+	elseif angle==90 then
+		local px,py = point.x,point.y
+		if px then y = px end
+		if py then x = -py end
+	elseif angle==180 then
+		local px,py = point.x,point.y
+		if px then x = -px end
+		if py then y = -py end
+	elseif angle==270 then
+		local px,py = point.x,point.y
+		if px then y = -px end
+		if py then x = py end
+	else
+		assert(point.x and point.y, "only points with x and y can be rotated an arbitrary angle")
+		x,y = rotate_xy(point.x, point.y, angle)
+	end
+	copy.x,copy.y = x,y
+	-- fix i,j
+	local i,j
+	if point.i or point.j then
+		if angle==0 then
+			i,j = point.i,point.j
+		elseif angle==90 or angle==270 then
+			assert(point.quadrant)
+			if point.quadrant=='single' then
+				assert((point.i or 0) >= 0)
+				assert((point.j or 0) >= 0)
+				i,j = point.j,point.i
+			elseif point.quadrant=='multi' then
+				if angle==90 then
+					local pi,pj = point.i,point.j
+					if pi then j = pi end
+					if pj then i = -pj end
+				else
+					local pi,pj = point.i,point.j
+					if pi then j = -pi end
+					if pj then i = pj end
+				end
+			else
+				error("unsupported quadrant mode")
+			end
+		elseif angle==180 then
+			assert(point.quadrant)
+			if point.quadrant=='single' then
+				assert((point.i or 0) >= 0)
+				assert((point.j or 0) >= 0)
+				i,j = point.i,point.j
+			elseif point.quadrant=='multi' then
+				if point.i then i = -point.i end
+				if point.j then j = -point.j end
+			else
+				error("unsupported quadrant mode")
+			end
+		else
+			assert(point.quadrant)
+			if point.quadrant=='single' then
+				error("arcs in single quadrant mode cannot be rotated an arbitrary angle")
+			elseif point.quadrant=='multi' then
+				assert(point.i and point.j, "only arcs with i and j can be rotated an arbitrary angle")
+				i,j = rotate_xy(point.i, point.j, angle)
+			else
+				error("unsupported quadrant mode")
+			end
+		end
+	end
+	copy.i,copy.j = i,j
+	-- fix angle
+	if copy.angle then copy.angle = (copy.angle + angle) % 360 end
 	return copy
 end
 
-function _M.rotate180_path(path, apertures, macros)
+function _M.rotate_path(path, angle, apertures, macros)
+	if not apertures then apertures = {} end
+	if not macros then macros = {} end
 	local copy = {
 		unit = path.unit,
 	}
 	assert(path.extents)
-	copy.extents = _M.rotate180_extents(path.extents)
+	copy.extents = _M.rotate_extents(path.extents, angle)
 	assert(path.center_extents)
-	copy.center_extents = _M.rotate180_extents(path.center_extents)
+	copy.center_extents = _M.rotate_extents(path.center_extents, angle)
 	if path.aperture then
 		copy.aperture = apertures[path.aperture]
 		if not copy.aperture then
-			copy.aperture = _M.rotate180_aperture(path.aperture, macros)
+			copy.aperture = _M.rotate_aperture(path.aperture, angle, macros)
 			apertures[path.aperture] = copy.aperture
 		end
 	end
 	for i,point in ipairs(path) do
-		copy[i] = _M.rotate180_point(point)
+		copy[i] = _M.rotate_point(point, angle)
 	end
 	return copy
 end
 
-function _M.rotate180_layer(layer, apertures, macros)
+function _M.rotate_layer(layer, angle, apertures, macros)
+	if not apertures then apertures = {} end
+	if not macros then macros = {} end
 	local copy = {
 		polarity = layer.polarity,
 	}
 	for i,path in ipairs(layer) do
-		copy[i] = _M.rotate180_path(path, apertures, macros)
+		copy[i] = _M.rotate_path(path, angle, apertures, macros)
 	end
 	return copy
 end
 
-function _M.rotate180_image(image, apertures, macros)
+function _M.rotate_image(image, angle, apertures, macros)
 	if not apertures then apertures = {} end
 	if not macros then macros = {} end
 	local copy = {
@@ -257,60 +396,74 @@ function _M.rotate180_image(image, apertures, macros)
 	end
 	
 	-- rotate extents
-	copy.extents = _M.rotate180_extents(image.extents)
-	copy.center_extents = _M.rotate180_extents(image.center_extents)
+	copy.extents = _M.rotate_extents(image.extents, angle)
+	copy.center_extents = _M.rotate_extents(image.center_extents, angle)
 	
 	-- rotate layers
 	for i,layer in ipairs(image.layers) do
-		copy.layers[i] = _M.rotate180_layer(layer, apertures, macros)
+		copy.layers[i] = _M.rotate_layer(layer, angle, apertures, macros)
 	end
 	
 	return copy
 end
 
-function _M.rotate180_outline_path(path)
+function _M.rotate_outline_path(path, angle)
 	local copy = {
 		unit = path.unit,
 	}
 	assert(path.extents)
-	copy.extents = _M.rotate180_extents(path.extents)
+	copy.extents = _M.rotate_extents(path.extents, angle)
 	assert(path.center_extents)
-	copy.center_extents = _M.rotate180_extents(path.center_extents)
+	copy.center_extents = _M.rotate_extents(path.center_extents, angle)
 	assert(not path.aperture)
-	-- find top-right point
+	-- rotate points
+	local rpath = {}
+	for i=1,#path-1 do
+		assert(i==1 or path[i].interpolation=='linear')
+		table.insert(rpath, _M.rotate_point(path[i], angle))
+	end
+	-- find bottom-left point
 	local min = 1
-	for i=2,#path do
-		if path[i].y > path[min].y or path[i].y == path[min].y and path[i].x > path[min].x then
+	for i=2,#rpath do
+		if rpath[i].y < rpath[min].y or rpath[i].y == rpath[min].y and rpath[i].x < rpath[min].x then
 			min = i
 		end
 	end
-	-- copy rotated points
+	-- re-order rotated points
+	assert(rpath[#rpath].interpolation=='linear')
 	for i=min,#path-1 do
-		table.insert(copy, _M.rotate180_point(path[i]))
+		table.insert(copy, _M.copy_point(rpath[i]))
 	end
 	for i=1,min do
-		table.insert(copy, _M.rotate180_point(path[i]))
+		table.insert(copy, _M.copy_point(rpath[i]))
 	end
+	for i=2,#copy-1 do
+		assert(copy[i].y > copy[1].y or copy[i].y == copy[1].y and copy[i].x > copy[1].x)
+	end
+	copy[1].interpolation = nil
+	copy[#copy-min+1].interpolation = 'linear'
 	return copy
 end
 
-function _M.rotate180_outline(outline, apertures, macros)
+function _M.rotate_outline(outline, angle, apertures, macros)
+	if not apertures then apertures = {} end
+	if not macros then macros = {} end
 	local copy = {
 		apertures = {},
 	}
 	
 	-- rotate extents
-	copy.extents = _M.rotate180_extents(outline.extents)
+	copy.extents = _M.rotate_extents(outline.extents, angle)
 	
 	-- rotate path (which should be a region)
 	assert(not outline.path.aperture)
-	copy.path = _M.rotate180_outline_path(outline.path)
+	copy.path = _M.rotate_outline_path(outline.path, angle)
 	
 	-- rotate apertures
 	for type,aperture in pairs(outline.apertures) do
 		copy.apertures[type] = apertures[aperture]
 		if not copy.apertures[type] then
-			copy.apertures[type] = _M.rotate180_aperture(aperture, macros)
+			copy.apertures[type] = _M.rotate_aperture(aperture, angle, macros)
 			apertures[aperture] = copy.apertures[type]
 		end
 	end
@@ -318,7 +471,7 @@ function _M.rotate180_outline(outline, apertures, macros)
 	return copy
 end
 
-function _M.rotate180_board(board)
+function _M.rotate_board(board, angle)
 	local copy = {
 		unit = board.unit,
 		template = board.template,
@@ -338,7 +491,7 @@ function _M.rotate180_board(board)
 	end
 	
 	-- rotate extents
-	copy.extents = _M.rotate180_extents(board.extents)
+	copy.extents = _M.rotate_extents(board.extents, angle)
 	
 	-- apertures and macros are shared by layers and paths, so create an index to avoid duplicating them in the copy
 	-- do it at the board level in case some apertures are shared between images and the outline or other images
@@ -347,18 +500,22 @@ function _M.rotate180_board(board)
 	
 	-- rotate images
 	for type,image in pairs(board.images) do
-		copy.images[type] = _M.rotate180_image(image, apertures, macros)
+		copy.images[type] = _M.rotate_image(image, angle, apertures, macros)
 	end
 	
 	-- rotate outline
 	if board.outline then
-		copy.outline = _M.rotate180_outline(board.outline, apertures, macros)
+		copy.outline = _M.rotate_outline(board.outline, angle, apertures, macros)
 	end
 	
 	return copy
 end
 
 ------------------------------------------------------------------------------
+
+function _M.copy_point(point)
+	return _M.offset_point(point, 0, 0)
+end
 
 function _M.copy_path(path)
 	return _M.offset_path(path, 0, 0)
