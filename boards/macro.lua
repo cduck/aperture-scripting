@@ -145,7 +145,7 @@ function macro_primitives.moire(x, y, outer_diameter, ring_thickness, ring_gap, 
 	assert(type(cross_hair_thickness)=='number')
 	assert(type(rotation)=='number')
 	assert(x==0 and y==0 or rotation==0, "rotation is only allowed if the center point is on the origin")
-	print("moiré primitive not yet supported, drawing a circle instead")
+	print("warning: moiré primitive not yet supported, drawing a circle instead")
 	local r = outer_diameter / 2
 	rotation = math.rad(rotation)
 	local circle_steps = config.circle_steps
@@ -172,7 +172,7 @@ function macro_primitives.thermal(x, y, outer_diameter, inner_diameter, gap_thic
 	assert(type(gap_thickness)=='number')
 	assert(type(rotation)=='number')
 	assert(x==0 and y==0 or rotation==0, "rotation is only allowed if the center point is on the origin")
-	print("thermal primitive not yet supported, drawing a circle instead")
+	print("warning: thermal primitive not yet supported, drawing a circle instead")
 	local r = outer_diameter / 2
 	rotation = math.rad(rotation)
 	local circle_steps = config.circle_steps
