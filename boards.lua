@@ -230,6 +230,14 @@ function _M.load_image(filepath, format, options)
 	local unit = options.unit or 'pm'
 	local template = templates.default -- :TODO: make that configurable
 	
+	if not format then
+		local msg
+		format,msg = _M.detect_format(filepath)
+		if not format then
+			return nil,msg
+		end
+	end
+	
 	return load_image(filepath, format, unit, template)
 end
 
@@ -329,12 +337,13 @@ local function path_to_region(path)
 	return region
 end
 
-function _M.detect_format(type, path)
-	local file = io.open(path, 'rb')
-	if not file then return nil end
-	local k = file:read(1024)
-	assert(file:close())
-	if not k then return nil end
+function _M.detect_format(path)
+	local file,msg = io.open(path, 'rb')
+	if not file then return nil,msg end
+	local k,msg = file:read(1024)
+	if not k then file:close(); return nil,msg end
+	local success,msg = file:close()
+	if not success then return nil,msg end
 	if k:match('FS[LT][AI]X%d%dY%d%d%*') or k:match('%%ADD10') then
 		return 'gerber'
 	elseif k:match('T01') or k:match('M48') then
@@ -343,6 +352,8 @@ function _M.detect_format(type, path)
 		return 'dxf'
 	elseif k:match('^[^\n]*\t[^\n]*\n') then
 		return 'bom'
+	else
+		return nil,"unknown file format"
 	end
 end
 
@@ -467,7 +478,7 @@ function _M.load(path, options)
 	local formats = {}
 	for type,path in pairs(paths) do
 		local hash = hashes[type]
-		local format = assert(_M.detect_format(type, path), "could not detect format of file "..tostring(path))
+		local format = assert(_M.detect_format(path), "could not detect format of file "..tostring(path))
 		local image = load_image(path, format, board.unit, template)
 		images[type] = image
 		formats[type] = format
