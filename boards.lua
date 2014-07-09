@@ -13,6 +13,7 @@ local dxf = require 'dxf'
 local dump = require 'dump'
 local crypto = require 'crypto'
 
+local macro = require 'boards.macro'
 local region = require 'boards.region'
 local drawing = require 'boards.drawing'
 local templates = require 'boards.templates'
@@ -39,8 +40,7 @@ _M.circle_steps = 64
 
 local function generate_aperture_path(aperture, board_unit)
 	local shape = aperture.shape
-	local macro = aperture.macro
-	if not shape and not macro then
+	if not shape and not aperture.macro then
 		return
 	end
 	local parameters = aperture.parameters
@@ -121,8 +121,9 @@ local function generate_aperture_path(aperture, board_unit)
 				table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
 			end
 		end
-	elseif macro then
-		path = macro.chunk(unpack(parameters or {}))
+	elseif aperture.macro then
+		local chunk = macro.compile(aperture.macro, circle_steps)
+		path = chunk(unpack(parameters or {}))
 		for _,point in ipairs(path) do
 			point.x = point.x * scale
 			point.y = point.y * scale
