@@ -39,26 +39,28 @@ else
 local FT = result
 local library = assert(FT.Init_FreeType())
 
-local font_scale = 1000 -- to account for Freetype fixed point data, and the minimum font size of 1
+-- use a unique font size, because Freetype can't deal with fonts too small or
+-- too large, while this library should be able to be scale-independent
+local font_size = 1000
 local face_cache = {}
 local glyph_cache = {}
 
-local function get_face(fontname, size)
-	local face_key = fontname..'\0'..size
+local function get_face(fontname)
+	local face_key = fontname
 	local face = face_cache[face_key]
 	if not face then
 		face = assert(FT.Open_Face(library, {stream=assert(io.open(fontname, "rb"))}, 0))
-		FT.Set_Char_Size(face, size * font_scale, size * font_scale, 0, 0)
+		FT.Set_Char_Size(face, font_size, font_size, 0, 0)
 		face_cache[face_key] = face
 	end
 	return face
 end
 
-local function get_glyph(fontname, size, char)
-	local glyph_key = fontname..'\0'..size..'\0'..char
+local function get_glyph(fontname, char)
+	local glyph_key = fontname..'\0'..char
 	local glyph = glyph_cache[glyph_key]
 	if not glyph then
-		local face = get_face(fontname, size)
+		local face = get_face(fontname)
 		local charcode = assert(FT.Get_Char_Index(face, char))
 		
 		assert(FT.Load_Glyph(face, charcode, {'DEFAULT', 'NO_HINTING', 'NO_AUTOHINT'}))
@@ -115,15 +117,9 @@ local function get_glyph(fontname, size, char)
 				lastpos = pos
 			end,
 		}))
-		for _,path in ipairs(paths) do
-			for _,point in ipairs(path) do
-				point.x = point.x / font_scale
-				point.y = point.y / font_scale
-			end
-		end
 		glyph = {
-			left = glyph_slot.metrics.horiBearingX / font_scale,
-			width = glyph_slot.metrics.horiAdvance / font_scale,
+			left = glyph_slot.metrics.horiBearingX,
+			width = glyph_slot.metrics.horiAdvance,
 			contours = paths,
 			flags = glyph.outline.flags,
 		}
@@ -132,12 +128,12 @@ local function get_glyph(fontname, size, char)
 	return glyph
 end
 
-local function get_kerning(fontname, size, leftchar, rightchar)
-	local face = get_face(fontname, size)
+local function get_kerning(fontname, leftchar, rightchar)
+	local face = get_face(fontname)
 	local leftcharcode = assert(FT.Get_Char_Index(face, leftchar))
 	local rightcharcode = assert(FT.Get_Char_Index(face, rightchar))
 	local kerning = FT.Get_Kerning(face, leftcharcode, rightcharcode, 'DEFAULT')
-	return kerning.x / font_scale
+	return kerning.x
 end
 
 local function clockwise(path)
@@ -162,16 +158,17 @@ end
 
 local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, text)
 	if #text == 0 then return end
+	local scale = size / font_size
 	
 	text = {string.byte(text, 1, #text)}
 	
 	local textwidth = 0
 	for i,char in ipairs(text) do
 		if i > 1 then
-			textwidth = textwidth + get_kerning(fontname, size, text[i-1], char)
+			textwidth = textwidth + get_kerning(fontname, text[i-1], char) * scale
 		end
-		local glyph = get_glyph(fontname, size, char)
-		textwidth = textwidth + glyph.width
+		local glyph = get_glyph(fontname, char)
+		textwidth = textwidth + glyph.width * scale
 	end
 	
 	if halign == 'left' then
@@ -179,8 +176,8 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 	elseif halign == 'center' then
 		x = x - textwidth / 2
 	elseif halign == 'x0' then
-		local glyph = get_glyph(fontname, size, char[1])
-		x = x + glyph.left
+		local glyph = get_glyph(fontname, char[1])
+		x = x + glyph.left * scale
 	else
 		error("unsupported horizontal alignment")
 	end
@@ -190,19 +187,19 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 	local ilayer
 	for i,char in ipairs(text) do
 		if i > 1 then
-			x = x + get_kerning(fontname, size, text[i-1], char)
+			x = x + get_kerning(fontname, text[i-1], char) * scale
 		end
 		
-		local glyph = get_glyph(fontname, size, char)
+		local glyph = get_glyph(fontname, char)
 		
 		ilayer = base_layer
 		for icontour,contour in ipairs(glyph.contours) do
 			local path = {}
 			for i,point in ipairs(contour) do
 				if i == 1 then
-					table.insert(path, {x = x + point.x, y = y + point.y})
+					table.insert(path, {x = x + point.x * scale, y = y + point.y * scale})
 				else
-					table.insert(path, {x = x + point.x, y = y + point.y, interpolation='linear'})
+					table.insert(path, {x = x + point.x * scale, y = y + point.y * scale, interpolation='linear'})
 				end
 			end
 			local clockwise_outline = not glyph.flags.REVERSE_FILL
@@ -219,10 +216,11 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 				ilayer = ilayer + 1
 				image.layers[ilayer] = layer
 			end
+			region.recompute_path_extents(path)
 			table.insert(layer, path)
 		end
 		
-		x = x + glyph.width
+		x = x + glyph.width * scale
 	end
 end
 
