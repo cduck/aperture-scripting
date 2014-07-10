@@ -194,7 +194,7 @@ function _M.load(file_path)
 end
 
 function _M.save(image, file_path)
-	assert(#image.layers == 1)
+	assert(#image.layers == 1, "excellon image has more than 1 layer")
 	
 	-- list apertures
 	local apertures = {}
