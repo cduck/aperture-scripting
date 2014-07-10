@@ -752,10 +752,6 @@ function _M.copy_board(board)
 	return _M.offset_board(board, 0, 0)
 end
 
-function _M.copy_side(side)
-	return _M.offset_side(side, 0)
-end
-
 ------------------------------------------------------------------------------
 
 function _M.merge_layers(layer_a, layer_b)
