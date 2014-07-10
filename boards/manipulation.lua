@@ -29,7 +29,7 @@ function _M.offset_path(path, dx, dy)
 	local copy = {
 		unit = path.unit,
 	}
-	assert(path.extents)
+	assert(path.extents, "path has no extents")
 	copy.extents = _M.offset_extents(path.extents, dx, dy)
 	assert(path.center_extents)
 	copy.center_extents = _M.offset_extents(path.center_extents, dx, dy)
