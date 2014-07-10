@@ -513,6 +513,225 @@ end
 
 ------------------------------------------------------------------------------
 
+function _M.scale_extents(extents, scale)
+	local copy = {}
+	copy.left = extents.left * scale
+	copy.right = extents.right * scale
+	copy.bottom = extents.bottom * scale
+	copy.top = extents.top * scale
+	return region(copy)
+end
+
+function _M.scale_macro(macro, s)
+	local copy = {
+		name = macro.name,
+		unit = macro.unit,
+		script = macro.script,
+		chunk = macro.chunk,
+	}
+	error("macro scaling not yet implemented")
+	return copy
+end
+
+local function scale_aperture_hole(a, b, scale)
+	a = a * scale
+	if b then
+		b = b * scale
+	end
+	return a,b
+end
+
+function _M.scale_aperture(aperture, scale, macros)
+	local copy = {
+		name = aperture.name,
+		unit = aperture.unit,
+		shape = aperture.shape,
+		macro = nil,
+		parameters = nil,
+	}
+	-- copy parameters
+	if aperture.parameters then
+		copy.parameters = {}
+		for k,v in pairs(aperture.parameters) do
+			copy.parameters[k] = v
+		end
+	end
+	-- adjust parameters
+	assert(not (aperture.shape and aperture.macro), "aperture has a shape and a macro")
+	if aperture.macro then
+		copy.macro = macros[aperture.macro]
+		if not copy.macro then
+			copy.macro = _M.scale_macro(aperture.macro, scale)
+			macros[aperture.macro] = copy.macro
+		end
+	elseif aperture.shape=='circle' then
+		copy.parameters[1] = copy.parameters[1] * scale
+		copy.parameters[2],copy.parameters[3] = scale_aperture_hole(copy.parameters[2], copy.parameters[3], scale)
+	elseif aperture.shape=='rectangle' or aperture.shape=='obround' then
+		assert(#copy.parameters >= 2)
+		copy.parameters[1],copy.parameters[2] = scale_aperture_hole(copy.parameters[1], copy.parameters[2], scale)
+		copy.parameters[3],copy.parameters[4] = scale_aperture_hole(copy.parameters[3], copy.parameters[4], scale)
+	elseif aperture.shape=='polygon' then
+		copy.parameters[1] = copy.parameters[1] * scale
+		copy.parameters[4],copy.parameters[5] = scale_aperture_hole(copy.parameters[4], copy.parameters[5], scale)
+	elseif aperture.device then
+		-- parts rotation is in the layer data
+		copy.device = true
+	else
+		error("unsupported aperture shape")
+	end
+	return copy
+end
+
+function _M.scale_point(point, scale)
+	local copy = {}
+	for k,v in pairs(point) do
+		copy[k] = v
+	end
+	-- fix x,y
+	copy.x = point.x * scale
+	copy.y = point.y * scale
+	-- fix i,j
+	local i,j
+	if point.i or point.j then
+		i = point.i * scale
+		j = point.j * scale
+	end
+	copy.i,copy.j = i,j
+	return copy
+end
+
+function _M.scale_path(path, scale, apertures, macros)
+	if not apertures then apertures = {} end
+	if not macros then macros = {} end
+	local copy = {
+		unit = path.unit,
+	}
+	assert(path.extents)
+	copy.extents = _M.scale_extents(path.extents, scale)
+	assert(path.center_extents)
+	copy.center_extents = _M.scale_extents(path.center_extents, scale)
+	if path.aperture then
+		copy.aperture = apertures[path.aperture]
+		if not copy.aperture then
+			copy.aperture = _M.scale_aperture(path.aperture, scale, macros)
+			apertures[path.aperture] = copy.aperture
+		end
+	end
+	for i,point in ipairs(path) do
+		copy[i] = _M.scale_point(point, scale)
+	end
+	return copy
+end
+
+function _M.scale_layer(layer, scale, apertures, macros)
+	if not apertures then apertures = {} end
+	if not macros then macros = {} end
+	local copy = {
+		polarity = layer.polarity,
+	}
+	for i,path in ipairs(layer) do
+		copy[i] = _M.scale_path(path, scale, apertures, macros)
+	end
+	return copy
+end
+
+function _M.scale_image(image, scale, apertures, macros)
+	if not apertures then apertures = {} end
+	if not macros then macros = {} end
+	local copy = {
+		file_path = image.file_path,
+		name = image.name,
+		format = {},
+		unit = image.unit,
+		layers = {},
+	}
+	
+	-- copy format
+	for k,v in pairs(image.format) do
+		copy.format[k] = v
+	end
+	
+	-- scale extents
+	copy.extents = _M.scale_extents(image.extents, scale)
+	copy.center_extents = _M.scale_extents(image.center_extents, scale)
+	
+	-- scale layers
+	for i,layer in ipairs(image.layers) do
+		copy.layers[i] = _M.scale_layer(layer, scale, apertures, macros)
+	end
+	
+	return copy
+end
+
+function _M.scale_outline(outline, scale, apertures, macros)
+	if not apertures then apertures = {} end
+	if not macros then macros = {} end
+	local copy = {
+		apertures = {},
+	}
+	
+	-- scale extents
+	copy.extents = _M.scale_extents(outline.extents, scale)
+	
+	-- scale path (which should be a region)
+	assert(not outline.path.aperture)
+	copy.path = _M.scale_path(outline.path, scale)
+	
+	-- scale apertures
+	for type,aperture in pairs(outline.apertures) do
+		copy.apertures[type] = apertures[aperture]
+		if not copy.apertures[type] then
+			copy.apertures[type] = _M.scale_aperture(aperture, scale, macros)
+			apertures[aperture] = copy.apertures[type]
+		end
+	end
+	
+	return copy
+end
+
+function _M.scale_board(board, scale)
+	local copy = {
+		unit = board.unit,
+		template = board.template,
+		extensions = {},
+		formats = {},
+		images = {},
+	}
+	
+	-- copy extensions
+	for type,extension in pairs(board.extensions) do
+		copy.extensions[type] = extension
+	end
+	
+	-- copy formats
+	for type,format in pairs(board.formats) do
+		copy.formats[type] = format
+	end
+	
+	-- scale extents
+	copy.extents = _M.scale_extents(board.extents, scale)
+	
+	-- apertures and macros are shared by layers and paths, so create an index to avoid duplicating them in the copy
+	-- do it at the board level in case some apertures are shared between images and the outline or other images
+	local apertures = {}
+	local macros = {}
+	
+	-- scale images
+	for type,image in pairs(board.images) do
+		copy.images[type] = _M.scale_image(image, scale, apertures, macros)
+	end
+	
+	-- scale outline
+	if board.outline then
+		copy.outline = _M.scale_outline(board.outline, scale, apertures, macros)
+	end
+	
+	return copy
+end
+
+------------------------------------------------------------------------------
+
 function _M.copy_point(point)
 	return _M.offset_point(point, 0, 0)
 end

@@ -230,4 +230,57 @@ end
 
 ------------------------------------------------------------------------------
 
+function _M.recompute_image_extents(image)
+	-- collect apertures
+	local apertures = {}
+	for _,layer in ipairs(image.layers) do
+		for _,path in ipairs(layer) do
+			local aperture = path.aperture
+			if aperture and not apertures[aperture] then
+				apertures[aperture] = true
+			end
+		end
+	end
+	
+	-- compute extents
+	for aperture in pairs(apertures) do
+		if not aperture.extents then
+			aperture.extents = region()
+			if aperture.path then
+				for _,point in ipairs(aperture.path) do
+					aperture.extents = aperture.extents + point
+				end
+			end
+		end
+	end
+	image.center_extents = region()
+	image.extents = region()
+	for _,layer in ipairs(image.layers) do
+		for _,path in ipairs(layer) do
+			region.recompute_path_extents(path)
+			image.center_extents = image.center_extents + path.center_extents
+			image.extents = image.extents + path.extents
+		end
+	end
+end
+
+function _M.recompute_board_extents(board)
+	for _,image in pairs(board.images) do
+		_M.recompute_image_extents(image)
+	end
+	if board.outline then
+		region.recompute_path_extents(board.outline.path)
+		board.outline.extents = board.outline.path.extents
+		board.extents = board.outline.extents
+	else
+		local extents = region()
+		for _,image in pairs(board.images) do
+			extents = extents + image.extents
+		end
+		board.extents = extents
+	end
+end
+
+------------------------------------------------------------------------------
+
 return _M
