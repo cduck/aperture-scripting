@@ -19,6 +19,7 @@ local function empty_image()
 		layers = { { polarity = 'dark' } },
 	}
 end
+_M.empty_image = empty_image
 
 function _M.empty_board(width, height)
 	local extents = region{
