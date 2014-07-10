@@ -22,10 +22,10 @@ end
 _M.empty_image = empty_image
 
 function _M.empty_board(width, height)
-	local extents = region{
+	local extents = region(width and height and {
 		left = 0, right = width,
 		bottom = 0, top = height,
-	}
+	})
 	return {
 		unit = 'pm',
 		template = templates.default,
@@ -44,7 +44,7 @@ function _M.empty_board(width, height)
 		extensions = {},
 		formats = {},
 		extents = extents,
-		outline = {
+		outline = width and height and {
 			apertures = {},
 			extents = extents,
 			path = {
