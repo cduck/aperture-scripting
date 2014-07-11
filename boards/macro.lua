@@ -7,12 +7,23 @@ local region = require 'boards.region'
 local config = {}
 local macro_primitives = {}
 
+local function argcheck(f, i, t, ...)
+	local v = select(i, ...)
+	local tv = select('#', ...) < i and 'none' or type(v)
+	if tv==t then
+		return v
+	else
+		error("invalid argument #"..i.." to '"..f.."' ("..t.." expected, got "..tv..")")
+	end
+end
+
 -- Circle, primitive code 1
-function macro_primitives.circle(exposure, diameter, x, y)
-	assert(exposure, "unexposed circle primitives are not supported")
-	assert(type(diameter)=='number')
-	assert(type(x)=='number')
-	assert(type(y)=='number')
+function macro_primitives.circle(...)
+	local exposure = argcheck('circle', 1, 'number', ...)
+	local diameter = argcheck('circle', 2, 'number', ...)
+	local x = argcheck('circle', 3, 'number', ...)
+	local y = argcheck('circle', 4, 'number', ...)
+	assert(exposure==1, "unexposed circle primitives are not supported")
 	return macro_primitives.polygon(exposure, config.circle_steps, x, y, diameter, 0)
 end
 
@@ -24,14 +35,15 @@ local function rotate(point, rotation)
 end
 
 -- Vector Line, primitive code 2 or 20
-function macro_primitives.line(exposure, line_width, x0, y0, x1, y1, rotation)
+function macro_primitives.line(...)
+	local exposure = argcheck('vector line', 1, 'number', ...)
+	local line_width = argcheck('vector line', 2, 'number', ...)
+	local x0 = argcheck('vector line', 3, 'number', ...)
+	local y0 = argcheck('vector line', 4, 'number', ...)
+	local x1 = argcheck('vector line', 5, 'number', ...)
+	local y1 = argcheck('vector line', 6, 'number', ...)
+	local rotation = argcheck('vector line', 7, 'number', ...)
 	assert(exposure==1, "unexposed line primitives are not supported")
-	assert(type(line_width)=='number')
-	assert(type(x0)=='number')
-	assert(type(y0)=='number')
-	assert(type(x1)=='number')
-	assert(type(y1)=='number')
-	assert(type(rotation)=='number')
 	local dx = x1 - x0
 	local dy = y1 - y0
 	local n = math.sqrt(dx*dx + dy*dy)
@@ -51,13 +63,14 @@ end
 macro_primitives.rectangle_ends = macro_primitives.line
 
 -- Center Line, primitive code 21
-function macro_primitives.rectangle_center(exposure, width, height, x, y, rotation)
+function macro_primitives.rectangle_center(...)
+	local exposure = argcheck('center line', 1, 'number', ...)
+	local width = argcheck('center line', 2, 'number', ...)
+	local height = argcheck('center line', 3, 'number', ...)
+	local x = argcheck('center line', 4, 'number', ...)
+	local y = argcheck('center line', 5, 'number', ...)
+	local rotation = argcheck('center line', 6, 'number', ...)
 	assert(exposure==1, "unexposed line primitives are not supported")
-	assert(type(width)=='number')
-	assert(type(height)=='number')
-	assert(type(x)=='number')
-	assert(type(y)=='number')
-	assert(type(rotation)=='number')
 	local dx = width / 2
 	local dy = height / 2
 	local path = {}
@@ -71,12 +84,13 @@ end
 
 -- Lower Left Line, primitive code 22
 function macro_primitives.rectangle_corner(...)
+	local exposure = argcheck('lower left line', 1, 'number', ...)
+	local width = argcheck('lower left line', 2, 'number', ...)
+	local height = argcheck('lower left line', 3, 'number', ...)
+	local x = argcheck('lower left line', 4, 'number', ...)
+	local y = argcheck('lower left line', 5, 'number', ...)
+	local rotation = argcheck('lower left line', 6, 'number', ...)
 	assert(exposure==1, "unexposed line primitives are not supported")
-	assert(type(width)=='number')
-	assert(type(height)=='number')
-	assert(type(x)=='number')
-	assert(type(y)=='number')
-	assert(type(rotation)=='number')
 	local dx = width
 	local dy = height
 	local path = {}
@@ -89,12 +103,13 @@ function macro_primitives.rectangle_corner(...)
 end
 
 -- Outline, primitive code 4
-function macro_primitives.outline(exposure, points, ...)
+function macro_primitives.outline(...)
+	local exposure = argcheck('outline', 1, 'number', ...)
+	local points = argcheck('outline', 2, 'number', ...)
 	assert(exposure==1, "unexposed polygon primitives are not supported")
-	assert(type(points)=='number')
 	local path = {}
 	for i=0,points do
-		local x,y = select(i*2+1, ...)
+		local x,y = select(i*2+3, ...)
 		assert(type(x)=='number')
 		assert(type(y)=='number')
 		table.insert(path, {x=x, y=y})
@@ -111,13 +126,14 @@ function macro_primitives.outline(exposure, points, ...)
 end
 
 -- Polygon, primitive code 5
-function macro_primitives.polygon(exposure, vertices, x, y, diameter, rotation)
+function macro_primitives.polygon(...)
+	local exposure = argcheck('outline', 1, 'number', ...)
+	local vertices = argcheck('outline', 2, 'number', ...)
+	local x = argcheck('outline', 3, 'number', ...)
+	local y = argcheck('outline', 4, 'number', ...)
+	local diameter = argcheck('outline', 5, 'number', ...)
+	local rotation = argcheck('outline', 6, 'number', ...)
 	assert(exposure==1, "unexposed polygon primitives are not supported")
-	assert(type(vertices)=='number')
-	assert(type(x)=='number')
-	assert(type(y)=='number')
-	assert(type(diameter)=='number')
-	assert(type(rotation)=='number')
 	assert(x==0 and y==0 or rotation==0, "rotation is only allowed if the center point is on the origin")
 	local r = diameter / 2
 	rotation = math.rad(rotation)
@@ -149,16 +165,16 @@ local function quadrant_point(path, quadrant, x, y, offset)
 end
 
 -- Moiré, primitive code 6
-function macro_primitives.moire(x, y, outer_diameter, ring_thickness, ring_gap, max_rings, cross_hair_thickness, cross_hair_length, rotation)
-	assert(type(x)=='number')
-	assert(type(y)=='number')
-	assert(type(outer_diameter)=='number')
-	assert(type(ring_thickness)=='number')
-	assert(type(ring_gap)=='number')
-	assert(type(max_rings)=='number')
-	assert(type(cross_hair_length)=='number')
-	assert(type(cross_hair_thickness)=='number')
-	assert(type(rotation)=='number')
+function macro_primitives.moire(...)
+	local x = argcheck('outline', 1, 'number', ...)
+	local y = argcheck('outline', 2, 'number', ...)
+	local outer_diameter = argcheck('outline', 3, 'number', ...)
+	local ring_thickness = argcheck('outline', 4, 'number', ...)
+	local ring_gap = argcheck('outline', 5, 'number', ...)
+	local max_rings = argcheck('outline', 6, 'number', ...)
+	local cross_hair_thickness = argcheck('outline', 7, 'number', ...)
+	local cross_hair_length = argcheck('outline', 8, 'number', ...)
+	local rotation = argcheck('outline', 9, 'number', ...)
 	assert(x==0 and y==0 or rotation==0, "rotation is only allowed if the center point is on the origin")
 	assert(cross_hair_length >= outer_diameter, "unsupported moiré configuration") -- :TODO: this is a hard beast to tackle
 	assert(cross_hair_thickness > 0, "unsupported moiré configuration") -- :FIXME: this is just concentric rings
