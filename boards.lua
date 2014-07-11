@@ -271,31 +271,9 @@ end
 
 ------------------------------------------------------------------------------
 
-local function exterior(path)
-	local total = 0
-	for i=1,#path-1 do
-		local p0 = path[i-1] or path[#path-1]
-		local p1 = path[i]
-		local p2 = path[i+1] or path[1]
-		local dx1 = p1.x - p0.x
-		local dy1 = p1.y - p0.y
-		local dx2 = p2.x - p1.x
-		local dy2 = p2.y - p1.y
-		local l1 = math.sqrt(dx1*dx1+dy1*dy1)
-		local l2 = math.sqrt(dx2*dx2+dy2*dy2)
-		if l1 * l2 ~= 0 then
-			local angle = math.asin((dx1*dy2-dy1*dx2)/(l1*l2))
-			total = total + angle
-		end
-	end
-	return total >= 0
-end
-
 local function path_to_region(path)
-	local region = { center_extents = path.center_extents, extents = path.center_extents }
-	
 	-- find bottom-left corner
-	local exterior = exterior(path)
+	local exterior = region.exterior(path)
 	local reversible = true
 	local corner = 1
 	for i=2,#path-1 do
@@ -308,6 +286,8 @@ local function path_to_region(path)
 	end
 	
 	local corner_interpolation = corner==1 and path[#path].interpolation or path[corner].interpolation
+	
+	local region = { center_extents = path.center_extents, extents = path.center_extents }
 	
 	if path[corner].interpolated or corner_interpolation~='linear' or not exterior and not reversible then
 		-- don't alter the path (which will prevent panelization)
