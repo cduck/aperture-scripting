@@ -38,7 +38,7 @@ local aperture_scales = {
 
 _M.circle_steps = 64
 
-local function generate_aperture_path(aperture, board_unit)
+local function generate_aperture_paths(aperture, board_unit)
 	local shape = aperture.shape
 	if not shape and not aperture.macro then
 		return
@@ -48,12 +48,12 @@ local function generate_aperture_path(aperture, board_unit)
 	local scale = assert(aperture_scales[scale_name], "unsupported aperture scale "..scale_name)
 	
 	local circle_steps = _M.circle_steps
-	local path
+	local paths
 	if shape=='circle' then
 		local d,hx,hy = unpack(parameters)
 		assert(d, "circle apertures require at least 1 parameter")
 		assert(not hx and not hy, "circle apertures with holes are not yet supported")
-		path = {concave=true}
+		local path = {concave=true}
 		if d ~= 0 then
 			local r = d / 2 * scale
 			for i=0,circle_steps do
@@ -62,11 +62,12 @@ local function generate_aperture_path(aperture, board_unit)
 				table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
 			end
 		end
+		paths = { path }
 	elseif shape=='rectangle' then
 		local x,y,hx,hy = unpack(parameters)
 		assert(x and y, "rectangle apertures require at least 2 parameters")
 		assert(not hx and not hy, "rectangle apertures with holes are not yet supported")
-		path = {
+		local path = {
 			concave=true,
 			{x=-x/2*scale, y=-y/2*scale},
 			{x= x/2*scale, y=-y/2*scale},
@@ -74,12 +75,13 @@ local function generate_aperture_path(aperture, board_unit)
 			{x=-x/2*scale, y= y/2*scale},
 			{x=-x/2*scale, y=-y/2*scale},
 		}
+		paths = { path }
 	elseif shape=='obround' then
 		assert(circle_steps % 2 == 0, "obround apertures are only supported when circle_steps is even")
 		local x,y,hx,hy = unpack(parameters)
 		assert(x and y, "obround apertures require at least 2 parameters")
 		assert(not hx and not hy, "obround apertures with holes are not yet supported")
-		path = {concave=true}
+		local path = {concave=true}
 		if y > x then
 			local straight = (y - x) * scale
 			local r = x / 2 * scale
@@ -107,12 +109,13 @@ local function generate_aperture_path(aperture, board_unit)
 			end
 			table.insert(path, {x=straight/2, y=-r})
 		end
+		paths = { path }
 	elseif shape=='polygon' then
 		local d,steps,angle,hx,hy = unpack(parameters)
 		assert(d and steps, "polygon apertures require at least 2 parameter")
 		angle = angle or 0
 		assert(not hx and not hy, "polygon apertures with holes are not yet supported")
-		path = {concave=true}
+		local path = {concave=true}
 		if d ~= 0 then
 			local r = d / 2 * scale
 			for i=0,steps do
@@ -121,18 +124,26 @@ local function generate_aperture_path(aperture, board_unit)
 				table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
 			end
 		end
+		paths = { path }
 	elseif aperture.macro then
 		local chunk = macro.compile(aperture.macro, circle_steps)
-		path = chunk(unpack(parameters or {}))
-		for _,point in ipairs(path) do
-			point.x = point.x * scale
-			point.y = point.y * scale
+		local data = chunk(unpack(parameters or {}))
+		paths = {}
+		for i,dpath in ipairs(data) do
+			local path = {}
+			for j,point in ipairs(dpath) do
+				path[j] = {
+					x = point.x * scale,
+					y = point.y * scale,
+				}
+			end
+			paths[i] = path
 		end
 	else
 		error("unsupported aperture shape "..tostring(shape))
 	end
 	
-	aperture.path = path
+	aperture.paths = paths
 end
 
 ------------------------------------------------------------------------------
@@ -194,16 +205,18 @@ local function load_image(filepath, format, unit, template)
 	
 	-- generate aperture paths
 	for aperture in pairs(apertures) do
-		generate_aperture_path(aperture, unit)
+		generate_aperture_paths(aperture, unit)
 	end
 	
 	-- compute extents
 	for aperture in pairs(apertures) do
 		if not aperture.extents then
 			aperture.extents = region()
-			if aperture.path then
-				for _,point in ipairs(aperture.path) do
-					aperture.extents = aperture.extents + point
+			if aperture.paths then
+				for _,path in ipairs(aperture.paths) do
+					for _,point in ipairs(path) do
+						aperture.extents = aperture.extents + point
+					end
 				end
 			end
 		end

@@ -246,9 +246,11 @@ function _M.recompute_image_extents(image)
 	for aperture in pairs(apertures) do
 		if not aperture.extents then
 			aperture.extents = region()
-			if aperture.path then
-				for _,point in ipairs(aperture.path) do
-					aperture.extents = aperture.extents + point
+			if aperture.paths then
+				for _,path in ipairs(aperture.paths) do
+					for _,point in ipairs(path) do
+						aperture.extents = aperture.extents + point
+					end
 				end
 			end
 		end

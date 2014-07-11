@@ -1,5 +1,7 @@
 local _M = {}
 
+local region = require 'boards.region'
+
 ------------------------------------------------------------------------------
 
 local config = {}
@@ -44,7 +46,7 @@ function macro_primitives.line(exposure, line_width, x0, y0, x1, y1, rotation)
 	table.insert(path, rotate({x=x1+dy, y=y1-dx}, rotation))
 	table.insert(path, rotate({x=x1-dy, y=y1+dx}, rotation))
 	table.insert(path, rotate({x=x0-dy, y=y0+dx}, rotation))
-	return path
+	return { path }
 end
 macro_primitives.rectangle_ends = macro_primitives.line
 
@@ -64,7 +66,7 @@ function macro_primitives.rectangle_center(exposure, width, height, x, y, rotati
 	table.insert(path, rotate({x=x+dx, y=y+dy}, rotation))
 	table.insert(path, rotate({x=x-dx, y=y+dy}, rotation))
 	table.insert(path, rotate({x=x-dx, y=y-dy}, rotation))
-	return path
+	return { path }
 end
 
 -- Lower Left Line, primitive code 22
@@ -83,7 +85,7 @@ function macro_primitives.rectangle_corner(...)
 	table.insert(path, rotate({x=x+dx, y=y+dy}, rotation))
 	table.insert(path, rotate({x=x   , y=y+dy}, rotation))
 	table.insert(path, rotate({x=x   , y=y   }, rotation))
-	return path
+	return { path }
 end
 
 -- Outline, primitive code 4
@@ -105,7 +107,7 @@ function macro_primitives.outline(exposure, points, ...)
 	for i=1,#path do
 		path[i] = rotate(path[i], rotation)
 	end
-	return path
+	return { path }
 end
 
 -- Polygon, primitive code 5
@@ -130,7 +132,20 @@ function macro_primitives.polygon(exposure, vertices, x, y, diameter, rotation)
 			y = y + r * math.sin(a),
 		})
 	end
-	return path
+	return { path }
+end
+
+-- helper function for moiré
+local function quadrant_point(path, quadrant, x, y, offset)
+	if quadrant==0 then
+		table.insert(path, { x = x + offset.x, y = y + offset.y })
+	elseif quadrant==1 then
+		table.insert(path, { x = x - offset.y, y = y + offset.x })
+	elseif quadrant==2 then
+		table.insert(path, { x = x - offset.x, y = y - offset.y })
+	elseif quadrant==3 then
+		table.insert(path, { x = x + offset.y, y = y - offset.x })
+	end
 end
 
 -- Moiré, primitive code 6
@@ -145,22 +160,100 @@ function macro_primitives.moire(x, y, outer_diameter, ring_thickness, ring_gap, 
 	assert(type(cross_hair_thickness)=='number')
 	assert(type(rotation)=='number')
 	assert(x==0 and y==0 or rotation==0, "rotation is only allowed if the center point is on the origin")
-	print("warning: moiré primitive not yet supported, drawing a circle instead")
+	assert(cross_hair_length >= outer_diameter, "unsupported moiré configuration") -- :TODO: this is a hard beast to tackle
+	assert(cross_hair_thickness > 0, "unsupported moiré configuration") -- :FIXME: this is just concentric rings
 	local r = outer_diameter / 2
 	rotation = math.rad(rotation)
 	local circle_steps = config.circle_steps
+	local quadrant_steps = math.ceil(circle_steps / 4)
+	
+	local paths = {}
+	
+	-- draw exterior
 	local path = {}
-	for i=0,circle_steps do
-		local a
-		-- :KLUDGE: we force last vertex on the first, since sin(x) is not always equal to sin(x+2*pi)
-		if i==circle_steps then i = 0 end
-		local a = rotation + math.pi * 2 * (i / circle_steps)
-		table.insert(path, {
-			x = x + r * math.cos(a),
-			y = y + r * math.sin(a),
+	-- start with right cross hair
+	quadrant_point(path, 0, x, y, {
+		x = cross_hair_length / 2,
+		y = -cross_hair_thickness / 2,
+	})
+	for q=0,3 do
+		-- cross hair end
+		quadrant_point(path, q, x, y, {
+			x = cross_hair_length / 2,
+			y = cross_hair_thickness / 2,
+		})
+		-- intersection with outer circle
+		local a0 = math.asin(cross_hair_thickness / 2 / r)
+		local a1 = math.pi/2 - a0
+		-- draw a quadrant
+		for i=0,quadrant_steps do
+			local a = a0 + (a1 - a0) * i / quadrant_steps
+			quadrant_point(path, q, x, y, {
+				x = r * math.cos(a),
+				y = r * math.sin(a),
+			})
+		end
+		-- straight segment to cross hair end
+		quadrant_point(path, q, x, y, {
+			x = cross_hair_thickness / 2,
+			y = cross_hair_length / 2,
 		})
 	end
-	return path
+	table.insert(paths, path)
+	
+	-- cut out internal rings
+	for q=0,3 do
+		local minr = math.sqrt(2) * cross_hair_thickness / 2
+		local rings = 0
+		local r0 = r - ring_thickness
+		while r0 > minr do
+			rings = rings + 1
+			local path = {}
+			-- outer edge
+			do
+				local a0 = math.asin(cross_hair_thickness / 2 / r0)
+				local a1 = math.pi/2 - a0
+				for i=0,quadrant_steps do
+					local a = a1 + (a0 - a1) * i / quadrant_steps
+					quadrant_point(path, q, x, y, {
+						x = r0 * math.cos(a),
+						y = r0 * math.sin(a),
+					})
+				end
+			end
+			-- inner edge
+			local r1
+			if rings >= max_rings then
+				r1 = minr
+			else
+				r1 = r0 - ring_gap
+			end
+			if r1 <= minr then
+				-- corner case
+				quadrant_point(path, q, x, y, {
+					x = cross_hair_thickness / 2,
+					y = cross_hair_thickness / 2,
+				})
+			else
+				local a0 = math.asin(cross_hair_thickness / 2 / r1)
+				local a1 = math.pi/2 - a0
+				for i=0,quadrant_steps do
+					local a = a0 + (a1 - a0) * i / quadrant_steps
+					quadrant_point(path, q, x, y, {
+						x = r1 * math.cos(a),
+						y = r1 * math.sin(a),
+					})
+				end
+			end
+			-- close the path
+			table.insert(path, {x=path[1].x, y=path[1].y})
+			table.insert(paths, path)
+			
+			r0 = r1 - ring_thickness
+		end
+	end
+	
+	return paths
 end
 
 -- Thermal, primitive code 7
@@ -187,7 +280,7 @@ function macro_primitives.thermal(x, y, outer_diameter, inner_diameter, gap_thic
 			y = y + r * math.sin(a),
 		})
 	end
-	return path
+	return { path }
 end
 
 local function compile_expression(expression)
@@ -226,12 +319,14 @@ function _M.compile(macro, circle_steps)
 		end
 	end
 	source = table.concat(source)
-	local paths
+	local current_paths
 	local env = setmetatable({}, {
 		__index=function(_, k)
 			return function(...)
-				local path = assert(macro_primitives[k], "no generator function for primitive "..tostring(k))(...)
-				table.insert(paths, path)
+				local paths2 = assert(macro_primitives[k], "no generator function for primitive "..tostring(k))(...)
+				for _,path in ipairs(paths2) do
+					table.insert(current_paths, path)
+				end
 			end
 		end,
 		__newindex=function(_, k, v)
@@ -246,27 +341,32 @@ function _M.compile(macro, circle_steps)
 		setfenv(rawchunk, env)
 	end
 	local chunk = function(...)
-		paths = {}
+		current_paths = {}
 		config.circle_steps = circle_steps
 		rawchunk(...)
 		config.circle_steps = nil
-		local path
-		if #paths==1 then
-			path = paths[1]
-		else
+		local paths = current_paths
+		current_paths = nil
+		--[[
+		-- this code splits overlapping paths
+		if #paths>=2 then
 			local tesselation = require 'tesselation'
 			local surface = tesselation.surface()
 			for _,path in ipairs(paths) do
-				surface:extend(path)
+				if region.exterior(path) then
+					surface:extend(path)
+				else
+					local reverse = {}
+					for i=1,#path do
+						reverse[i] = path[#path+1-i]
+					end
+					surface:drill(reverse, {x=0, y=0})
+				end
 			end
 			paths = surface.contour
-			assert(#paths==1, "macro scripts must generate a single contour")
-			path = {}
-			for _,point in ipairs(paths[1]) do
-				table.insert(path, {x=point.x, y=point.y})
-			end
 		end
-		return path
+		--]]
+		return paths
 	end
 	return chunk
 end
