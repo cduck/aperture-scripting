@@ -733,43 +733,47 @@ end
 ------------------------------------------------------------------------------
 
 function _M.copy_point(point)
-	return _M.offset_point(point, 0, 0)
+	return _M.rotate_point(point, 0)
 end
 
-function _M.copy_path(path)
-	return _M.offset_path(path, 0, 0)
+function _M.copy_path(path, apertures, macros)
+	return _M.rotate_path(path, 0, apertures, macros)
 end
 
-function _M.copy_layer(layer)
-	return _M.offset_layer(layer, 0, 0)
+function _M.copy_layer(layer, apertures, macros)
+	return _M.rotate_layer(layer, 0, apertures, macros)
 end
 
-function _M.copy_image(image)
-	return _M.offset_image(image, 0, 0)
+function _M.copy_image(image, apertures, macros)
+	return _M.rotate_image(image, 0, apertures, macros)
 end
 
 function _M.copy_board(board)
-	return _M.offset_board(board, 0, 0)
+	return _M.rotate_board(board, 0)
 end
 
 ------------------------------------------------------------------------------
 
-function _M.merge_layers(layer_a, layer_b)
+function _M.merge_layers(layer_a, layer_b, apertures, macros)
 	assert(layer_a.polarity == layer_b.polarity, "layer polarity mismatch ("..tostring(layer_a.polarity).." vs. "..tostring(layer_b.polarity)..")")
+	if not apertures then apertures = {} end
+	if not macros then macros = {} end
 	local merged = {
 		polarity = layer_a.polarity,
 	}
 	for i,path in ipairs(layer_a) do
-		table.insert(merged, _M.copy_path(path))
+		table.insert(merged, _M.copy_path(path, apertures, macros))
 	end
 	for i,path in ipairs(layer_b) do
-		table.insert(merged, _M.copy_path(path))
+		table.insert(merged, _M.copy_path(path, apertures, macros))
 	end
 	return merged
 end
 
-function _M.merge_images(image_a, image_b)
+function _M.merge_images(image_a, image_b, apertures, macros)
 	assert(image_a.unit == image_b.unit, "image unit mismatch ("..tostring(image_a.unit).." vs. "..tostring(image_b.unit)..")")
+	if not apertures then apertures = {} end
+	if not macros then macros = {} end
 	local merged = {
 		file_path = nil,
 		name = nil,
@@ -801,13 +805,13 @@ function _M.merge_images(image_a, image_b)
 		local layer_a = image_a.layers[i]
 		local layer_b = image_b.layers[i]
 		if layer_b then
-			merged.layers[i] = _M.merge_layers(layer_a, layer_b)
+			merged.layers[i] = _M.merge_layers(layer_a, layer_b, apertures, macros)
 		else
-			merged.layers[i] = _M.copy_layer(layer_a)
+			merged.layers[i] = _M.copy_layer(layer_a, apertures, macros)
 		end
 	end
 	for i=#image_a.layers+1,#image_b.layers do
-		merged.layers[i] = _M.copy_layer(image_b.layers[i])
+		merged.layers[i] = _M.copy_layer(image_b.layers[i], apertures, macros)
 	end
 	
 	return merged
@@ -850,18 +854,20 @@ function _M.merge_boards(board_a, board_b)
 	merged.extents = board_a.extents + board_b.extents
 	
 	-- merge images
+	local apertures = {}
+	local macros = {}
 	for type,image_a in pairs(board_a.images) do
 		local image_b = board_b.images[type]
 		if image_b then
-			merged.images[type] = _M.merge_images(image_a, image_b)
+			merged.images[type] = _M.merge_images(image_a, image_b, apertures, macros)
 		else
-			merged.images[type] = _M.copy_image(image_a)
+			merged.images[type] = _M.copy_image(image_a, apertures, macros)
 		end
 	end
 	for type,image_b in pairs(board_b.images) do
 		local image_a = board_a.images[type]
 		if not image_a then
-			merged.images[type] = _M.copy_image(image_b)
+			merged.images[type] = _M.copy_image(image_b, apertures, macros)
 		end
 	end
 	
