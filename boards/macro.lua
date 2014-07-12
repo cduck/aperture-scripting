@@ -300,22 +300,58 @@ function macro_primitives.thermal(x, y, outer_diameter, inner_diameter, gap_thic
 	assert(type(gap_thickness)=='number')
 	assert(type(rotation)=='number')
 	assert(x==0 and y==0 or rotation==0, "rotation is only allowed if the center point is on the origin")
-	print("warning: thermal primitive not yet supported, drawing a circle instead")
-	local r = outer_diameter / 2
-	rotation = math.rad(rotation)
+	assert(gap_thickness > 0, "unsupported thermal configuration") -- :FIXME: this is just a ring
 	local circle_steps = config.circle_steps
-	local path = {}
-	for i=0,circle_steps do
-		local a
-		-- :KLUDGE: we force last vertex on the first, since sin(x) is not always equal to sin(x+2*pi)
-		if i==circle_steps then i = 0 end
-		local a = rotation + math.pi * 2 * (i / circle_steps)
-		table.insert(path, {
-			x = x + r * math.cos(a),
-			y = y + r * math.sin(a),
-		})
+	local quadrant_steps = math.ceil(circle_steps / 4)
+	local r0 = outer_diameter / 2
+	local r1 = inner_diameter / 2
+	local minr = math.sqrt(2) * gap_thickness / 2
+	rotation = math.rad(rotation)
+	
+	local paths = {}
+	
+	-- the whole thermal is like one moiré ring
+	for q=0,3 do
+		local path = {}
+		-- outer edge
+		do
+			local a0 = math.asin(gap_thickness / 2 / r0)
+			local a1 = math.pi/2 - a0
+			for i=0,quadrant_steps do
+				local a = rotation + a0 + (a1 - a0) * i / quadrant_steps
+				quadrant_point(path, q, x, y, {
+					x = r0 * math.cos(a),
+					y = r0 * math.sin(a),
+				})
+			end
+		end
+		-- inner edge
+		if r1 <= minr then
+			-- corner case
+			local a = rotation + math.pi/4
+			local r = math.sqrt(2) * gap_thickness / 2
+			quadrant_point(path, q, x, y, {
+				x = r * math.cos(a),
+				y = r * math.sin(a),
+			})
+		else
+			local a0 = math.asin(gap_thickness / 2 / r1)
+			local a1 = math.pi/2 - a0
+			for i=0,quadrant_steps do
+				local a = rotation + a1 + (a0 - a1) * i / quadrant_steps
+				quadrant_point(path, q, x, y, {
+					x = r1 * math.cos(a),
+					y = r1 * math.sin(a),
+				})
+			end
+		end
+		-- close the path
+		table.insert(path, {x=path[1].x, y=path[1].y})
+		
+		table.insert(paths, path)
 	end
-	return { path }
+	
+	return paths
 end
 
 local function compile_expression(expression)
