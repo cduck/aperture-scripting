@@ -193,31 +193,43 @@ function macro_primitives.moire(...)
 	-- draw exterior
 	local path = {}
 	-- start with right cross hair
-	quadrant_point(path, 0, x, y, {
-		x = cross_hair_length / 2,
-		y = -cross_hair_thickness / 2,
-	})
+	do
+		local i = cross_hair_length / 2
+		local j = -cross_hair_thickness / 2
+		local c = math.cos(rotation)
+		local s = math.sin(rotation)
+		quadrant_point(path, 0, x, y, {
+			x = c * i - s * j,
+			y = c * j + s * i,
+		})
+	end
 	for q=0,3 do
+		local c = math.cos(rotation)
+		local s = math.sin(rotation)
 		-- cross hair end
+		local i = cross_hair_length / 2
+		local j = cross_hair_thickness / 2
 		quadrant_point(path, q, x, y, {
-			x = cross_hair_length / 2,
-			y = cross_hair_thickness / 2,
+			x = c * i - s * j,
+			y = c * j + s * i,
 		})
 		-- intersection with outer circle
 		local a0 = math.asin(cross_hair_thickness / 2 / r)
 		local a1 = math.pi/2 - a0
 		-- draw a quadrant
 		for i=0,quadrant_steps do
-			local a = a0 + (a1 - a0) * i / quadrant_steps
+			local a = rotation + a0 + (a1 - a0) * i / quadrant_steps
 			quadrant_point(path, q, x, y, {
 				x = r * math.cos(a),
 				y = r * math.sin(a),
 			})
 		end
 		-- straight segment to cross hair end
+		local i = cross_hair_thickness / 2
+		local j = cross_hair_length / 2
 		quadrant_point(path, q, x, y, {
-			x = cross_hair_thickness / 2,
-			y = cross_hair_length / 2,
+			x = c * i - s * j,
+			y = c * j + s * i,
 		})
 	end
 	table.insert(paths, path)
@@ -235,7 +247,7 @@ function macro_primitives.moire(...)
 				local a0 = math.asin(cross_hair_thickness / 2 / r0)
 				local a1 = math.pi/2 - a0
 				for i=0,quadrant_steps do
-					local a = a1 + (a0 - a1) * i / quadrant_steps
+					local a = rotation + a1 + (a0 - a1) * i / quadrant_steps
 					quadrant_point(path, q, x, y, {
 						x = r0 * math.cos(a),
 						y = r0 * math.sin(a),
@@ -251,15 +263,17 @@ function macro_primitives.moire(...)
 			end
 			if r1 <= minr then
 				-- corner case
+				local a = rotation + math.pi / 4
+				local r = math.sqrt(2) * cross_hair_thickness / 2
 				quadrant_point(path, q, x, y, {
-					x = cross_hair_thickness / 2,
-					y = cross_hair_thickness / 2,
+					x = r * math.cos(a),
+					y = r * math.sin(a),
 				})
 			else
 				local a0 = math.asin(cross_hair_thickness / 2 / r1)
 				local a1 = math.pi/2 - a0
 				for i=0,quadrant_steps do
-					local a = a0 + (a1 - a0) * i / quadrant_steps
+					local a = rotation + a0 + (a1 - a0) * i / quadrant_steps
 					quadrant_point(path, q, x, y, {
 						x = r1 * math.cos(a),
 						y = r1 * math.sin(a),
