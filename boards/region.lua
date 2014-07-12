@@ -36,6 +36,10 @@ function region_getters:empty()
 	return self.right <= self.left or self.top <= self.bottom
 end
 
+function region_getters:area()
+	return (self.right - self.left) * (self.top - self.bottom)
+end
+
 function region_mt.__add(self, extension)
 	if extension.x and extension.y then
 		return ctor{

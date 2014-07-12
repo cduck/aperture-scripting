@@ -557,9 +557,7 @@ local function find_image_outline(image)
 	local amax,lmax,pmax = -math.huge
 	for l,layer in ipairs(image.layers) do
 		for p,path in ipairs(layer) do
-			local width = path.extents.right - path.extents.left
-			local height = path.extents.top - path.extents.bottom
-			local a = width * height
+			local a = path.extents.area
 			if a > amax then
 				amax,lmax,pmax = a,l,p
 			end
@@ -601,7 +599,7 @@ function _M.find_board_outlines(board)
 		if not ignore_outline[type] then
 			local path,ilayer,ipath = find_image_outline(image)
 			if path then
-				local area = (path.center_extents.right - path.center_extents.left) * (path.center_extents.top - path.center_extents.bottom)
+				local area = path.center_extents.area
 				max_area = math.max(max_area, area)
 				outlines[type] = {path=path, ilayer=ilayer, ipath=ipath, area=area}
 			end
