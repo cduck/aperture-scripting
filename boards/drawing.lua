@@ -7,8 +7,6 @@ local region = require 'boards.region'
 
 function _M.circle_aperture(diameter)
 	local aperture = { shape = 'circle', parameters = { diameter } }
-	local r = diameter / 2
-	aperture.extents = region{left=-r, right=r, bottom=-r, top=r}
 	return aperture
 end
 
@@ -23,7 +21,6 @@ function _M.draw_path(image, aperture, ...)
 		local x,y = select(i, ...)
 		table.insert(path, { x = x, y = y, interpolation = i > 1 and 'linear' or nil })
 	end
-	region.recompute_path_extents(path)
 	table.insert(image.layers[#image.layers], path)
 end
 
@@ -216,7 +213,6 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 				ilayer = ilayer + 1
 				image.layers[ilayer] = layer
 			end
-			region.recompute_path_extents(path)
 			table.insert(layer, path)
 		end
 		
@@ -226,61 +222,6 @@ end
 
 _M.draw_text = draw_text
 
-end
-
-------------------------------------------------------------------------------
-
-function _M.recompute_image_extents(image)
-	-- collect apertures
-	local apertures = {}
-	for _,layer in ipairs(image.layers) do
-		for _,path in ipairs(layer) do
-			local aperture = path.aperture
-			if aperture and not apertures[aperture] then
-				apertures[aperture] = true
-			end
-		end
-	end
-	
-	-- compute extents
-	for aperture in pairs(apertures) do
-		if not aperture.extents then
-			aperture.extents = region()
-			if aperture.paths then
-				for _,path in ipairs(aperture.paths) do
-					for _,point in ipairs(path) do
-						aperture.extents = aperture.extents + point
-					end
-				end
-			end
-		end
-	end
-	image.center_extents = region()
-	image.extents = region()
-	for _,layer in ipairs(image.layers) do
-		for _,path in ipairs(layer) do
-			region.recompute_path_extents(path)
-			image.center_extents = image.center_extents + path.center_extents
-			image.extents = image.extents + path.extents
-		end
-	end
-end
-
-function _M.recompute_board_extents(board)
-	for _,image in pairs(board.images) do
-		_M.recompute_image_extents(image)
-	end
-	if board.outline then
-		region.recompute_path_extents(board.outline.path)
-		board.outline.extents = board.outline.path.extents
-		board.extents = board.outline.extents
-	else
-		local extents = region()
-		for _,image in pairs(board.images) do
-			extents = extents + image.extents
-		end
-		board.extents = extents
-	end
 end
 
 ------------------------------------------------------------------------------

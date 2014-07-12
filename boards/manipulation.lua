@@ -6,15 +6,6 @@ local region = require 'boards.region'
 
 ------------------------------------------------------------------------------
 
-function _M.offset_extents(extents, dx, dy)
-	local copy = {}
-	copy.left = extents.left + dx
-	copy.right = extents.right + dx
-	copy.bottom = extents.bottom + dy
-	copy.top = extents.top + dy
-	return region(copy)
-end
-
 function _M.offset_point(point, dx, dy)
 	local copy = {}
 	for k,v in pairs(point) do
@@ -29,10 +20,6 @@ function _M.offset_path(path, dx, dy)
 	local copy = {
 		unit = path.unit,
 	}
-	assert(path.extents, "path has no extents")
-	copy.extents = _M.offset_extents(path.extents, dx, dy)
-	assert(path.center_extents)
-	copy.center_extents = _M.offset_extents(path.center_extents, dx, dy)
 	copy.aperture = path.aperture
 	for i,point in ipairs(path) do
 		copy[i] = _M.offset_point(point, dx, dy)
@@ -64,10 +51,6 @@ function _M.offset_image(image, dx, dy)
 		copy.format[k] = v
 	end
 	
-	-- move extents
-	copy.extents = _M.offset_extents(image.extents, dx, dy)
-	copy.center_extents = _M.offset_extents(image.center_extents, dx, dy)
-	
 	-- move layers
 	for i,layer in ipairs(image.layers) do
 		copy.layers[i] = _M.offset_layer(layer, dx, dy)
@@ -80,9 +63,6 @@ function _M.offset_outline(outline, dx, dy)
 	local copy = {
 		apertures = {},
 	}
-	
-	-- move the extents
-	copy.extents = _M.offset_extents(outline.extents, dx, dy)
 	
 	-- move the path
 	copy.path = _M.offset_path(outline.path, dx, dy)
@@ -114,9 +94,6 @@ function _M.offset_board(board, dx, dy)
 		copy.formats[type] = format
 	end
 	
-	-- move extents
-	copy.extents = _M.offset_extents(board.extents, dx, dy)
-	
 	-- move images
 	for type,image in pairs(board.images) do
 		copy.images[type] = _M.offset_image(image, dx, dy)
@@ -131,35 +108,6 @@ function _M.offset_board(board, dx, dy)
 end
 
 ------------------------------------------------------------------------------
-
-function _M.rotate_extents(extents, angle)
-	angle = angle % 360
-	local copy = {}
-	if angle==0 then
-		copy.left = extents.left
-		copy.right = extents.right
-		copy.bottom = extents.bottom
-		copy.top = extents.top
-	elseif angle==90 then
-		copy.left = -extents.top
-		copy.right = -extents.bottom
-		copy.bottom = extents.left
-		copy.top = extents.right
-	elseif angle==180 then
-		copy.left = -extents.right
-		copy.right = -extents.left
-		copy.bottom = -extents.top
-		copy.top = -extents.bottom
-	elseif angle==270 then
-		copy.left = extents.bottom
-		copy.right = extents.top
-		copy.bottom = -extents.right
-		copy.top = -extents.left
-	else
-		error("unsupported rotation angle")
-	end
-	return region(copy)
-end
 
 function _M.rotate_macro(macro)
 	local copy = {
@@ -350,10 +298,6 @@ function _M.rotate_path(path, angle, apertures, macros)
 	local copy = {
 		unit = path.unit,
 	}
-	assert(path.extents)
-	copy.extents = _M.rotate_extents(path.extents, angle)
-	assert(path.center_extents)
-	copy.center_extents = _M.rotate_extents(path.center_extents, angle)
 	if path.aperture then
 		copy.aperture = apertures[path.aperture]
 		if not copy.aperture then
@@ -395,10 +339,6 @@ function _M.rotate_image(image, angle, apertures, macros)
 		copy.format[k] = v
 	end
 	
-	-- rotate extents
-	copy.extents = _M.rotate_extents(image.extents, angle)
-	copy.center_extents = _M.rotate_extents(image.center_extents, angle)
-	
 	-- rotate layers
 	for i,layer in ipairs(image.layers) do
 		copy.layers[i] = _M.rotate_layer(layer, angle, apertures, macros)
@@ -411,10 +351,6 @@ function _M.rotate_outline_path(path, angle)
 	local copy = {
 		unit = path.unit,
 	}
-	assert(path.extents)
-	copy.extents = _M.rotate_extents(path.extents, angle)
-	assert(path.center_extents)
-	copy.center_extents = _M.rotate_extents(path.center_extents, angle)
 	assert(not path.aperture)
 	-- rotate points
 	local rpath = {}
@@ -452,9 +388,6 @@ function _M.rotate_outline(outline, angle, apertures, macros)
 		apertures = {},
 	}
 	
-	-- rotate extents
-	copy.extents = _M.rotate_extents(outline.extents, angle)
-	
 	-- rotate path (which should be a region)
 	assert(not outline.path.aperture)
 	copy.path = _M.rotate_outline_path(outline.path, angle)
@@ -490,9 +423,6 @@ function _M.rotate_board(board, angle)
 		copy.formats[type] = format
 	end
 	
-	-- rotate extents
-	copy.extents = _M.rotate_extents(board.extents, angle)
-	
 	-- apertures and macros are shared by layers and paths, so create an index to avoid duplicating them in the copy
 	-- do it at the board level in case some apertures are shared between images and the outline or other images
 	local apertures = {}
@@ -512,15 +442,6 @@ function _M.rotate_board(board, angle)
 end
 
 ------------------------------------------------------------------------------
-
-function _M.scale_extents(extents, scale)
-	local copy = {}
-	copy.left = extents.left * scale
-	copy.right = extents.right * scale
-	copy.bottom = extents.bottom * scale
-	copy.top = extents.top * scale
-	return region(copy)
-end
 
 function _M.scale_macro(macro, s)
 	local copy = {
@@ -607,10 +528,6 @@ function _M.scale_path(path, scale, apertures, macros)
 	local copy = {
 		unit = path.unit,
 	}
-	assert(path.extents)
-	copy.extents = _M.scale_extents(path.extents, scale)
-	assert(path.center_extents)
-	copy.center_extents = _M.scale_extents(path.center_extents, scale)
 	if path.aperture then
 		copy.aperture = apertures[path.aperture]
 		if not copy.aperture then
@@ -652,10 +569,6 @@ function _M.scale_image(image, scale, apertures, macros)
 		copy.format[k] = v
 	end
 	
-	-- scale extents
-	copy.extents = _M.scale_extents(image.extents, scale)
-	copy.center_extents = _M.scale_extents(image.center_extents, scale)
-	
 	-- scale layers
 	for i,layer in ipairs(image.layers) do
 		copy.layers[i] = _M.scale_layer(layer, scale, apertures, macros)
@@ -670,9 +583,6 @@ function _M.scale_outline(outline, scale, apertures, macros)
 	local copy = {
 		apertures = {},
 	}
-	
-	-- scale extents
-	copy.extents = _M.scale_extents(outline.extents, scale)
 	
 	-- scale path (which should be a region)
 	assert(not outline.path.aperture)
@@ -708,9 +618,6 @@ function _M.scale_board(board, scale)
 	for type,format in pairs(board.formats) do
 		copy.formats[type] = format
 	end
-	
-	-- scale extents
-	copy.extents = _M.scale_extents(board.extents, scale)
 	
 	-- apertures and macros are shared by layers and paths, so create an index to avoid duplicating them in the copy
 	-- do it at the board level in case some apertures are shared between images and the outline or other images
@@ -796,10 +703,6 @@ function _M.merge_images(image_a, image_b, apertures, macros)
 		assert(image_a.format[k] == v, "image format mismatch")
 	end
 	
-	-- merge extents
-	merged.extents = image_a.extents + image_b.extents
-	merged.center_extents = image_a.center_extents + image_b.center_extents
-	
 	-- merge layers
 	for i=1,#image_a.layers do
 		local layer_a = image_a.layers[i]
@@ -849,9 +752,6 @@ function _M.merge_boards(board_a, board_b)
 			merged.formats[type] = format
 		end
 	end
-	
-	-- merge extents
-	merged.extents = board_a.extents + board_b.extents
 	
 	-- merge images
 	local apertures = {}

@@ -5,6 +5,7 @@ local table = require 'table'
 
 local region = require 'boards.region'
 local drawing = require 'boards.drawing'
+local extents = require 'boards.extents'
 local templates = require 'boards.templates'
 local manipulation = require 'boards.manipulation'
 
@@ -14,18 +15,12 @@ local function empty_image()
 	return {
 		format = { integer = 2, decimal = 4, zeroes = 'L' },
 		unit = 'IN',
-		extents = region(),
-		center_extents = region(),
 		layers = { { polarity = 'dark' } },
 	}
 end
 _M.empty_image = empty_image
 
 function _M.empty_board(width, height)
-	local extents = region(width and height and {
-		left = 0, right = width,
-		bottom = 0, top = height,
-	})
 	return {
 		unit = 'pm',
 		template = templates.default,
@@ -43,13 +38,9 @@ function _M.empty_board(width, height)
 		},
 		extensions = {},
 		formats = {},
-		extents = extents,
 		outline = width and height and {
 			apertures = {},
-			extents = extents,
 			path = {
-				extents = extents,
-				center_extents = extents,
 				{ x = 0, y = 0 },
 				{ x = width, y = 0, interpolation = 'linear' },
 				{ x = width, y = height, interpolation = 'linear' },
@@ -264,10 +255,13 @@ local function merge_panels(panel_a, panel_b, options, vertical)
 	local outline_a = panel_a.outline
 	local outline_b = panel_b.outline
 	
+	-- check subpanel dimensions match
+	local outline_a_extents = extents.compute_outline_extents(outline_a)
+	local outline_b_extents = extents.compute_outline_extents(outline_b)
 	if vertical then
-		assert(outline_a.extents.left == outline_b.extents.left and outline_a.extents.right == outline_b.extents.right)
+		assert(outline_a_extents.left == outline_b_extents.left and outline_a_extents.right == outline_b_extents.right)
 	else
-		assert(outline_a.extents.bottom == outline_b.extents.bottom and outline_a.extents.top == outline_b.extents.top)
+		assert(outline_a_extents.bottom == outline_b_extents.bottom and outline_a_extents.top == outline_b_extents.top)
 	end
 	
 	-- generate a new outline
@@ -275,7 +269,6 @@ local function merge_panels(panel_a, panel_b, options, vertical)
 		apertures = {},
 		path = {},
 	}
-	merged.outline.extents = outline_a.extents + outline_b.extents
 	for type,aperture in pairs(outline_a.apertures) do
 		merged.outline.apertures[type] = aperture
 		if outline_b.apertures[type] then
@@ -348,7 +341,6 @@ local function merge_panels(panel_a, panel_b, options, vertical)
 			table.insert(merged.outline.path, outline_a.path[i])
 		end
 	end
-	region.recompute_path_extents(merged.outline.path)
 	
 	for i,point in ipairs(merged.outline.path) do
 		if i > 1 then
@@ -394,8 +386,9 @@ function _M.panelize(layout, options, vertical)
 	local left,bottom = 0,0
 	local panel
 	for _,subpanel in ipairs(subpanels) do
-		local dx = left - subpanel.outline.extents.left
-		local dy = bottom - subpanel.outline.extents.bottom
+		local subpanel_extents = extents.compute_outline_extents(subpanel.outline)
+		local dx = left - subpanel_extents.left
+		local dy = bottom - subpanel_extents.bottom
 		if not panel then
 			panel = manipulation.offset_board(subpanel, dx, dy)
 		else
@@ -403,9 +396,9 @@ function _M.panelize(layout, options, vertical)
 			panel = merge_panels(panel, neighbour, options, vertical)
 		end
 		if vertical then
-			bottom = panel.outline.extents.top + options.spacing
+			bottom = bottom + subpanel_extents.height + options.spacing
 		else
-			left = panel.outline.extents.right + options.spacing
+			left = left + subpanel_extents.width + options.spacing
 		end
 	end
 	

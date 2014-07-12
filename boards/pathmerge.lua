@@ -21,8 +21,6 @@ local function reverse_path(path)
 	end
 	reverse[1].interpolation = nil
 	reverse[#reverse].interpolation = 'linear'
-	reverse.extents = path.extents
-	reverse.center_extents = path.center_extents
 	return reverse
 end
 
@@ -35,7 +33,6 @@ local function append_path(parent, child)
 	for i=2,#child do
 		parent[nparent+i-1] = child[i]
 	end
-	region.recompute_path_extents(parent)
 end
 
 local function prepend_path(parent, child)
@@ -51,7 +48,6 @@ local function prepend_path(parent, child)
 	for i=1,nchild-1 do
 		parent[i] = child[i]
 	end
-	region.recompute_path_extents(parent)
 end
 
 local function point_to_node(point, epsilon)

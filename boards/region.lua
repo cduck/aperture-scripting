@@ -40,6 +40,14 @@ function region_getters:area()
 	return (self.right - self.left) * (self.top - self.bottom)
 end
 
+function region_getters:width()
+	return self.right - self.left
+end
+
+function region_getters:height()
+	return self.top - self.bottom
+end
+
 function region_mt.__add(self, extension)
 	if extension.x and extension.y then
 		return ctor{
@@ -77,20 +85,6 @@ _M.new = ctor
 
 function _MT:__call(...)
 	return ctor(...)
-end
-
-------------------------------------------------------------------------------
-
-function _M.recompute_path_extents(path)
-	path.center_extents = ctor()
-	for _,point in ipairs(path) do
-		path.center_extents = path.center_extents + point
-	end
-	path.extents = ctor(path.center_extents)
-	local aperture = path.aperture
-	if aperture and not aperture.extents.empty then
-		path.extents = path.extents * aperture.extents
-	end
 end
 
 ------------------------------------------------------------------------------
