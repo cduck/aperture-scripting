@@ -23,7 +23,6 @@ function macro_primitives.circle(...)
 	local diameter = argcheck('circle', 2, 'number', ...)
 	local x = argcheck('circle', 3, 'number', ...)
 	local y = argcheck('circle', 4, 'number', ...)
-	assert(exposure==1, "unexposed circle primitives are not supported")
 	return macro_primitives.polygon(exposure, config.circle_steps, x, y, diameter, 0)
 end
 
@@ -70,7 +69,6 @@ function macro_primitives.rectangle_center(...)
 	local x = argcheck('center line', 4, 'number', ...)
 	local y = argcheck('center line', 5, 'number', ...)
 	local rotation = argcheck('center line', 6, 'number', ...)
-	assert(exposure==1, "unexposed line primitives are not supported")
 	local dx = width / 2
 	local dy = height / 2
 	local path = {}
@@ -79,6 +77,13 @@ function macro_primitives.rectangle_center(...)
 	table.insert(path, rotate({x=x+dx, y=y+dy}, rotation))
 	table.insert(path, rotate({x=x-dx, y=y+dy}, rotation))
 	table.insert(path, rotate({x=x-dx, y=y-dy}, rotation))
+	if exposure==0 then
+		local t = {}
+		for i=1,#path do
+			t[i] = path[#path+1-i]
+		end
+		path = t
+	end
 	return { path }
 end
 
@@ -133,16 +138,16 @@ function macro_primitives.polygon(...)
 	local y = argcheck('outline', 4, 'number', ...)
 	local diameter = argcheck('outline', 5, 'number', ...)
 	local rotation = argcheck('outline', 6, 'number', ...)
-	assert(exposure==1, "unexposed polygon primitives are not supported")
 	assert(x==0 and y==0 or rotation==0, "rotation is only allowed if the center point is on the origin")
 	local r = diameter / 2
 	rotation = math.rad(rotation)
 	local path = {}
+	local dir = exposure == 0 and -1 or 1
 	for i=0,vertices do
 		local a
 		-- :KLUDGE: we force last vertex on the first, since sin(x) is not always equal to sin(x+2*pi)
 		if i==vertices then i = 0 end
-		local a = rotation + math.pi * 2 * (i / vertices)
+		local a = rotation + dir * math.pi * 2 * (i / vertices)
 		table.insert(path, {
 			x = x + r * math.cos(a),
 			y = y + r * math.sin(a),
