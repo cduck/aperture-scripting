@@ -335,14 +335,22 @@ function _M.compile(macro, circle_steps)
 		end
 	end
 	source = table.concat(source)
-	local current_paths
+	local tesselation = require 'tesselation'
+	local buffer
 	local env = setmetatable({}, {
 		__index=function(_, k)
 			return function(...)
-				local paths2 = assert(macro_primitives[k], "no generator function for primitive "..tostring(k))(...)
-				for _,path in ipairs(paths2) do
-					table.insert(current_paths, path)
+				local primitive = assert(macro_primitives[k], "no generator function for primitive "..tostring(k))(...)
+				-- recreate a surface for each new primitive, so that the previous holes are clamped to 0 windage (instead of -1)
+				local surface = tesselation.surface()
+				for _,path in ipairs(buffer) do
+					surface:extend(path)
 				end
+				-- combine new primitive
+				for _,path in ipairs(primitive) do
+					surface:extend(path)
+				end
+				buffer = surface.contour
 			end
 		end,
 		__newindex=function(_, k, v)
@@ -357,31 +365,16 @@ function _M.compile(macro, circle_steps)
 		setfenv(rawchunk, env)
 	end
 	local chunk = function(...)
-		current_paths = {}
+		-- setup
+		buffer = {}
 		config.circle_steps = circle_steps
+		-- run macro
 		rawchunk(...)
+		-- cleanup
 		config.circle_steps = nil
-		local paths = current_paths
-		current_paths = nil
-		--[[
-		-- this code splits overlapping paths
-		if #paths>=2 then
-			local tesselation = require 'tesselation'
-			local surface = tesselation.surface()
-			for _,path in ipairs(paths) do
-				if region.exterior(path) then
-					surface:extend(path)
-				else
-					local reverse = {}
-					for i=1,#path do
-						reverse[i] = path[#path+1-i]
-					end
-					surface:drill(reverse, {x=0, y=0})
-				end
-			end
-			paths = surface.contour
-		end
-		--]]
+		local paths = buffer
+		buffer = nil
+		-- return data
 		return paths
 	end
 	return chunk
