@@ -307,7 +307,6 @@ function _M.load(path, options)
 				if file then
 					paths[image] = path.dir / file
 					extensions[image] = pattern
-					found = true
 					break
 				end
 			end
