@@ -15,6 +15,7 @@ return {
 		},
 		{
 			dirs = {source=P'boards', build=P'boards', install=P'boards'},
+			"aperture.lua",
 			"drawing.lua",
 			"extents.lua",
 			"interpolation.lua",
