@@ -1,10 +1,18 @@
 local _M = {}
 
 local io = require 'io'
+local math = require 'math'
 local table = require 'table'
-local geometry = require 'geometry'
-local vector = geometry.vector
-local quaternion = geometry.quaternion
+
+local function rotate(v, angle)
+	local a = math.rad(angle)
+	local c = math.cos(a)
+	local s = math.sin(a)
+	return {
+		x = v.x * c - v.y * s,
+		y = v.x * s + v.y * c,
+	}
+end
 
 function _M.load(file_path, template)
 	local name = file_path.file
@@ -40,15 +48,14 @@ function _M.load(file_path, template)
 			angle = angle + set[template.fields.angle_offset]
 		end
 		part.angle = angle * template.scale.angle
-		local offset = vector()
+		local offset = {x=0, y=0}
 		if set[template.fields.x_offset] and set[template.fields.x_offset]~="" and set[template.fields.x_offset]~="*" then
-			offset.x = set[template.fields.x_offset]
+			offset.x = tonumber(set[template.fields.x_offset])
 		end
 		if set[template.fields.y_offset] and set[template.fields.y_offset]~="" and set[template.fields.y_offset]~="*" then
-			offset.y = set[template.fields.y_offset]
+			offset.y = tonumber(set[template.fields.y_offset])
 		end
-		local rotation = quaternion.glrotation(angle, 0, 0, 1)
-		offset = rotation:rotate(offset)
+		offset = rotate(offset, angle)
 		local x = set[template.fields.x] + offset.x
 		local y = set[template.fields.y] + offset.y
 		part.x = x * template.scale.dimension
