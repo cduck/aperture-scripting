@@ -390,11 +390,11 @@ function _M.compile(macro, circle_steps)
 		end
 	end
 	source = table.concat(source)
-	local tesselation = require 'tesselation'
 	local buffer
 	local env = setmetatable({}, {
 		__index=function(_, k)
 			return function(...)
+				local tesselation = require 'tesselation'
 				local primitive = assert(macro_primitives[k], "no generator function for primitive "..tostring(k))(...)
 				-- recreate a surface for each new primitive, so that the previous holes are clamped to 0 windage (instead of -1)
 				local surface = tesselation.surface()
