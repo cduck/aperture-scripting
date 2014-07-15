@@ -373,7 +373,8 @@ local function rotate_aperture_hole(a, b, angle)
 		elseif angle==90 or angle==270 then
 			a,b = b,a
 		else
-			error("unsupported rotation angle")
+			error("rectangle aperture holes cannot be rotated an arbitrary angle")
+			-- :TODO: convert to aperture macro
 		end
 	end
 	return a,b
