@@ -361,11 +361,11 @@ local function compile_expression(expression)
 		return expression
 			:gsub('x', '*')
 			:gsub('%$(%d+)', function(n) return "_VARS["..n.."]" end)
-			:gsub('%$(%a%w+)', function(k) return "_VARS['"..k.."']" end)
+			:gsub('%$(%a%w*)', function(k) return "_VARS['"..k.."']" end)
 	end
 end
 assert(compile_expression("1.08239x$1")=="1.08239*_VARS[1]")
-assert(compile_expression("$CXx2")=="_VARS['CX']*2")
+assert(compile_expression("$Xx2")=="_VARS['X']*2")
 
 ------------------------------------------------------------------------------
 
