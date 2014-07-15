@@ -378,7 +378,12 @@ function _M.compile(macro, circle_steps)
 		if instruction.type=='comment' then
 			-- ignore
 		elseif instruction.type=='variable' then
-			write("_VARS['"..instruction.name.."'] = "..compile_expression(instruction.expression).."\n")
+			if type(instruction.name)=='number' then
+				write("_VARS["..instruction.name.."]")
+			else
+				write("_VARS['"..instruction.name.."']")
+			end
+			write(" = "..compile_expression(instruction.expression).."\n")
 		elseif instruction.type=='primitive' then
 			write(instruction.shape.."(")
 			for i,expression in ipairs(instruction.parameters) do
