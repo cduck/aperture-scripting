@@ -436,6 +436,7 @@ function _M.compile(macro, circle_steps)
 				for _,path in ipairs(primitive) do
 					surface:extend(path)
 				end
+				-- :TODO: harden the tesselation module to deal with NaNs, or it crashes here
 				buffer = surface.contour
 			end
 		end,
