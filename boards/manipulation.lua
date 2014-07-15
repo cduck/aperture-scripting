@@ -114,7 +114,6 @@ function _M.rotate_macro(macro)
 		name = macro.name,
 		unit = macro.unit,
 		script = macro.script,
-		chunk = macro.chunk,
 	}
 	print("warning: macro rotation not yet implemented, assumed symmetrical")
 	return copy
@@ -448,7 +447,6 @@ function _M.scale_macro(macro, s)
 		name = macro.name,
 		unit = macro.unit,
 		script = macro.script,
-		chunk = macro.chunk,
 	}
 	error("macro scaling not yet implemented")
 	return copy
