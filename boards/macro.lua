@@ -142,6 +142,13 @@ function macro_primitives.polygon(...)
 	local diameter = argcheck('polygon', 5, 'number', ...)
 	local rotation = argcheck('polygon', 6, 'number', ...)
 	assert(x==0 and y==0 or rotation==0, "rotation is only allowed if the center point is on the origin")
+	if diameter < 0 then
+		print("warning: negative polygon diameter in macro")
+		diameter = -diameter
+	end
+	if diameter == 0 then
+		return {}
+	end
 	local r = diameter / 2
 	rotation = math.rad(rotation)
 	local path = {}
@@ -186,6 +193,11 @@ function macro_primitives.moire(...)
 	assert(x==0 and y==0 or rotation==0, "rotation is only allowed if the center point is on the origin")
 	assert(cross_hair_length >= outer_diameter, "unsupported moiré configuration") -- :TODO: this is a hard beast to tackle
 	assert(cross_hair_thickness > 0, "unsupported moiré configuration") -- :FIXME: this is just concentric rings
+	if outer_diameter < 0 then
+		print("warning: negative moiré diameter in macro")
+		outer_diameter = -outer_diameter
+	end
+	assert(outer_diameter > 0, "unsupported moiré configuration") -- :FIXME: this is just a cross
 	local r = outer_diameter / 2
 	rotation = math.rad(rotation)
 	local circle_steps = config.circle_steps
@@ -304,6 +316,16 @@ function macro_primitives.thermal(x, y, outer_diameter, inner_diameter, gap_thic
 	assert(type(rotation)=='number')
 	assert(x==0 and y==0 or rotation==0, "rotation is only allowed if the center point is on the origin")
 	assert(gap_thickness > 0, "unsupported thermal configuration") -- :FIXME: this is just a ring
+	if outer_diameter < inner_diameter then
+		print("warning: thermal outer diameter is smaller than inner diameter")
+		outer_diameter,inner_diameter = inner_diameter,outer_diameter
+	end
+	if outer_diameter == inner_diameter then
+		return {}
+	end
+	if gap_thickness > outer_diameter then
+		return {}
+	end
 	local circle_steps = config.circle_steps
 	local quadrant_steps = math.ceil(circle_steps / 4)
 	local r0 = outer_diameter / 2
