@@ -27,9 +27,12 @@ function macro_primitives.circle(...)
 end
 
 local function rotate(point, rotation)
+	local a = math.rad(rotation)
+	local c = math.cos(a)
+	local s = math.sin(a)
 	return {
-		x = point.x * math.cos(math.rad(rotation)) - point.y * math.sin(math.rad(rotation)),
-		y = point.x * math.sin(math.rad(rotation)) + point.y * math.cos(math.rad(rotation)),
+		x = point.x * c - point.y * s,
+		y = point.x * s + point.y * c,
 	}
 end
 
