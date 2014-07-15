@@ -125,7 +125,7 @@ function macro_primitives.outline(...)
 	assert(#path >= 3)
 	assert(path[1].x == path[#path].x)
 	assert(path[1].y == path[#path].y)
-	local rotation = select((points+1)*2+1, ...)
+	local rotation = select((points+1)*2+3, ...)
 	assert(type(rotation)=='number')
 	for i=1,#path do
 		path[i] = rotate(path[i], rotation)
