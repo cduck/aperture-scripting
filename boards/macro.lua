@@ -135,12 +135,12 @@ end
 
 -- Polygon, primitive code 5
 function macro_primitives.polygon(...)
-	local exposure = argcheck('outline', 1, 'number', ...)
-	local vertices = argcheck('outline', 2, 'number', ...)
-	local x = argcheck('outline', 3, 'number', ...)
-	local y = argcheck('outline', 4, 'number', ...)
-	local diameter = argcheck('outline', 5, 'number', ...)
-	local rotation = argcheck('outline', 6, 'number', ...)
+	local exposure = argcheck('polygon', 1, 'number', ...)
+	local vertices = argcheck('polygon', 2, 'number', ...)
+	local x = argcheck('polygon', 3, 'number', ...)
+	local y = argcheck('polygon', 4, 'number', ...)
+	local diameter = argcheck('polygon', 5, 'number', ...)
+	local rotation = argcheck('polygon', 6, 'number', ...)
 	assert(x==0 and y==0 or rotation==0, "rotation is only allowed if the center point is on the origin")
 	local r = diameter / 2
 	rotation = math.rad(rotation)
