@@ -52,14 +52,14 @@ function macro_primitives.line(...)
 	if n == 0 then
 		return nil -- empty primitive
 	end
-	dx = dx * line_width / n
-	dy = dy * line_width / n
+	local lx = line_width / 2 * dx / n
+	local ly = line_width / 2 * dy / n
 	local path = {}
-	table.insert(path, rotate({x=x0-dy, y=y0+dx}, rotation))
-	table.insert(path, rotate({x=x0+dy, y=y0-dx}, rotation))
-	table.insert(path, rotate({x=x1+dy, y=y1-dx}, rotation))
-	table.insert(path, rotate({x=x1-dy, y=y1+dx}, rotation))
-	table.insert(path, rotate({x=x0-dy, y=y0+dx}, rotation))
+	table.insert(path, rotate({x=x0-ly, y=y0+lx}, rotation))
+	table.insert(path, rotate({x=x0+ly, y=y0-lx}, rotation))
+	table.insert(path, rotate({x=x1+ly, y=y1-lx}, rotation))
+	table.insert(path, rotate({x=x1-ly, y=y1+lx}, rotation))
+	table.insert(path, rotate({x=x0-ly, y=y0+lx}, rotation))
 	return { path }
 end
 macro_primitives.rectangle_ends = macro_primitives.line
