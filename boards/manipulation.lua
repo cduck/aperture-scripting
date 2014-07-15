@@ -109,13 +109,259 @@ end
 
 ------------------------------------------------------------------------------
 
-function _M.rotate_macro(macro)
+local function rotate_xy(px, py, angle)
+	if angle==0 then
+		return px,py
+	elseif angle==90 then
+		return -py,px
+	elseif angle==180 then
+		return -px,-py
+	elseif angle==270 then
+		return py,-px
+	else
+		local a = math.rad(angle)
+		local c,s = math.cos(a),math.sin(a)
+		x = px*c - py*s
+		y = px*s + py*c
+		return x,y
+	end
+end
+
+if _NAME=='test' then
+	require 'test'
+	local function round(x, digits) return math.floor(x * 10^digits + 0.5) / 10^digits end
+	expect( 1, select(1, rotate_xy(1, 0, 0)))
+	expect( 0, select(2, rotate_xy(1, 0, 0)))
+	expect( 0, select(1, rotate_xy(1, 0, 90)))
+	expect( 1, select(2, rotate_xy(1, 0, 90)))
+	expect(-1, select(1, rotate_xy(1, 0, 180)))
+	expect( 0, select(2, rotate_xy(1, 0, 180)))
+	expect( 0, select(1, rotate_xy(1, 0, 270)))
+	expect(-1, select(2, rotate_xy(1, 0, 270)))
+	expect( 0, select(1, rotate_xy(0, 1, 0)))
+	expect( 1, select(2, rotate_xy(0, 1, 0)))
+	expect(-1, select(1, rotate_xy(0, 1, 90)))
+	expect( 0, select(2, rotate_xy(0, 1, 90)))
+	expect( 0, select(1, rotate_xy(0, 1, 180)))
+	expect(-1, select(2, rotate_xy(0, 1, 180)))
+	expect( 1, select(1, rotate_xy(0, 1, 270)))
+	expect( 0, select(2, rotate_xy(0, 1, 270)))
+	expect( 0.707, round(select(1, rotate_xy(1, 0, 45)), 3))
+	expect( 0.707, round(select(2, rotate_xy(1, 0, 45)), 3))
+end
+
+local function rotate_xy_expressions(px, py, angle)
+	if angle==0 then
+		return px,py
+	elseif angle==90 then
+		return '0-('..py..')',px
+	elseif angle==180 then
+		return '0-('..px..')','0-('..py..')'
+	elseif angle==270 then
+		return py,'0-('..px..')'
+	else
+		local a = math.rad(angle)
+		local c,s = math.cos(a),math.sin(a)
+		x = '('..px..')x'..c..'-('..py..')x'..s
+		y = '('..px..')x'..s..'+('..py..')x'..c
+		return x,y
+	end
+end
+
+local function rotate_xy_parameters(x, y, angle)
+	if type(x)=='number' and type(y)=='number' then
+		return rotate_xy(x, y, angle)
+	else
+		-- :TODO: pass the macro down here to generate unique variable names
+		local ix,iy
+		if type(x)=='string' then
+			ix = {
+				type = 'variable',
+				name = 'TMPX',
+				expression = x,
+			}
+			x = '$TMPX'
+		end
+		if type(y)=='string' then
+			iy = {
+				type = 'variable',
+				name = 'TMPY',
+				expression = y,
+			}
+			y = '$TMPY'
+		end
+		x,y = rotate_xy_expressions(x, y, angle)
+		return x,y,ix,iy
+	end
+end
+
+local function rotate_angle_parameter(value, angle)
+	local t = type(value)
+	if t=='number' then
+		return (value + angle) % 360
+	elseif t=='string' then
+		if angle==0 then
+			return value
+		elseif angle < 0 then
+			return value..'-'..-angle
+		else
+			return value..'+'..angle
+		end
+	else
+		error("unsupported parameter type "..t)
+	end
+end
+
+local macro_primitives = {}
+
+function macro_primitives.circle(parameters, angle)
+	local copy = {}
+	for i,param in ipairs(parameters) do
+		copy[i] = param
+	end
+	local ix,iy
+	copy[3],copy[4],ix,iy = rotate_xy_parameters(parameters[3], parameters[4], angle)
+	return copy,ix,iy
+end
+
+function macro_primitives.line(parameters, angle)
+	local copy = {}
+	for i,param in ipairs(parameters) do
+		copy[i] = param
+	end
+	copy[7] = rotate_angle_parameter(parameters[7], angle)
+	return copy
+end
+macro_primitives.rectangle_ends = macro_primitives.line
+
+function macro_primitives.rectangle_center(parameters, angle)
+	local copy = {}
+	for i,param in ipairs(parameters) do
+		copy[i] = param
+	end
+	copy[6] = rotate_angle_parameter(parameters[6], angle)
+	return copy
+end
+
+function macro_primitives.rectangle_corner(parameters, angle)
+	local copy = {}
+	for i,param in ipairs(parameters) do
+		copy[i] = param
+	end
+	copy[6] = rotate_angle_parameter(parameters[6], angle)
+	return copy
+end
+
+function macro_primitives.outline(parameters, angle)
+	local copy = {}
+	for i,param in ipairs(parameters) do
+		copy[i] = param
+	end
+	copy[#copy] = rotate_angle_parameter(parameters[#parameters], angle)
+	return copy
+end
+
+function macro_primitives.polygon(parameters, angle)
+	local copy = {}
+	for i,param in ipairs(parameters) do
+		copy[i] = param
+	end
+	local ix,iy
+	if parameters[3]==0 and parameters[4]==0 then
+		copy[6] = rotate_angle_parameter(parameters[6], angle)
+	else
+		local segment = 360 / parameters[2]
+		if angle % segment ~= 0 then
+			error("arbitrary rotation of non-centered polygon is not yet supported")
+			-- :TODO: convert to an outline
+		else
+			copy[3],copy[4],ix,iy = rotate_xy_parameters(parameters[3], parameters[4], angle)
+		end
+	end
+	return copy,ix,iy
+end
+
+function macro_primitives.moire(parameters, angle)
+	local copy = {}
+	for i,param in ipairs(parameters) do
+		copy[i] = param
+	end
+	local ix,iy
+	if parameters[1]==0 and parameters[2]==0 then
+		copy[9] = rotate_angle_parameter(parameters[9], angle)
+	else
+		if angle % 90 ~= 0 then
+			error("arbitrary rotation of non-centered moiré is not yet supported")
+			-- :TODO: find some way to rotate these
+		else
+			copy[1],copy[2],ix,iy = rotate_xy_parameters(parameters[1], parameters[2], angle)
+		end
+	end
+	return copy,ix,iy
+end
+
+function macro_primitives.thermal(parameters, angle)
+	local copy = {}
+	for i,param in ipairs(parameters) do
+		copy[i] = param
+	end
+	local ix,iy
+	if parameters[1]==0 and parameters[2]==0 then
+		copy[6] = rotate_angle_parameter(parameters[6], angle)
+	else
+		if angle % 90 ~= 0 then
+			error("arbitrary rotation of non-centered thermal is not yet supported")
+			-- :TODO: find some way to rotate these
+		else
+			copy[1],copy[2],ix,iy = rotate_xy_parameters(parameters[1], parameters[2], angle)
+		end
+	end
+	return copy,ix,iy
+end
+
+local function rotate_macro_primitive(instruction, angle)
+	local shape = instruction.shape
+	local copy = {
+		type = instruction.type,
+		shape = shape,
+	}
+	local rotate = assert(macro_primitives[shape], "unsupported aperture macro primitive shape "..tostring(shape))
+	local ix,iy
+	copy.parameters,ix,iy = rotate(instruction.parameters, angle)
+	return copy,ix,iy
+end
+
+function _M.rotate_macro(macro, angle)
 	local copy = {
 		name = macro.name,
 		unit = macro.unit,
-		script = macro.script,
+		script = {},
 	}
-	print("warning: macro rotation not yet implemented, assumed symmetrical")
+	for _,instruction in ipairs(macro.script) do
+		if instruction.type=='comment' then
+			table.insert(copy.script, {
+				type = instruction.type,
+				text = instruction.text,
+			})
+		elseif instruction.type=='variable' then
+			table.insert(copy.script, {
+				type = instruction.type,
+				name = instruction.name,
+				expression = instruction.expression,
+			})
+		elseif instruction.type=='primitive' then
+			local primitive,ix,iy = rotate_macro_primitive(instruction, angle)
+			if ix then
+				table.insert(copy.script, ix)
+			end
+			if iy then
+				table.insert(copy.script, iy)
+			end
+			table.insert(copy.script, primitive)
+		else
+			error("unsupported macro instruction type "..tostring(instruction.type))
+		end
+	end
 	return copy
 end
 
@@ -181,35 +427,6 @@ function _M.rotate_aperture(aperture, angle, macros)
 	return copy
 end
 
-local function rotate_xy(px, py, angle)
-	local a = math.rad(angle)
-	local c,s = math.cos(a),math.sin(a)
-	x = px*c - py*s
-	y = px*s + py*c
-	return x,y
-end
-
-if _NAME=='test' then
-	require 'test'
-	local function round(x, digits) return math.floor(x * 10^digits + 0.5) / 10^digits end
-	expect( 1, round(select(1, rotate_xy(1, 0, 0)), 12))
-	expect( 0, round(select(2, rotate_xy(1, 0, 0)), 12))
-	expect( 0, round(select(1, rotate_xy(1, 0, 90)), 12))
-	expect( 1, round(select(2, rotate_xy(1, 0, 90)), 12))
-	expect(-1, round(select(1, rotate_xy(1, 0, 180)), 12))
-	expect( 0, round(select(2, rotate_xy(1, 0, 180)), 12))
-	expect( 0, round(select(1, rotate_xy(1, 0, 270)), 12))
-	expect(-1, round(select(2, rotate_xy(1, 0, 270)), 12))
-	expect( 0, round(select(1, rotate_xy(0, 1, 0)), 12))
-	expect( 1, round(select(2, rotate_xy(0, 1, 0)), 12))
-	expect(-1, round(select(1, rotate_xy(0, 1, 90)), 12))
-	expect( 0, round(select(2, rotate_xy(0, 1, 90)), 12))
-	expect( 0, round(select(1, rotate_xy(0, 1, 180)), 12))
-	expect(-1, round(select(2, rotate_xy(0, 1, 180)), 12))
-	expect( 1, round(select(1, rotate_xy(0, 1, 270)), 12))
-	expect( 0, round(select(2, rotate_xy(0, 1, 270)), 12))
-end
-
 function _M.rotate_point(point, angle)
 	angle = angle % 360
 	local copy = {}
@@ -217,25 +434,8 @@ function _M.rotate_point(point, angle)
 		copy[k] = v
 	end
 	-- fix x,y
-	local x,y
-	if angle==0 then
-		x,y = point.x,point.y
-	elseif angle==90 then
-		local px,py = point.x,point.y
-		if px then y = px end
-		if py then x = -py end
-	elseif angle==180 then
-		local px,py = point.x,point.y
-		if px then x = -px end
-		if py then y = -py end
-	elseif angle==270 then
-		local px,py = point.x,point.y
-		if px then y = -px end
-		if py then x = py end
-	else
-		assert(point.x and point.y, "only points with x and y can be rotated an arbitrary angle")
-		x,y = rotate_xy(point.x, point.y, angle)
-	end
+	assert(point.x and point.y, "only points with x and y can be rotated")
+	local x,y = rotate_xy(point.x, point.y, angle)
 	copy.x,copy.y = x,y
 	-- fix i,j
 	local i,j
