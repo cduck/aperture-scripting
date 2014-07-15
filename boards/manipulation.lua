@@ -269,14 +269,11 @@ function macro_primitives.polygon(parameters, angle)
 	local ix,iy
 	if parameters[3]==0 and parameters[4]==0 then
 		copy[6] = rotate_angle_parameter(parameters[6], angle)
+	elseif (angle * parameters[2]) % 360 == 0 then
+		copy[3],copy[4],ix,iy = rotate_xy_parameters(parameters[3], parameters[4], angle)
 	else
-		local segment = 360 / parameters[2]
-		if angle % segment ~= 0 then
-			error("arbitrary rotation of non-centered polygon is not yet supported")
-			-- :TODO: convert to an outline
-		else
-			copy[3],copy[4],ix,iy = rotate_xy_parameters(parameters[3], parameters[4], angle)
-		end
+		error("arbitrary rotation of non-centered polygon is not supported")
+		-- :TODO: convert to an outline
 	end
 	return copy,ix,iy
 end
@@ -289,13 +286,11 @@ function macro_primitives.moire(parameters, angle)
 	local ix,iy
 	if parameters[1]==0 and parameters[2]==0 then
 		copy[9] = rotate_angle_parameter(parameters[9], angle)
+	elseif angle % 90 == 0 then
+		copy[1],copy[2],ix,iy = rotate_xy_parameters(parameters[1], parameters[2], angle)
 	else
-		if angle % 90 ~= 0 then
-			error("arbitrary rotation of non-centered moiré is not yet supported")
-			-- :TODO: find some way to rotate these
-		else
-			copy[1],copy[2],ix,iy = rotate_xy_parameters(parameters[1], parameters[2], angle)
-		end
+		error("arbitrary rotation of non-centered moiré is not supported")
+		-- :TODO: find some way to rotate these
 	end
 	return copy,ix,iy
 end
@@ -308,13 +303,11 @@ function macro_primitives.thermal(parameters, angle)
 	local ix,iy
 	if parameters[1]==0 and parameters[2]==0 then
 		copy[6] = rotate_angle_parameter(parameters[6], angle)
+	elseif angle % 90 == 0 then
+		copy[1],copy[2],ix,iy = rotate_xy_parameters(parameters[1], parameters[2], angle)
 	else
-		if angle % 90 ~= 0 then
-			error("arbitrary rotation of non-centered thermal is not yet supported")
-			-- :TODO: find some way to rotate these
-		else
-			copy[1],copy[2],ix,iy = rotate_xy_parameters(parameters[1], parameters[2], angle)
-		end
+		error("arbitrary rotation of non-centered thermal is not supported")
+		-- :TODO: find some way to rotate these
 	end
 	return copy,ix,iy
 end
