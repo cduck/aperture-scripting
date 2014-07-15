@@ -153,6 +153,9 @@ function macro_variable_mt:__tostring()
 end
 
 function _M.macro_variable(name, expression)
+	if type(name)=='string' and name:match('^%d+$') then
+		name = tonumber(name)
+	end
 	local macro_variable = setmetatable({type='variable'}, macro_variable_mt)
 	macro_variable.name = name
 	macro_variable.expression = expression
