@@ -314,14 +314,38 @@ end
 
 local function rotate_macro_primitive(instruction, angle)
 	local shape = instruction.shape
-	local copy = {
-		type = instruction.type,
-		shape = shape,
-	}
-	local rotate = assert(macro_primitives[shape], "unsupported aperture macro primitive shape "..tostring(shape))
-	local ix,iy
-	copy.parameters,ix,iy = rotate(instruction.parameters, angle)
-	return copy,ix,iy
+	local parameters = instruction.parameters
+	if shape=='polygon' and parameters[3]~=0 and parameters[4]~=0 and (angle * parameters[2]) % 360 ~= 0 then
+		local exposure,vertices,x,y,d,rotation = table.unpack(parameters)
+		-- convert polygon to outline
+		local outline = {
+			type = instruction.type,
+			shape = 'outline',
+			parameters = {
+				exposure,
+				vertices, -- outline has an extra point, but it's not counted here
+			},
+		}
+		local r = d / 2
+		for i=0,vertices do
+			-- :KLUDGE: we force last vertex on the first, since sin(x) is not always equal to sin(x+2*pi)
+			if i==vertices then i = 0 end
+			local a = math.pi * 2 * (i / vertices)
+			table.insert(outline.parameters, x + r * math.cos(a))
+			table.insert(outline.parameters, y + r * math.sin(a))
+		end
+		table.insert(outline.parameters, (rotation + angle) % 360)
+		return outline
+	else
+		local copy = {
+			type = instruction.type,
+			shape = shape,
+		}
+		local rotate = assert(macro_primitives[shape], "unsupported aperture macro primitive shape "..tostring(shape))
+		local ix,iy
+		copy.parameters,ix,iy = rotate(parameters, angle)
+		return copy,ix,iy
+	end
 end
 
 function _M.rotate_macro(macro, angle)
