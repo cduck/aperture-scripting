@@ -45,7 +45,6 @@ function macro_primitives.line(...)
 	local x1 = argcheck('vector line', 5, 'number', ...)
 	local y1 = argcheck('vector line', 6, 'number', ...)
 	local rotation = argcheck('vector line', 7, 'number', ...)
-	assert(exposure==1, "unexposed line primitives are not supported")
 	local dx = x1 - x0
 	local dy = y1 - y0
 	local n = math.sqrt(dx*dx + dy*dy)
@@ -60,6 +59,9 @@ function macro_primitives.line(...)
 	table.insert(path, rotate({x=x1+ly, y=y1-lx}, rotation))
 	table.insert(path, rotate({x=x1-ly, y=y1+lx}, rotation))
 	table.insert(path, rotate({x=x0-ly, y=y0+lx}, rotation))
+	if exposure==0 then
+		path[2],path[4] = path[4],path[2]
+	end
 	return { path }
 end
 macro_primitives.rectangle_ends = macro_primitives.line
@@ -81,11 +83,7 @@ function macro_primitives.rectangle_center(...)
 	table.insert(path, rotate({x=x-dx, y=y+dy}, rotation))
 	table.insert(path, rotate({x=x-dx, y=y-dy}, rotation))
 	if exposure==0 then
-		local t = {}
-		for i=1,#path do
-			t[i] = path[#path+1-i]
-		end
-		path = t
+		path[2],path[4] = path[4],path[2]
 	end
 	return { path }
 end
@@ -98,7 +96,6 @@ function macro_primitives.rectangle_corner(...)
 	local x = argcheck('lower left line', 4, 'number', ...)
 	local y = argcheck('lower left line', 5, 'number', ...)
 	local rotation = argcheck('lower left line', 6, 'number', ...)
-	assert(exposure==1, "unexposed line primitives are not supported")
 	local dx = width
 	local dy = height
 	local path = {}
@@ -107,6 +104,9 @@ function macro_primitives.rectangle_corner(...)
 	table.insert(path, rotate({x=x+dx, y=y+dy}, rotation))
 	table.insert(path, rotate({x=x   , y=y+dy}, rotation))
 	table.insert(path, rotate({x=x   , y=y   }, rotation))
+	if exposure==0 then
+		path[2],path[4] = path[4],path[2]
+	end
 	return { path }
 end
 
@@ -114,7 +114,6 @@ end
 function macro_primitives.outline(...)
 	local exposure = argcheck('outline', 1, 'number', ...)
 	local points = argcheck('outline', 2, 'number', ...)
-	assert(exposure==1, "unexposed polygon primitives are not supported")
 	local path = {}
 	for i=0,points do
 		local x,y = select(i*2+3, ...)
@@ -129,6 +128,13 @@ function macro_primitives.outline(...)
 	assert(type(rotation)=='number')
 	for i=1,#path do
 		path[i] = rotate(path[i], rotation)
+	end
+	if region.exterior(path) ~= (exposure~=0) then
+		local t = {}
+		for i=1,#path do
+			t[i] = path[#path+1-i]
+		end
+		path = t
 	end
 	return { path }
 end
