@@ -16,6 +16,29 @@ local aperture_scales = {
 	MM_mm =  1,
 }
 
+local function generate_aperture_hole(x, y, scale, circle_steps)
+	local path
+	if y then
+		path = {
+			{x=-x/2*scale, y=-y/2*scale},
+			{x=-x/2*scale, y= y/2*scale},
+			{x= x/2*scale, y= y/2*scale},
+			{x= x/2*scale, y=-y/2*scale},
+			{x=-x/2*scale, y=-y/2*scale},
+		}
+	elseif x and x ~= 0 then
+		local d = x
+		path = {}
+		local r = d / 2 * scale
+		for i=0,circle_steps do
+			if i==circle_steps then i = 0 end -- :KLUDGE: sin(2*pi) is not zero, but an epsilon, so we force it
+			local a = -math.pi * 2 * (i / circle_steps)
+			table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
+		end
+	end
+	return path
+end
+
 function _M.generate_aperture_paths(aperture, board_unit, circle_steps)
 	local shape = aperture.shape
 	if not shape and not aperture.macro then
@@ -29,7 +52,6 @@ function _M.generate_aperture_paths(aperture, board_unit, circle_steps)
 	if shape=='circle' then
 		local d,hx,hy = unpack(parameters)
 		assert(d, "circle apertures require at least 1 parameter")
-		assert(not hx and not hy, "circle apertures with holes are not yet supported")
 		local path = {concave=true}
 		if d ~= 0 then
 			local r = d / 2 * scale
@@ -39,11 +61,11 @@ function _M.generate_aperture_paths(aperture, board_unit, circle_steps)
 				table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
 			end
 		end
-		paths = { path }
+		local hole = generate_aperture_hole(hx, hy, scale, circle_steps)
+		paths = { path, hole }
 	elseif shape=='rectangle' then
 		local x,y,hx,hy = unpack(parameters)
 		assert(x and y, "rectangle apertures require at least 2 parameters")
-		assert(not hx and not hy, "rectangle apertures with holes are not yet supported")
 		local path = {
 			concave=true,
 			{x=-x/2*scale, y=-y/2*scale},
@@ -52,12 +74,12 @@ function _M.generate_aperture_paths(aperture, board_unit, circle_steps)
 			{x=-x/2*scale, y= y/2*scale},
 			{x=-x/2*scale, y=-y/2*scale},
 		}
-		paths = { path }
+		local hole = generate_aperture_hole(hx, hy, scale, circle_steps)
+		paths = { path, hole }
 	elseif shape=='obround' then
 		assert(circle_steps % 2 == 0, "obround apertures are only supported when circle_steps is even")
 		local x,y,hx,hy = unpack(parameters)
 		assert(x and y, "obround apertures require at least 2 parameters")
-		assert(not hx and not hy, "obround apertures with holes are not yet supported")
 		local path = {concave=true}
 		if y > x then
 			local straight = (y - x) * scale
@@ -86,12 +108,12 @@ function _M.generate_aperture_paths(aperture, board_unit, circle_steps)
 			end
 			table.insert(path, {x=straight/2, y=-r})
 		end
-		paths = { path }
+		local hole = generate_aperture_hole(hx, hy, scale, circle_steps)
+		paths = { path, hole }
 	elseif shape=='polygon' then
 		local d,steps,angle,hx,hy = unpack(parameters)
 		assert(d and steps, "polygon apertures require at least 2 parameter")
 		angle = angle or 0
-		assert(not hx and not hy, "polygon apertures with holes are not yet supported")
 		local path = {concave=true}
 		if d ~= 0 then
 			local r = d / 2 * scale
@@ -101,7 +123,8 @@ function _M.generate_aperture_paths(aperture, board_unit, circle_steps)
 				table.insert(path, {x=r*math.cos(a), y=r*math.sin(a)})
 			end
 		end
-		paths = { path }
+		local hole = generate_aperture_hole(hx, hy, scale, circle_steps)
+		paths = { path, hole }
 	elseif aperture.macro then
 		local chunk = macro.compile(aperture.macro, circle_steps)
 		local data = chunk(unpack(parameters or {}))
