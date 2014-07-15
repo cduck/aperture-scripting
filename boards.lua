@@ -11,7 +11,6 @@ local bom = require 'bom'
 local svg = require 'svg'
 local dxf = require 'dxf'
 local dump = require 'dump'
-local crypto = require 'crypto'
 
 local region = require 'boards.region'
 local drawing = require 'boards.drawing'
@@ -301,22 +300,10 @@ function _M.load(path, options)
 	end
 	board.extensions = extensions
 	
-	-- determine file hashes
-	local hashes = {}
-	for type,path in pairs(paths) do
-		local file = assert(io.open(path, "rb"))
-		local content = assert(file:read('*all'))
-		assert(file:close())
-		local hash = crypto.evp.digest('md5', content):lower()
-		hashes[type] = hash
-	end
-	board.hashes = hashes
-	
 	-- load images
 	local images = {}
 	local formats = {}
 	for type,path in pairs(paths) do
-		local hash = hashes[type]
 		local format = assert(_M.detect_format(path), "could not detect format of file "..tostring(path))
 		local image = load_image(path, format, board.unit, template)
 		images[type] = image
