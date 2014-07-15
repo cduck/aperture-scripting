@@ -400,6 +400,8 @@ function _M.rotate_aperture(aperture, angle, macros)
 	elseif aperture.shape=='circle' then
 		copy.parameters[2],copy.parameters[3] = rotate_aperture_hole(copy.parameters[2], copy.parameters[3], angle)
 	elseif aperture.shape=='rectangle' or aperture.shape=='obround' then
+		assert(angle % 90 == 0, aperture.shape.." aperture can only be rotated multiples of 90 degrees")
+		-- :TODO: convert to a macro if angle is arbitrary
 		assert(#copy.parameters >= 2)
 		copy.parameters[1],copy.parameters[2] = rotate_aperture_hole(copy.parameters[1], copy.parameters[2], angle)
 		copy.parameters[3],copy.parameters[4] = rotate_aperture_hole(copy.parameters[3], copy.parameters[4], angle)
