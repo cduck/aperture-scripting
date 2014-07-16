@@ -177,18 +177,18 @@ local function rotate_xy_parameters(x, y, angle)
 		if type(x)=='string' then
 			ix = {
 				type = 'variable',
-				name = 'TMPX',
+				name = 'TMPI',
 				expression = x,
 			}
-			x = '$TMPX'
+			x = '$TMPI'
 		end
 		if type(y)=='string' then
 			iy = {
 				type = 'variable',
-				name = 'TMPY',
+				name = 'TMPJ',
 				expression = y,
 			}
-			y = '$TMPY'
+			y = '$TMPJ'
 		end
 		x,y = rotate_xy_expressions(x, y, angle)
 		return x,y,ix,iy
