@@ -26,9 +26,9 @@ end
 
 ------------------------------------------------------------------------------
 
-local success,result = pcall(require, 'freetype.core')
+local success,result = pcall(require, 'freetype')
 if not success then
-	if not result:match("module 'freetype.core' not found") then
+	if not result:match("module 'freetype' not found") then
 		error(result)
 	end
 else
