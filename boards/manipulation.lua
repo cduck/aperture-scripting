@@ -413,7 +413,7 @@ function _M.rotate_aperture(aperture, angle, macros)
 			copy.parameters[k] = v
 		end
 	end
-	-- adjust parameters
+	-- adjust parameters (and some shapes need to be converted to macros)
 	assert(not (aperture.shape and aperture.macro), "aperture has a shape and a macro")
 	if aperture.macro then
 		copy.macro = macros[aperture.macro]
@@ -422,22 +422,182 @@ function _M.rotate_aperture(aperture, angle, macros)
 			macros[aperture.macro] = copy.macro
 		end
 	elseif aperture.shape=='circle' then
-		copy.parameters[2],copy.parameters[3] = rotate_aperture_hole(copy.parameters[2], copy.parameters[3], angle)
-	elseif aperture.shape=='rectangle' or aperture.shape=='obround' then
-		assert(angle % 90 == 0, aperture.shape.." aperture can only be rotated multiples of 90 degrees")
-		-- :TODO: convert to a macro if angle is arbitrary
-		assert(#copy.parameters >= 2)
-		copy.parameters[1],copy.parameters[2] = rotate_aperture_hole(copy.parameters[1], copy.parameters[2], angle)
-		copy.parameters[3],copy.parameters[4] = rotate_aperture_hole(copy.parameters[3], copy.parameters[4], angle)
-	elseif aperture.shape=='polygon' then
-		local shape_angle = copy.parameters[3] or 0
-		shape_angle = (shape_angle + angle) % 360
-		if #copy.parameters<=3 and shape_angle==0 then
-			copy.parameters[3] = nil
+		if angle % 90 ~= 0 and copy.parameters[3] ~= 0 then
+			local d,hx,hy = table.unpack(aperture.parameters)
+			copy.shape = nil
+			copy.parameters = nil
+			copy.macro = {
+				name = aperture.name,
+				unit = aperture.unit,
+				script = {},
+			}
+			table.insert(copy.macro.script, {
+				type = 'primitive',
+				shape = 'circle',
+				parameters = { 1, d, 0, 0 },
+			})
+			if hy then
+				assert(hx)
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'rectangle_center',
+					parameters = { 0, hx, hy, 0, 0, angle },
+				})
+			elseif hx then
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'circle',
+					parameters = { 0, hx, 0, 0 },
+				})
+			end
 		else
-			copy.parameters[3] = shape_angle
+			copy.parameters[2],copy.parameters[3] = rotate_aperture_hole(copy.parameters[2], copy.parameters[3], angle)
 		end
-		copy.parameters[4],copy.parameters[5] = rotate_aperture_hole(copy.parameters[4], copy.parameters[5], angle)
+	elseif aperture.shape=='rectangle' then
+		if angle % 90 ~= 0 then
+			local x,y,hx,hy = table.unpack(aperture.parameters)
+			copy.shape = nil
+			copy.parameters = nil
+			copy.macro = {
+				name = aperture.name,
+				unit = aperture.unit,
+				script = {},
+			}
+			table.insert(copy.macro.script, {
+				type = 'primitive',
+				shape = 'rectangle_center',
+				parameters = { 1, x, y, 0, 0, angle },
+			})
+			if hy then
+				assert(hx)
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'rectangle_center',
+					parameters = { 0, hx, hy, 0, 0, angle },
+				})
+			elseif hx then
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'circle',
+					parameters = { 0, hx, 0, 0 },
+				})
+			end
+		else
+			assert(#copy.parameters >= 2)
+			copy.parameters[1],copy.parameters[2] = rotate_aperture_hole(copy.parameters[1], copy.parameters[2], angle)
+			copy.parameters[3],copy.parameters[4] = rotate_aperture_hole(copy.parameters[3], copy.parameters[4], angle)
+		end
+	elseif aperture.shape=='obround' then
+		if angle % 90 ~= 0 and (aperture.parameters[1] ~= aperture.parameters[2] or aperture.parameters[4]) then
+			local x,y,hx,hy = table.unpack(aperture.parameters)
+			copy.shape = nil
+			copy.parameters = nil
+			copy.macro = {
+				name = aperture.name,
+				unit = aperture.unit,
+				script = {},
+			}
+			if x == y then
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'circle',
+					parameters = { 1, x, 0, 0 },
+				})
+			elseif x < y then
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'rectangle_center',
+					parameters = { 1, x, y - x, 0, 0, angle },
+				})
+				local dx,dy = 0,(y - x) / 2
+				dx,dy = rotate_xy(dx, dy, angle)
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'circle',
+					parameters = { 1, x, -dx, -dy },
+				})
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'circle',
+					parameters = { 1, x, dx, dy },
+				})
+			else
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'rectangle_center',
+					parameters = { 1, x - y, y, 0, 0, angle },
+				})
+				local dx,dy = (x - y) / 2,0
+				dx,dy = rotate_xy(dx, dy, angle)
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'circle',
+					parameters = { 1, y, -dx, -dy },
+				})
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'circle',
+					parameters = { 1, y, dx, dy },
+				})
+			end
+			if hy then
+				assert(hx)
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'rectangle_center',
+					parameters = { 0, hx, hy, 0, 0, angle },
+				})
+			elseif hx then
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'circle',
+					parameters = { 0, hx, 0, 0 },
+				})
+			end
+		else
+			assert(#copy.parameters >= 2)
+			copy.parameters[1],copy.parameters[2] = rotate_aperture_hole(copy.parameters[1], copy.parameters[2], angle)
+			copy.parameters[3],copy.parameters[4] = rotate_aperture_hole(copy.parameters[3], copy.parameters[4], angle)
+		end
+	elseif aperture.shape=='polygon' then
+		if angle % 90 ~= 0 and aperture.parameters[5] then
+			local d,n,a,hx,hy = table.unpack(aperture.parameters)
+			copy.shape = nil
+			copy.parameters = nil
+			copy.macro = {
+				name = aperture.name,
+				unit = aperture.unit,
+				script = {},
+			}
+			table.insert(copy.macro.script, {
+				type = 'primitive',
+				shape = 'polygon',
+				parameters = { 1, n, 0, 0, d, angle },
+			})
+			if hy then
+				assert(hx)
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'rectangle_center',
+					parameters = { 0, hx, hy, 0, 0, angle },
+				})
+			elseif hx then
+				table.insert(copy.macro.script, {
+					type = 'primitive',
+					shape = 'circle',
+					parameters = { 0, hx, 0, 0 },
+				})
+			end
+		else
+			local shape_angle = copy.parameters[3] or 0
+			shape_angle = (shape_angle + angle) % 360
+			if #copy.parameters<=3 and shape_angle==0 then
+				copy.parameters[3] = nil
+			else
+				copy.parameters[3] = shape_angle
+			end
+			copy.parameters[4],copy.parameters[5] = rotate_aperture_hole(copy.parameters[4], copy.parameters[5], angle)
+		end
 	elseif aperture.device then
 		-- parts rotation is in the layer data
 		copy.device = true
