@@ -170,6 +170,19 @@ end
 
 ------------------------------------------------------------------------------
 
+function _M.macro_instruction(data)
+	local t = data.type
+	if t=='comment' then
+		return _M.macro_comment(data.text)
+	elseif t=='primitive' then
+		return _M.macro_primitive(data.shape, data.parameters)
+	elseif t=='variable' then
+		return _M.macro_variable(data.name, data.expression)
+	else
+		error("unsupported macro instruction type "..tostring(t))
+	end
+end
+
 local function load_macro_instruction(block)
 	local char = block:sub(1,1)
 	if char=='0' then
@@ -195,7 +208,10 @@ end
 function _M.macro(name, script)
 	local macro = setmetatable({type='macro'}, macro_mt)
 	macro.name = name
-	macro.script = script
+	macro.script = {}
+	for i,instruction in ipairs(script) do
+		macro.script[i] = _M.macro_instruction(instruction)
+	end
 	return macro
 end
 
