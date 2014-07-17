@@ -1,4 +1,5 @@
 local boards = require 'boards'
+local manipulation = require 'boards.manipulation'
 
 local files = {}
 
@@ -28,13 +29,13 @@ files[#files] = nil
 -- load files
 for _,file in ipairs(files) do
 	print("loading "..file.filename)
-	file.board = boards.offset(assert(boards.load(file.filename, {keep_outlines_in_images=true})), file.offset.x, file.offset.y)
+	file.board = manipulation.offset_board(assert(boards.load(file.filename, {keep_outlines_in_images=true})), file.offset.x, file.offset.y)
 end
 
 -- merge files
 local merged = files[1].board
 for i=2,#files do
-	merged = boards.merge(merged, files[i].board)
+	merged = manipulation.merge_boards(merged, files[i].board)
 end
 
 -- merge apertures

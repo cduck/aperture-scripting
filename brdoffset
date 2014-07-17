@@ -1,4 +1,5 @@
 local boards = require 'boards'
+local manipulation = require 'boards.manipulation'
 
 local input,dx,dy,output = ...
 assert(dx:match('^([+-]?)([%d.]+)(%w*)$'), "invalid dx")
@@ -8,7 +9,7 @@ dy = boards.parse_distances(dy)
 
 local data = assert(boards.load(input))
 
-local copy = boards.offset(data, dx, dy)
+local copy = manipulation.offset_board(data, dx, dy)
 
 boards.save(copy, output)
 
