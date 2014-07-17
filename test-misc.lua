@@ -11,6 +11,6 @@ manipulation.rotate_image(image, 270)
 
 local board = assert(boards.load('test/simple/simple'))
 board = assert(manipulation.rotate_board(board, 90))
-assert(boards.save(board, 'test/tmp/tmp'))
+assert(boards.save(board, 'test/output/tmp'))
 
 print("all tests passed successfully")
