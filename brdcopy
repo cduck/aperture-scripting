@@ -1,3 +1,5 @@
+#!/usr/bin/lua
+
 local boards = require 'boards'
 
 local input,output = ...

@@ -1,5 +1,6 @@
 
 export LUA_PATH=./?.lua;;
+export PATH:=.:$(PATH)
 
 .PHONY:test
 test:test-check test-copy test-offset test-merge test-misc

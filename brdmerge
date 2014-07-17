@@ -1,3 +1,5 @@
+#!/usr/bin/lua
+
 local boards = require 'boards'
 local manipulation = require 'boards.manipulation'
 

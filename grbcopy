@@ -1,3 +1,5 @@
+#!/usr/bin/lua
+
 local gerber = require 'gerber'
 
 local input,output = ...
