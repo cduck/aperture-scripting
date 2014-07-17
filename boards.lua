@@ -5,11 +5,6 @@ local math = require 'math'
 local table = require 'table'
 local lfs = require 'lfs'
 local pathlib = require 'path'
-local gerber = require 'gerber'
-local excellon = require 'excellon'
-local bom = require 'bom'
-local svg = require 'svg'
-local dxf = require 'dxf'
 local dump = require 'dump'
 
 local region = require 'boards.region'
@@ -46,14 +41,19 @@ local function load_image(filepath, format, unit, template)
 	print("loading "..tostring(filepath))
 	local image
 	if format=='excellon' then
+		local excellon = require 'excellon'
 		image = excellon.load(filepath)
 	elseif format=='bom' then
+		local bom = require 'bom'
 		image = bom.load(filepath, template.bom)
 	elseif format=='gerber' then
+		local gerber = require 'gerber'
 		image = gerber.load(filepath)
 	elseif format=='svg' then
+		local svg = require 'svg'
 		image = svg.load(filepath)
 	elseif format=='dxf' then
+		local dxf = require 'dxf'
 		image = dxf.load(filepath)
 	else
 		error("unsupported image format "..tostring(format))
@@ -104,14 +104,19 @@ local function save_image(image, filepath, format, unit, template)
 	print("saving "..tostring(filepath))
 	assert(unit == 'pm', "saving scaled images is not yet supported")
 	if format=='excellon' then
+		local excellon = require 'excellon'
 		return excellon.save(image, filepath)
 	elseif format=='bom' then
+		local bom = require 'bom'
 		return bom.save(image, filepath, template.bom)
 	elseif format=='gerber' then
+		local gerber = require 'gerber'
 		return gerber.save(image, filepath)
 	elseif format=='svg' then
+		local svg = require 'svg'
 		return svg.save(image, filepath)
 	elseif format=='dxf' then
+		local dxf = require 'dxf'
 		return dxf.save(image, filepath)
 	else
 		error("unsupported image format "..tostring(format))
