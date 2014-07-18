@@ -86,7 +86,6 @@ end
 
 local function load_header(block)
 	-- may be a tool definition (in header) or a tool selection (in program)
-	local name,sparameters = block:match('^T(%d+)(.*)$')
 	local words = {}
 	for word in block:gmatch('[^;]+') do
 		table.insert(words, word)
@@ -160,7 +159,7 @@ function _M.load(filename)
 			if block=='M95' or block=='%' then
 				header = false
 			else
-				if block:match('^T') then
+				if block:match('^T%d') then
 					local tool = load_tool(block)
 					data.tools[tool.tcode] = tool
 					table.insert(data.headers, tool)
@@ -171,16 +170,21 @@ function _M.load(filename)
 					table.insert(data.headers, load_comment(block))
 				elseif block:match('^;') then
 					table.insert(data.headers, load_comment(block))
-				elseif block=='INCH,LZ' or block=='INCH,TZ' or block=='METRIC,LZ' or block=='METRIC,TZ' then
-					local unit,zeroes = block:match('^(.*),(.*)$')
-					if zeroes == 'LZ' then -- header is what is present
-						data.format.zeroes = 'T' -- format is what we omit
-						table.insert(data.headers, load_header(unit))
-					elseif zeroes == 'TZ' then
-						data.format.zeroes = 'L'
-						table.insert(data.headers, load_header(unit))
-					else
-						table.insert(data.headers, load_header(block))
+				elseif block:match('INCH') or block:match('METRIC') or block:match('LZ') or block:match('TZ') then
+					for word in block:gmatch('[^,]+') do
+						if word=='LZ' then -- header is what is present
+							data.format.zeroes = 'T' -- format is what we omit
+						elseif word=='TZ' then
+							data.format.zeroes = 'L'
+						elseif word=='INCH' then
+							data.format.integer,data.format.integer = 2,4
+							table.insert(data.headers, load_header(word))
+						elseif word=='METRIC' then
+							data.format.integer,data.format.decimal = 3,3
+							table.insert(data.headers, load_header(word))
+						else
+							error("unsupported keyword '"..word.."' in format header")
+						end
 					end
 				else
 					-- this is a very basic parameter parsing
