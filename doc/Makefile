@@ -1,0 +1,4 @@
+
+gendoc:
+	../../doc/gendoc
+
