@@ -8,4 +8,4 @@ test/simple.offset-1in-0
 test/simple.merge-a
 test/merged.drl
 test/merged.grb
-test/tmp
+test/output
