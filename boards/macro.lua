@@ -59,10 +59,11 @@ function macro_primitives.line(...)
 	table.insert(path, rotate({x=x1+ly, y=y1-lx}, rotation))
 	table.insert(path, rotate({x=x1-ly, y=y1+lx}, rotation))
 	table.insert(path, rotate({x=x0-ly, y=y0+lx}, rotation))
+	local hole
 	if exposure==0 then
-		path[2],path[4] = path[4],path[2]
+		hole = true
 	end
-	return { path }
+	return { hole=hole, path }
 end
 macro_primitives.rectangle_ends = macro_primitives.line
 
@@ -82,10 +83,11 @@ function macro_primitives.rectangle_center(...)
 	table.insert(path, rotate({x=x+dx, y=y+dy}, rotation))
 	table.insert(path, rotate({x=x-dx, y=y+dy}, rotation))
 	table.insert(path, rotate({x=x-dx, y=y-dy}, rotation))
+	local hole
 	if exposure==0 then
-		path[2],path[4] = path[4],path[2]
+		hole = true
 	end
-	return { path }
+	return { hole=hole, path }
 end
 
 -- Lower Left Line, primitive code 22
@@ -104,10 +106,11 @@ function macro_primitives.rectangle_corner(...)
 	table.insert(path, rotate({x=x+dx, y=y+dy}, rotation))
 	table.insert(path, rotate({x=x   , y=y+dy}, rotation))
 	table.insert(path, rotate({x=x   , y=y   }, rotation))
+	local hole
 	if exposure==0 then
-		path[2],path[4] = path[4],path[2]
+		hole = true
 	end
-	return { path }
+	return { hole=hole, path }
 end
 
 -- Outline, primitive code 4
@@ -129,14 +132,18 @@ function macro_primitives.outline(...)
 	for i=1,#path do
 		path[i] = rotate(path[i], rotation)
 	end
-	if region.exterior(path) ~= (exposure~=0) then
+	if not region.exterior(path) then
 		local t = {}
 		for i=1,#path do
 			t[i] = path[#path+1-i]
 		end
 		path = t
 	end
-	return { path }
+	local hole
+	if exposure==0 then
+		hole = true
+	end
+	return { hole=hole, path }
 end
 
 -- Polygon, primitive code 5
@@ -158,18 +165,21 @@ function macro_primitives.polygon(...)
 	local r = diameter / 2
 	rotation = math.rad(rotation)
 	local path = {}
-	local dir = exposure == 0 and -1 or 1
 	for i=0,vertices do
 		local a
 		-- :KLUDGE: we force last vertex on the first, since sin(x) is not always equal to sin(x+2*pi)
 		if i==vertices then i = 0 end
-		local a = rotation + dir * math.pi * 2 * (i / vertices)
+		local a = rotation + math.pi * 2 * (i / vertices)
 		table.insert(path, {
 			x = x + r * math.cos(a),
 			y = y + r * math.sin(a),
 		})
 	end
-	return { path }
+	local hole
+	if exposure==0 then
+		hole = true
+	end
+	return { hole=hole, path }
 end
 
 -- helper function for moiré
@@ -431,19 +441,28 @@ function _M.compile(macro, circle_steps)
 	local env = setmetatable({}, {
 		__index=function(_, k)
 			return function(...)
-				local tesselation = require 'tesselation'
+				local gpc = require 'gpc'
 				local primitive = assert(macro_primitives[k], "no generator function for primitive "..tostring(k))(...)
-				-- recreate a surface for each new primitive, so that the previous holes are clamped to 0 windage (instead of -1)
-				local surface = tesselation.surface()
-				for _,path in ipairs(buffer) do
-					surface:extend(path)
-				end
-				-- combine new primitive
+				-- build up a primitive polygon
+				local primpoly = gpc.new()
 				for _,path in ipairs(primitive) do
-					surface:extend(path)
+					local c = {}
+					for i=1,#path-1 do
+						table.insert(c, path[i].x)
+						table.insert(c, path[i].y)
+					end
+					if region.exterior(path) then
+						primpoly = primpoly + gpc.new():add(c)
+					else
+						primpoly = primpoly - gpc.new():add(c)
+					end
 				end
-				-- :TODO: harden the tesselation module to deal with NaNs, or it crashes here
-				buffer = surface.contour
+				-- add it to the aperture
+				if primitive.hole then
+					buffer = buffer - primpoly
+				else
+					buffer = buffer + primpoly
+				end
 			end
 		end,
 		__newindex=function(_, k, v)
@@ -458,14 +477,32 @@ function _M.compile(macro, circle_steps)
 		setfenv(rawchunk, env)
 	end
 	local chunk = function(...)
+		local gpc = require 'gpc'
 		-- setup
-		buffer = {}
+		buffer = gpc.new()
 		config.circle_steps = circle_steps
 		-- run macro
 		rawchunk(...)
 		-- cleanup
 		config.circle_steps = nil
-		local paths = buffer
+		local paths = {}
+		for c=1,buffer:get() do
+			local path = {}
+			local n,h = buffer:get(c)
+			for i=1,n do
+				local x,y = buffer:get(c, i)
+				path[i] = {x=x, y=y}
+			end
+			path[n+1] = {x=path[1].x, y=path[1].y}
+			if h == region.exterior(path) then
+				local t = {}
+				for i=1,#path do
+					t[i] = path[#path+1-i]
+				end
+				path = t
+			end
+			table.insert(paths, path)
+		end
 		buffer = nil
 		-- return data
 		return paths
