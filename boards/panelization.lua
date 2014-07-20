@@ -167,10 +167,14 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 				mill(panel.images.milling, spacer, w, z1, z2)
 				mill(panel.images.milling, spacer, w, z3, z4)
 				-- small lines on the edge of the tab to ease breaking
-				mill(panel.images.top_soldermask, breaker, w - options.spacing / 2, z2, z3)
-				mill(panel.images.top_soldermask, breaker, w + options.spacing / 2, z2, z3)
-				mill(panel.images.bottom_soldermask, breaker, w - options.spacing / 2, z2, z3)
-				mill(panel.images.bottom_soldermask, breaker, w + options.spacing / 2, z2, z3)
+				if panel.images.top_soldermask then
+					mill(panel.images.top_soldermask, breaker, w - options.spacing / 2, z2, z3)
+					mill(panel.images.top_soldermask, breaker, w + options.spacing / 2, z2, z3)
+				end
+				if panel.images.bottom_soldermask then
+					mill(panel.images.bottom_soldermask, breaker, w - options.spacing / 2, z2, z3)
+					mill(panel.images.bottom_soldermask, breaker, w + options.spacing / 2, z2, z3)
+				end
 				-- drill holes to make the tabs easy to break
 				local drill_count = math.floor(options.break_tab_width / options.break_hole_diameter / 2)
 				for i=0,drill_count-1 do
