@@ -62,7 +62,6 @@ local function load_image(filepath, format, unit, template)
 	-- scale the path data (sub-modules output picometers)
 	local scale = assert(path_load_scales[unit], "unsupported board output unit "..tostring(unit))
 	if scale ~= 1 then
-		local k = 0
 		for _,layer in ipairs(image.layers) do
 			for _,path in ipairs(layer) do
 				for _,point in ipairs(path) do
@@ -70,7 +69,6 @@ local function load_image(filepath, format, unit, template)
 					point.y = point.y * scale
 					if point.i then point.i = point.i * scale end
 					if point.j then point.j = point.j * scale end
-					k = k + 1
 				end
 			end
 		end
