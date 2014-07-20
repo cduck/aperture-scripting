@@ -152,7 +152,7 @@ function _M.load(filename)
 
 	local data = { headers = {}, tools = {} }
 	-- :FIXME: find out how excellon files declare their format
-	data.format = { integer = 2, decimal = 4, zeroes = 'L' }
+	data.format = { integer = nil, decimal = nil, zeroes = 'L' }
 	local header = nil
 	for block in content:gmatch('[^\n]+') do
 		if header then
@@ -170,6 +170,16 @@ function _M.load(filename)
 					table.insert(data.headers, load_comment(block))
 				elseif block:match('^;') then
 					table.insert(data.headers, load_comment(block))
+				elseif block=='M71' then
+					table.insert(data.headers, load_header(block))
+					if data.format.integer==nil and data.format.decimal==nil then
+						data.format.integer,data.format.decimal = 3,3
+					end
+				elseif block=='M72' then
+					table.insert(data.headers, load_header(block))
+					if data.format.integer==nil and data.format.decimal==nil then
+						data.format.integer,data.format.decimal = 2,4
+					end
 				elseif block:match('INCH') or block:match('METRIC') or block:match('LZ') or block:match('TZ') then
 					for word in block:gmatch('[^,]+') do
 						if word=='LZ' then -- header is what is present
@@ -177,10 +187,14 @@ function _M.load(filename)
 						elseif word=='TZ' then
 							data.format.zeroes = 'L'
 						elseif word=='INCH' then
-							data.format.integer,data.format.integer = 2,4
+							if data.format.integer==nil and data.format.decimal==nil then
+								data.format.integer,data.format.decimal = 2,4
+							end
 							table.insert(data.headers, load_header(word))
 						elseif word=='METRIC' then
-							data.format.integer,data.format.decimal = 3,3
+							if data.format.integer==nil and data.format.decimal==nil then
+								data.format.integer,data.format.decimal = 3,3
+							end
 							table.insert(data.headers, load_header(word))
 						else
 							error("unsupported keyword '"..word.."' in format header")
@@ -197,8 +211,10 @@ function _M.load(filename)
 			elseif block=='M48' then
 				header = true
 			elseif block:match('^T') then
+				assert(data.format.integer and data.format.decimal, "tool definition appears before format has been specified")
 				table.insert(data, load_tool(block, data.format))
 			elseif block:match('^[MXYG]') then
+				assert(data.format.integer and data.format.decimal, "directive appears before format has been specified")
 				table.insert(data, load_directive(block, data.format))
 			else
 				table.insert(data, block)
