@@ -60,12 +60,13 @@ local function close_path(path, epsilon)
 	assert(#path >= 3)
 	assert(point_to_node(path[1], epsilon) == point_to_node(path[#path], epsilon))
 	assert(path[1].interpolation == nil)
-	assert(path[#path].interpolation == 'linear')
-	local first_segment_is_vertical = path[1].x == path[2].x
-	local first_segment_is_horizontal = path[1].y == path[2].y
+	local first_segment_is_linear = path[2].interpolation == 'linear'
+	local first_segment_is_vertical = first_segment_is_linear and path[1].x == path[2].x
+	local first_segment_is_horizontal = first_segment_is_linear and path[1].y == path[2].y
 	local first_segment_is_axis_aligned = first_segment_is_vertical or first_segment_is_horizontal
-	local last_segment_is_vertical = path[#path].x == path[#path-1].x
-	local last_segment_is_horizontal = path[#path].y == path[#path-1].y
+	local last_segment_is_linear = path[#path].interpolation == 'linear'
+	local last_segment_is_vertical = last_segment_is_linear and path[#path].x == path[#path-1].x
+	local last_segment_is_horizontal = last_segment_is_linear and path[#path].y == path[#path-1].y
 	local last_segment_is_axis_aligned = last_segment_is_vertical or last_segment_is_horizontal
 	if first_segment_is_axis_aligned and last_segment_is_axis_aligned then
 		-- adjust both segments both toward the point where their supporting lines intersect
@@ -87,9 +88,17 @@ local function close_path(path, epsilon)
 	elseif last_segment_is_axis_aligned then
 		path[1].x = path[#path].x
 		path[1].y = path[#path].y
-	else--if first_segment_is_axis_aligned then
+	elseif first_segment_is_axis_aligned then
 		path[#path].x = path[1].x
 		path[#path].y = path[1].y
+	elseif first_segment_is_linear then
+		path[1].x = path[#path].x
+		path[1].y = path[#path].y
+	elseif last_segment_is_linear then
+		path[#path].x = path[1].x
+		path[#path].y = path[1].y
+	else
+		error("closing curved paths is not yet supported")
 	end
 end
 
