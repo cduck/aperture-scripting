@@ -211,10 +211,14 @@ function _M.load(filename)
 			elseif block=='M48' then
 				header = true
 			elseif block:match('^T') then
-				assert(data.format.integer and data.format.decimal, "tool definition appears before format has been specified")
+				if data.format.integer==nil and data.format.decimal==nil then
+					data.format.integer,data.format.decimal = 2,4
+				end
 				table.insert(data, load_tool(block, data.format))
 			elseif block:match('^[MXYG]') then
-				assert(data.format.integer and data.format.decimal, "directive appears before format has been specified")
+				if data.format.integer==nil and data.format.decimal==nil then
+					data.format.integer,data.format.decimal = 2,4
+				end
 				table.insert(data, load_directive(block, data.format))
 			else
 				table.insert(data, block)
