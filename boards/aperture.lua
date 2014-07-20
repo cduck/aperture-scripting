@@ -8,7 +8,6 @@ local unpack = unpack or table.unpack
 
 ------------------------------------------------------------------------------
 
--- all positions are in picometers
 local aperture_scales = {
 	IN_pm = 25400000000,
 	MM_pm =  1000000000,
