@@ -87,7 +87,7 @@ end
 local function load_header(block)
 	-- may be a tool definition (in header) or a tool selection (in program)
 	local words = {}
-	for word in block:gmatch('[^;]+') do
+	for word in block:gmatch('[^,]+') do
 		table.insert(words, word)
 	end
 	assert(block == table.concat(words, ","))
