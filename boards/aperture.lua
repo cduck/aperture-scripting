@@ -9,10 +9,10 @@ local unpack = unpack or table.unpack
 ------------------------------------------------------------------------------
 
 local aperture_scales = {
-	IN_pm = 25400000000,
-	MM_pm =  1000000000,
-	IN_mm = 25.4,
-	MM_mm =  1,
+	in_pm = 25400000000,
+	mm_pm =  1000000000,
+	in_mm = 25.4,
+	mm_mm =  1,
 }
 
 local function generate_aperture_hole(x, y, scale, circle_steps)

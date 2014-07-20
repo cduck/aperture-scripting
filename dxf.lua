@@ -1622,7 +1622,7 @@ function _M.load(file_path)
 	
 	local layers = {{polarity='dark'}}
 	local layer = layers[1]
-	local aperture = {shape='circle', parameters={0}, unit='MM', name=10}
+	local aperture = {shape='circle', parameters={0}, unit='mm', name=10}
 	for _,entity in ipairs(sections.ENTITIES) do
 		local npoints = 0
 		if entity.type == 'LWPOLYLINE' then
@@ -1712,7 +1712,7 @@ function _M.load(file_path)
 		file_path = file_path,
 		name = nil,
 		format = {},
-		unit = 'MM',
+		unit = 'mm',
 		layers = layers,
 	}
 	
@@ -1742,9 +1742,9 @@ function _M.save(image, file_path)
 		ACADVER = 'AC1014',
 		HANDSEED = 'FFFF',
 	}
-	if image.unit == 'MM' then
+	if image.unit == 'mm' then
 		sections.HEADER.MEASUREMENT = 1
-	elseif image.unit == 'IN' then
+	elseif image.unit == 'in' then
 		sections.HEADER.MEASUREMENT = 0
 	end
 	

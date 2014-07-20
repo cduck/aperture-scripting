@@ -9,8 +9,8 @@ _M.blocks = require 'excellon.blocks'
 
 -- all positions in picometers (1e-12 meters)
 local scales = {
-	IN = 25400000000 / 10 ^ _M.blocks.decimal_shift,
-	MM =  1000000000 / 10 ^ _M.blocks.decimal_shift,
+	['in'] = 25400000000 / 10 ^ _M.blocks.decimal_shift,
+	mm =  1000000000 / 10 ^ _M.blocks.decimal_shift,
 }
 for unit,scale in pairs(scales) do
 	assert(math.floor(scale)==scale)
@@ -109,14 +109,17 @@ function _M.load(file_path)
 			-- ignore
 		elseif th=='header' then
 			if header.name=='M72' then
-				assert(not unit or unit=='IN', "excellon files with mixtures of units not supported")
-				unit = 'IN'
+				assert(not unit or unit=='in', "excellon files with mixtures of units not supported")
+				unit = 'in'
+			elseif header.name=='M71' then
+				assert(not unit or unit=='mm', "excellon files with mixtures of units not supported")
+				unit = 'mm'
 			elseif header.name=='INCH' then
-				assert(not unit or unit=='IN', "excellon files with mixtures of units not supported")
-				unit = 'IN'
+				assert(not unit or unit=='in', "excellon files with mixtures of units not supported")
+				unit = 'in'
 			elseif header.name=='METRIC' then
-				assert(not unit or unit=='MM', "excellon files with mixtures of units not supported")
-				unit = 'MM'
+				assert(not unit or unit=='mm', "excellon files with mixtures of units not supported")
+				unit = 'mm'
 			elseif ignored_headers[header.name] then
 				print("ignored Excellon header "..header.name..(#header.parameters==0 and "" or (" with value "..table.concat(header.parameters, ","))))
 			else
@@ -127,7 +130,7 @@ function _M.load(file_path)
 		end
 	end
 	if not unit then
-		unit = 'IN'
+		unit = 'in'
 		for _,tool in pairs(tools) do
 			tool.unit = unit
 		end
@@ -150,11 +153,11 @@ function _M.load(file_path)
 			end
 		elseif tb=='directive' then
 			if block.M==72 then
-				assert(not unit or unit=='IN', "excellon files with mixtures of units not supported")
-				unit = 'IN'
+				assert(not unit or unit=='in', "excellon files with mixtures of units not supported")
+				unit = 'in'
 			elseif block.M==71 then
-				assert(not unit or unit=='MM', "excellon files with mixtures of units not supported")
-				unit = 'MM'
+				assert(not unit or unit=='mm', "excellon files with mixtures of units not supported")
+				unit = 'mm'
 			elseif block.G==5 then
 				-- drill mode, ignore
 			elseif block.G==90 then
@@ -243,8 +246,10 @@ function _M.save(image, file_path)
 	local unit = image.unit
 	assert(scales[unit])
 	
-	if unit == 'IN' then
+	if unit == 'in' then
 		table.insert(data.headers, 'M72')
+	elseif unit == 'mm' then
+		table.insert(data.headers, 'M71')
 	else
 		error("unsupported unit")
 	end

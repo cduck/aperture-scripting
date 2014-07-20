@@ -9,8 +9,8 @@ _M.blocks = require 'gerber.blocks'
 
 -- all positions in picometers (1e-12 meters)
 local scales = {
-	IN = 25400000000 / 10 ^ _M.blocks.decimal_shift,
-	MM =  1000000000 / 10 ^ _M.blocks.decimal_shift,
+	['in'] = 25400000000 / 10 ^ _M.blocks.decimal_shift,
+	mm =  1000000000 / 10 ^ _M.blocks.decimal_shift,
 }
 for unit,scale in pairs(scales) do
 	assert(math.floor(scale)==scale)
@@ -187,9 +187,10 @@ function _M.load(file_path)
 				layer_name = nil
 				table.insert(layers, layer)
 			elseif tp=='MO' then
-				assert(not unit or unit==block.value, "gerber files with mixtures of units not supported")
-				assert(scales[block.value], "unsupported unit "..tostring(block.value))
-				unit = block.value
+				local value = block.value:lower()
+				assert(not unit or unit==value, "gerber files with mixtures of units not supported")
+				assert(scales[value], "unsupported unit "..tostring(block.value))
+				unit = value
 			elseif tp=='IJ' then
 				-- image justify
 				assert(block.value == 'ALBL', "unsupported image justify "..tostring(block.value).." (Gerber IJ parameter")
@@ -313,11 +314,11 @@ function _M.load(file_path)
 			elseif block.G==3 then
 				interpolation = 'counterclockwise'
 			elseif block.G==70 then
-				assert(not unit or unit=='IN', "gerber files with mixtures of units not supported")
-				unit = 'IN'
+				assert(not unit or unit=='in', "gerber files with mixtures of units not supported")
+				unit = 'in'
 			elseif block.G==71 then
-				assert(not unit or unit=='MM', "gerber files with mixtures of units not supported")
-				unit = 'MM'
+				assert(not unit or unit=='mm', "gerber files with mixtures of units not supported")
+				unit = 'mm'
 			elseif block.G==74 then
 				quadrant = 'single'
 			elseif block.G==75 then
@@ -446,7 +447,7 @@ function _M.save(image, file_path, verbose)
 --	table.insert(data, _M.blocks.directive{G=70})
 	assert(image.format.zeroes and image.format.integer and image.format.decimal)
 	table.insert(data, _M.blocks.format(image.format.zeroes, image.format.integer, image.format.decimal))
-	table.insert(data, _M.blocks.parameter('MO', unit))
+	table.insert(data, _M.blocks.parameter('MO', unit:upper()))
 	
 	for _,macro in ipairs(macro_order) do
 		table.insert(data, save_macro(macro))

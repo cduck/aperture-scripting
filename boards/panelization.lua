@@ -14,7 +14,7 @@ local manipulation = require 'boards.manipulation'
 local function empty_image()
 	return {
 		format = { integer = 2, decimal = 4, zeroes = 'L' },
-		unit = 'IN',
+		unit = 'in',
 		layers = { { polarity = 'dark' } },
 	}
 end
@@ -52,8 +52,8 @@ function _M.empty_board(width, height)
 end
 
 local aperture_scales = {
-	IN = 1 / (254e8),
-	MM = 1 / 1e9,
+	['in'] = 1 / (254e8),
+	mm = 1 / 1e9,
 }
 
 local function cut_tabs(panel, side_a, side_b, position, options, vertical)
@@ -102,7 +102,7 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 		end
 	end
 	if not aperture_unit then
-		aperture_unit = 'IN'
+		aperture_unit = 'in'
 	end
 	local aperture_scale = assert(aperture_scales[aperture_unit], "unsupported aperture unit "..tostring(aperture_unit).." found in milling image")
 	local spacer = drawing.circle_aperture(options.spacing * aperture_scale, aperture_unit)

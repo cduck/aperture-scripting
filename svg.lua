@@ -118,13 +118,13 @@ local function style_aperture(style)
 		local d,unit
 		if width=='0' then
 			d = 0
-			unit = 'MM'
+			unit = 'mm'
 		else
 			d,unit = width:match('^([-0-9.e]+)(%a%a)$')
 			assert(d and unit, tostring(width).." doesn't not contain a valid line width")
 			d = assert(tonumber(d), d.." is not a number") * 1e9
-			unit = unit:upper()
-			assert(unit=='MM' or unit=='IN')
+			unit = unit:lower()
+			assert(unit=='mm' or unit=='in')
 		end
 		return {name=name, shape='circle', parameters={d}, unit=unit}
 	else
