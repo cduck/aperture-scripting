@@ -51,6 +51,11 @@ function _M.empty_board(width, height)
 	}
 end
 
+local aperture_scales = {
+	IN = 1 / (254e8),
+	MM = 1 / 1e9,
+}
+
 local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 	-- draw cut lines and break tabs
 	-- see http://blogs.mentor.com/tom-hausherr/blog/2011/06/23/pcb-design-perfection-starts-in-the-cad-library-part-19/
@@ -72,10 +77,36 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 		end
 	end
 	
+	-- prepare the milling image
+	if not panel.images.milling then
+		panel.images.milling = empty_image()
+	end
+	if #panel.images.milling.layers==0 or panel.images.milling.layers[#panel.images.milling.layers].polarity=='clear' then
+		table.insert(panel.images.milling.layers, { polarity = 'dark' })
+	end
+	
 	-- prepare routing and tab-separation drills
 	-- :FIXME: for some reason the diameter needs to be scaled here, this is wrong
-	local spacer = drawing.circle_aperture(options.spacing / 25.4 / 1e9)
-	local breaker = drawing.circle_aperture(options.break_hole_diameter / 25.4 / 1e9)
+	local aperture_unit
+	for _,layer in ipairs(panel.images.milling.layers) do
+		for _,path in ipairs(layer) do
+			if path.aperture then
+				aperture_unit = path.aperture.unit
+			end
+			if aperture_unit then
+				break
+			end
+		end
+		if aperture_unit then
+			break
+		end
+	end
+	if not aperture_unit then
+		aperture_unit = 'IN'
+	end
+	local aperture_scale = assert(aperture_scales[aperture_unit], "unsupported aperture unit "..tostring(aperture_unit).." found in milling image")
+	local spacer = drawing.circle_aperture(options.spacing * aperture_scale, aperture_unit)
+	local breaker = drawing.circle_aperture(options.break_hole_diameter * aperture_scale, aperture_unit)
 	
 	assert(#side_b % 2 == 0)
 	assert(#side_a % 2 == 0)
