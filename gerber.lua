@@ -193,22 +193,22 @@ function _M.load(file_path)
 				unit = value
 			elseif tp=='IJ' then
 				-- image justify
-				assert(block.value == 'ALBL', "unsupported image justify "..tostring(block.value).." (Gerber IJ parameter")
+				assert(block.value == 'ALBL', "unsupported image justify "..tostring(block.value).." (Gerber IJ parameter)")
 			elseif tp=='MI' then
 				-- mirror image
-				assert(block.value == 'A0B0', "unsupported non-trivial mirror image "..tostring(block.value).." (Gerber MI parameter")
+				assert(block.value == 'A0B0', "unsupported non-trivial mirror image "..tostring(block.value).." (Gerber MI parameter)")
 			elseif tp=='OF' then
 				-- offset
 				local a,b = block.value:match('^A([%d.]+)B([%d.]+)$')
-				assert(a and b, "unsupported offset "..tostring(block.value).." (Gerber OF parameter")
+				assert(a and b, "unsupported offset "..tostring(block.value).." (Gerber OF parameter)")
 				a,b = tonumber(a),tonumber(b)
-				assert(a == 0 and b == 0, "unsupported non-null offset "..tostring(block.value).." (Gerber OF parameter")
+				assert(a == 0 and b == 0, "unsupported non-null offset "..tostring(block.value).." (Gerber OF parameter)")
 			elseif tp=='SF' then
 				-- scale factor
 				local a,b = block.value:match('^A([%d.]+)B([%d.]+)$')
-				assert(a and b, "unsupported scale factor "..tostring(block.value).." (Gerber SF parameter")
+				assert(a and b, "unsupported scale factor "..tostring(block.value).." (Gerber SF parameter=")
 				a,b = tonumber(a),tonumber(b)
-				assert(a == 1 and b == 1, "unsupported non-identity scale factor "..tostring(block.value).." (Gerber SF parameter")
+				assert(a == 1 and b == 1, "unsupported non-identity scale factor "..tostring(block.value).." (Gerber SF parameter)")
 			elseif tp=='IR' then
 				-- image rotation
 				assert(tonumber(block.value) == 0, "unsupported non-identity image rotation "..tostring(block.value).." (Gerber IR parameter)")
