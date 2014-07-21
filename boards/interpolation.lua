@@ -23,10 +23,10 @@ function _M.single_quadrant_center(x0, y0, i, j, x1, y1, interpolation)
 		local tb = math.deg(math.atan2(dyb, dxb))
 		local dt
 		if interpolation == 'clockwise' then
-			while ta <= tb do ta = ta + 360 end
+			while ta < tb do ta = ta + 360 end
 			dt = ta - tb
 		else
-			while tb <= ta do tb = tb + 360 end
+			while tb < ta do tb = tb + 360 end
 			dt = tb - ta
 		end
 		if dt < 180 then
@@ -74,7 +74,7 @@ function _M.interpolate(path, point)
 			tb2 = (math.floor(tb / step) + 1) * step
 			step = -step
 		else
-			while tb <= ta do tb = tb + 360 end
+			while tb < ta do tb = tb + 360 end
 			if quadrant == 'multi' and tb == ta then tb = tb + 360 end
 			ta2 = (math.floor(ta / step) + 1) * step
 			tb2 = (math.ceil(tb / step) - 1) * step
