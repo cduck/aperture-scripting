@@ -297,9 +297,9 @@ local function load_number(s, format)
 	local size = format.integer + format.decimal
 	if #base < size then
 		if format.zeroes == 'L' then
-			base = string.rep('0', size - #s) .. base
+			base = string.rep('0', size - #base) .. base
 		elseif format.zeroes == 'T' then
-			base = base .. string.rep('0', size - #s)
+			base = base .. string.rep('0', size - #base)
 		elseif format.zeroes == 'D' then
 			error("unexpected number "..s.." in format "..tostring(format))
 		end
