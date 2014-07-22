@@ -60,6 +60,10 @@ local function close_path(path, epsilon)
 	assert(#path >= 3)
 	assert(point_to_node(path[1], epsilon) == point_to_node(path[#path], epsilon))
 	assert(path[1].interpolation == nil)
+	if path[#path].x==path[1].x and path[#path].y==path[1].y then
+		-- path is already closed
+		return
+	end
 	local first_segment_is_linear = path[2].interpolation == 'linear'
 	local first_segment_is_vertical = first_segment_is_linear and path[1].x == path[2].x
 	local first_segment_is_horizontal = first_segment_is_linear and path[1].y == path[2].y
