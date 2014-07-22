@@ -67,8 +67,8 @@ local function load_image(filepath, format, unit, template)
 				for _,point in ipairs(path) do
 					point.x = point.x * scale
 					point.y = point.y * scale
-					if point.i then point.i = point.i * scale end
-					if point.j then point.j = point.j * scale end
+					if point.cx then point.cx = point.cx * scale end
+					if point.cy then point.cy = point.cy * scale end
 				end
 			end
 		end
@@ -503,8 +503,8 @@ local function interpolate_path(path)
 	end
 	for i,point in ipairs(interpolated) do
 		point.interpolated = nil
-		point.i = nil
-		point.j = nil
+		point.cx = nil
+		point.cy = nil
 		point.quadrant = nil
 		if i > 1 then point.interpolation = 'linear' end
 	end
@@ -566,7 +566,7 @@ local function round_image_paths(image, epsilon)
 		for _,path in ipairs(layer) do
 			local interpolated = { aperture = path.aperture }
 			for _,point in ipairs(path) do
-				for _,k in ipairs{'x', 'y', 'i', 'j'} do
+				for _,k in ipairs{'x', 'y', 'cx', 'cy'} do
 					point[k] = round(point[k], epsilon)
 				end
 			end

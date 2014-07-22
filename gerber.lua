@@ -125,6 +125,49 @@ local layer_polarity_codes = {
 	clear = 'C',
 }
 
+local function circle_center(x0, y0, i, j, x1, y1, interpolation, quadrant)
+	assert(interpolation=='clockwise' or interpolation=='counterclockwise')
+	if quadrant=='single' then
+		local centers = {
+			{ x = x0 - i, y = y0 - j },
+			{ x = x0 + i, y = y0 - j },
+			{ x = x0 + i, y = y0 + j },
+			{ x = x0 - i, y = y0 + j },
+		}
+		local cx,cy
+		local best = math.huge
+		for _,c in ipairs(centers) do
+			local dxa,dya = x0 - c.x, y0 - c.y
+			local dxb,dyb = x1 - c.x, y1 - c.y
+			local ra = math.sqrt(dxa*dxa + dya*dya)
+			local rb = math.sqrt(dxb*dxb + dyb*dyb)
+			local ta = math.deg(math.atan2(dya, dxa))
+			local tb = math.deg(math.atan2(dyb, dxb))
+			local dt
+			if interpolation == 'clockwise' then
+				while ta < tb do ta = ta + 360 end
+				dt = ta - tb
+			else
+				while tb < ta do tb = tb + 360 end
+				dt = tb - ta
+			end
+			if dt < 180 then
+				local ratio = math.max(ra, rb) / math.min(ra, rb)
+				if ratio < best then
+					best = ratio
+					cx,cy = c.x,c.y
+				end
+			end
+		end
+		assert(cx and cy)
+		return cx,cy
+	elseif quadrant=='multi' then
+		return x0+i,y0+j
+	else
+		error("unsupported quadrant mode "..tostring(quadrant))
+	end
+end
+
 function _M.load(file_path)
 	local data,err = _M.blocks.load(file_path)
 	if not data then return nil,err end
@@ -272,7 +315,10 @@ function _M.load(file_path)
 						assert(quadrant, "circular interpolation before a quadrant mode is specified")
 						local i = (block.I or 0) * scale
 						local j = (block.J or 0) * scale
-						table.insert(path, {x=x, y=y, i=i, j=j, interpolation=interpolation, quadrant=quadrant})
+						local x0 = path[#path].x
+						local y0 = path[#path].y
+						local cx,cy = circle_center(x0, y0, i, j, x, y, interpolation, quadrant)
+						table.insert(path, {x=x, y=y, cx=cx, cy=cy, interpolation=interpolation, quadrant=quadrant})
 					elseif interpolation then
 						error("unsupported interpolation mode "..interpolation)
 					else
@@ -513,13 +559,24 @@ function _M.save(image, file_path, verbose)
 						end
 						local px,py = point.x / scale,point.y / scale
 						if D ~= 2 or x ~= px or y ~= py then -- don't move to the current pos
+							local i,j
+							local cx = point.cx and point.cx / scale
+							local cy = point.cy and point.cy / scale
+							if cx and (verbose or cx ~= x) then
+								i = cx - x
+								if point.quadrant=='single' then i = math.abs(i) end
+							end
+							if cy and (verbose or cy ~= y) then
+								j = cy - y
+								if point.quadrant=='single' then j = math.abs(j) end
+							end
 							table.insert(data, _M.blocks.directive({
 								G = G,
 								D = D,
 								X = (verbose or px ~= x) and px or nil,
 								Y = (verbose or py ~= y) and py or nil,
-								I = point.i and (verbose or point.i ~= 0) and point.i / scale or nil,
-								J = point.j and (verbose or point.j ~= 0) and point.j / scale or nil,
+								I = i,
+								J = j,
 							}, image.format))
 						end
 						x,y = px,py

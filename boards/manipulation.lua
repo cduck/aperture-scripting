@@ -13,6 +13,8 @@ function _M.offset_point(point, dx, dy)
 	end
 	if copy.x then copy.x = copy.x + dx end
 	if copy.y then copy.y = copy.y + dy end
+	if copy.cx then copy.cx = copy.cx + dx end
+	if copy.cy then copy.cy = copy.cy + dy end
 	return copy
 end
 
@@ -617,55 +619,12 @@ function _M.rotate_point(point, angle)
 	assert(point.x and point.y, "only points with x and y can be rotated")
 	local x,y = rotate_xy(point.x, point.y, angle)
 	copy.x,copy.y = x,y
-	-- fix i,j
-	local i,j
-	if point.i or point.j then
-		if angle==0 then
-			i,j = point.i,point.j
-		elseif angle==90 or angle==270 then
-			assert(point.quadrant)
-			if point.quadrant=='single' then
-				assert((point.i or 0) >= 0)
-				assert((point.j or 0) >= 0)
-				i,j = point.j,point.i
-			elseif point.quadrant=='multi' then
-				if angle==90 then
-					local pi,pj = point.i,point.j
-					if pi then j = pi end
-					if pj then i = -pj end
-				else
-					local pi,pj = point.i,point.j
-					if pi then j = -pi end
-					if pj then i = pj end
-				end
-			else
-				error("unsupported quadrant mode")
-			end
-		elseif angle==180 then
-			assert(point.quadrant)
-			if point.quadrant=='single' then
-				assert((point.i or 0) >= 0)
-				assert((point.j or 0) >= 0)
-				i,j = point.i,point.j
-			elseif point.quadrant=='multi' then
-				if point.i then i = -point.i end
-				if point.j then j = -point.j end
-			else
-				error("unsupported quadrant mode")
-			end
-		else
-			assert(point.quadrant)
-			if point.quadrant=='single' then
-				error("arcs in single quadrant mode cannot be rotated an arbitrary angle")
-			elseif point.quadrant=='multi' then
-				assert(point.i and point.j, "only arcs with i and j can be rotated an arbitrary angle")
-				i,j = rotate_xy(point.i, point.j, angle)
-			else
-				error("unsupported quadrant mode")
-			end
-		end
+	-- fix cx,cy
+	local cx,cy
+	if point.cx or point.cy then
+		cx,cy = rotate_xy(point.cx, point.cy, angle)
 	end
-	copy.i,copy.j = i,j
+	copy.cx,copy.cy = cx,cy
 	-- fix angle
 	if copy.angle then copy.angle = (copy.angle + angle) % 360 end
 	return copy
@@ -890,13 +849,13 @@ function _M.scale_point(point, scale)
 	-- fix x,y
 	copy.x = point.x * scale
 	copy.y = point.y * scale
-	-- fix i,j
-	local i,j
-	if point.i or point.j then
-		i = point.i * scale
-		j = point.j * scale
+	-- fix cx,cy
+	local cx,cy
+	if point.cx or point.cy then
+		cx = point.cx * scale
+		cy = point.cy * scale
 	end
-	copy.i,copy.j = i,j
+	copy.cx,copy.cy = cx,cy
 	return copy
 end
 
