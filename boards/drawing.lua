@@ -7,7 +7,7 @@ local region = require 'boards.region'
 
 function _M.circle_aperture(diameter, unit)
 	assert(unit, "no unit specified for aperture")
-	local aperture = { shape = 'circle', unit = unit, parameters = { diameter } }
+	local aperture = { shape = 'circle', unit = unit, diameter = diameter }
 	return aperture
 end
 

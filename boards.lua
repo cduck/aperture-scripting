@@ -430,14 +430,52 @@ end
 ------------------------------------------------------------------------------
 
 local function macro_hash(macro)
-	-- :TODO: only consider relevant fields
-	return dump.tostring(macro)
+	local t = {}
+	for _,instruction in ipairs(macro.script) do
+		local type = instruction.type
+		table.insert(t, type)
+		if type=='comment' then
+			-- ignore
+		elseif type=='variable' then
+			table.insert(t, instruction.name)
+			table.insert(t, instruction.expression)
+		elseif type=='primitive' then
+			table.insert(t, instruction.shape)
+			for _,expression in ipairs(instruction.parameters) do
+				write(expression)
+			end
+		else
+			error("unsupported aperture macro instruction type "..tostring(type))
+		end
+	end
+	return table.concat(t, '\0')
 end
 
 local function aperture_hash(aperture)
-	local t = {aperture.shape, table.unpack(aperture.parameters)}
-	if aperture.macro then
+	local shape = aperture.shape
+	local t = {shape}
+	if shape=='circle' then
+		table.insert(t, aperture.diameter)
+		table.insert(t, aperture.hole_width)
+		table.insert(t, aperture.hole_height)
+	elseif shape=='rectangle' or shape=='obround' then
+		table.insert(t, aperture.width)
+		table.insert(t, aperture.height)
+		table.insert(t, aperture.hole_width)
+		table.insert(t, aperture.hole_height)
+	elseif shape=='polygon' then
+		table.insert(t, aperture.diameter)
+		table.insert(t, aperture.steps)
+		table.insert(t, aperture.angle)
+		table.insert(t, aperture.hole_width)
+		table.insert(t, aperture.hole_height)
+	elseif shape then
+		error("unsupported aperture shape "..tostring(shape))
+	elseif aperture.macro then
+		table.insert(t, 'macro')
 		table.insert(t, macro_hash(aperture.macro))
+	else
+		error("aperture has no shape and no macro")
 	end
 	return table.concat(t, '\0')
 end

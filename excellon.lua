@@ -26,14 +26,14 @@ local function load_tool(data, unit)
 		name = tcode,
 		unit = unit,
 		shape = 'circle',
-		parameters = { d },
+		diameter = d,
 	}
 end
 
 local function save_tool(aperture)
 	local name = assert(aperture.save_name)
 	assert(aperture.shape == 'circle', "only circle apertures are supported")
-	local parameters = { 'C', C = aperture.parameters[1] }
+	local parameters = { 'C', C = aperture.diameter }
 	return _M.blocks.tool(name, parameters)
 end
 

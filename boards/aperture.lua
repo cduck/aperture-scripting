@@ -49,8 +49,8 @@ function _M.generate_aperture_paths(aperture, board_unit, circle_steps)
 	
 	local paths
 	if shape=='circle' then
-		local d,hx,hy = unpack(parameters)
-		assert(d, "circle apertures require at least 1 parameter")
+		local d,hx,hy = aperture.diameter,aperture.hole_width,aperture.hole_height
+		assert(d, "circle aperture has no diameter")
 		local path = {concave=true}
 		if d ~= 0 then
 			local r = d / 2 * scale
@@ -63,8 +63,9 @@ function _M.generate_aperture_paths(aperture, board_unit, circle_steps)
 		local hole = generate_aperture_hole(hx, hy, scale, circle_steps)
 		paths = { path, hole }
 	elseif shape=='rectangle' then
-		local x,y,hx,hy = unpack(parameters)
-		assert(x and y, "rectangle apertures require at least 2 parameters")
+		local x,y,hx,hy = aperture.width,aperture.height,aperture.hole_width,aperture.hole_height
+		assert(x, "rectangle aperture has no width")
+		assert(y, "rectangle aperture has no height")
 		local path = {
 			concave=true,
 			{x=-x/2*scale, y=-y/2*scale},
@@ -77,8 +78,9 @@ function _M.generate_aperture_paths(aperture, board_unit, circle_steps)
 		paths = { path, hole }
 	elseif shape=='obround' then
 		assert(circle_steps % 2 == 0, "obround apertures are only supported when circle_steps is even")
-		local x,y,hx,hy = unpack(parameters)
-		assert(x and y, "obround apertures require at least 2 parameters")
+		local x,y,hx,hy = aperture.width,aperture.height,aperture.hole_width,aperture.hole_height
+		assert(x, "obround aperture has no width")
+		assert(y, "obround aperture has no height")
 		local path = {concave=true}
 		if y > x then
 			local straight = (y - x) * scale
@@ -110,8 +112,9 @@ function _M.generate_aperture_paths(aperture, board_unit, circle_steps)
 		local hole = generate_aperture_hole(hx, hy, scale, circle_steps)
 		paths = { path, hole }
 	elseif shape=='polygon' then
-		local d,steps,angle,hx,hy = unpack(parameters)
-		assert(d and steps, "polygon apertures require at least 2 parameter")
+		local d,steps,angle,hx,hy = aperture.diameter,aperture.steps,aperture.angle,aperture.hole_width,aperture.hole_height
+		assert(d, "polygon aperture has no diameter")
+		assert(steps, "polygon aperture has no number of vertices")
 		angle = angle or 0
 		local path = {concave=true}
 		if d ~= 0 then
@@ -126,7 +129,7 @@ function _M.generate_aperture_paths(aperture, board_unit, circle_steps)
 		paths = { path, hole }
 	elseif aperture.macro then
 		local chunk = macro.compile(aperture.macro, circle_steps)
-		local data = chunk(unpack(parameters or {}))
+		local data = chunk(unpack(aperture.parameters or {}))
 		paths = {}
 		for i,dpath in ipairs(data) do
 			local path = {}
