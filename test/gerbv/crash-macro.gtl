@@ -1,0 +1,28 @@
+G75*
+G70*
+%OFA0B0*%
+%FSLAX24Y24*%
+%IPPOS*%
+%LPD*%
+%AMCOMPLEX*
+0 a complex macro:*
+$OD=0.2*
+$ID=$ODx0.75*
+$ANGLE=20*
+0 an offset circle*
+1,1,0.2,0.3,0*
+0 an offset moire*
+6,0.15,0.15,$OD,0.01,0.015,2,0.02,0.22,0*
+0 an offset thermal*
+7,0.15,-0.15,$OD,$ID,0.08,0*
+0 a rotated thermal*
+7,0,0,$OD,$ID,0.08,$ANGLE*
+0 a rotated moire*
+6,0,0,0.1,0.005,0.015,2,0.02,$OD x 1.1,$ANGLE*
+0 a polygon hole covering the other primitives*
+5,0,8,0.15,0,$OD,0*
+%
+%ADD10COMPLEX*%
+D10*
+X02500Y05000D03*
+M02*
