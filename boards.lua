@@ -442,7 +442,7 @@ local function macro_hash(macro)
 		elseif type=='primitive' then
 			table.insert(t, instruction.shape)
 			for _,expression in ipairs(instruction.parameters) do
-				write(expression)
+				table.insert(t, expression)
 			end
 		else
 			error("unsupported aperture macro instruction type "..tostring(type))
@@ -452,30 +452,42 @@ local function macro_hash(macro)
 end
 
 local function aperture_hash(aperture)
-	local shape = aperture.shape
 	local t = {shape}
-	if shape=='circle' then
-		table.insert(t, aperture.diameter)
-		table.insert(t, aperture.hole_width)
-		table.insert(t, aperture.hole_height)
-	elseif shape=='rectangle' or shape=='obround' then
-		table.insert(t, aperture.width)
-		table.insert(t, aperture.height)
-		table.insert(t, aperture.hole_width)
-		table.insert(t, aperture.hole_height)
-	elseif shape=='polygon' then
-		table.insert(t, aperture.diameter)
-		table.insert(t, aperture.steps)
-		table.insert(t, aperture.angle)
-		table.insert(t, aperture.hole_width)
-		table.insert(t, aperture.hole_height)
-	elseif shape then
-		error("unsupported aperture shape "..tostring(shape))
-	elseif aperture.macro then
+	if aperture.macro then
 		table.insert(t, 'macro')
 		table.insert(t, macro_hash(aperture.macro))
+	elseif aperture.shape then
+		local shape = aperture.shape
+		if shape=='circle' then
+			table.insert(t, aperture.diameter)
+			table.insert(t, aperture.hole_width)
+			table.insert(t, aperture.hole_height)
+		elseif shape=='rectangle' or shape=='obround' then
+			table.insert(t, aperture.width)
+			table.insert(t, aperture.height)
+			table.insert(t, aperture.hole_width)
+			table.insert(t, aperture.hole_height)
+		elseif shape=='polygon' then
+			table.insert(t, aperture.diameter)
+			table.insert(t, aperture.steps)
+			table.insert(t, aperture.angle)
+			table.insert(t, aperture.hole_width)
+			table.insert(t, aperture.hole_height)
+		else
+			error("unsupported aperture shape "..tostring(shape))
+		end
+	elseif aperture.device then
+		local keys = {}
+		for k in pairs(aperture.parameters) do
+			table.insert(keys, k)
+		end
+		table.sort(keys)
+		for _,k in ipairs(keys) do
+			table.insert(t, k)
+			table.insert(t, aperture.parameters[k])
+		end
 	else
-		error("aperture has no shape and no macro")
+		error("unsupported aperture")
 	end
 	return table.concat(t, '\0')
 end

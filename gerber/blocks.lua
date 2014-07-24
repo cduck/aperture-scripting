@@ -1,4 +1,5 @@
 local _M = {}
+local _NAME = ... or 'test'
 
 local io = require 'io'
 local math = require 'math'
@@ -77,6 +78,134 @@ local function load_format(block)
 	assert(mode=='A', "only files with absolute coordinates are supported")
 	assert(xi==yi and xd==yd, "files with different precisions on X and Y axis are not yet supported")
 	return _M.format(zeroes, tonumber(xi), tonumber(xd))
+end
+
+------------------------------------------------------------------------------
+
+-- numbers are scaled by a factor of 10^8 to keep as many digits as possible in the integer part of lua numbers
+-- also 1e-8 inches and 1e-8 millimeters are both an integer number of picometers
+local decimal_shift = 8
+_M.decimal_shift = decimal_shift
+
+local function load_number(s, format)
+	local sign,base = s:match('^([+-]?)(%d+)$')
+	assert(sign and base)
+	local size = format.integer + format.decimal
+	if #base < size then
+		if format.zeroes == 'L' then
+			base = string.rep('0', size - #base) .. base
+		elseif format.zeroes == 'T' then
+			base = base .. string.rep('0', size - #base)
+		elseif format.zeroes == 'D' then
+			error("unexpected number "..s.." in format "..tostring(format))
+		end
+	end
+	return (sign=='-' and -1 or 1) * tonumber(base) * 10 ^ (decimal_shift - format.decimal)
+end
+_M.load_number = load_number
+
+local function save_number(n, format, long)
+	local sign
+	if n < 0 then
+		sign = '-'
+		n = -n
+	else
+		sign = ''
+	end
+	n = n / 10 ^ (decimal_shift - format.decimal)
+	local ni = math.floor(n + 0.5)
+--	assert(math.abs(n - ni) < 1e-8, "rounding error")
+	local d = ni % 10 ^ format.decimal
+	local i = (ni - d) / 10 ^ format.decimal
+	assert(i < 10 ^ format.integer, "number is too big for format")
+	n = string.format('%0'..format.integer..'d%0'..format.decimal..'d', i, d)
+	assert(#n == format.integer + format.decimal)
+	if not long then
+		if format.zeroes == 'L' then
+			n = n:match('^0*(.*.)$')
+		elseif format.zeroes=='T' then
+			n = n:match('^(..-)0*$')
+		end
+	end
+	return sign..n
+end
+_M.save_number = save_number
+
+------------------------------------------------------------------------------
+
+local function load_aperture_parameter(s)
+	local sign,base = s:match('^([+-]?)([%d.]+)$')
+	assert(sign and base, "invalid aperture parameter '"..tostring(s).."'")
+	local integer,decimal
+	if base:match('%.') then
+		integer,decimal = base:match('^(.*)%.(.*)$')
+	else
+		integer,decimal = base,""
+	end
+	assert(integer:match('^%d*$'))
+	assert(decimal:match('^%d*$'))
+--	assert(#decimal <= decimal_shift, "aperture parameter has too many decimal digits")
+	return (sign=='-' and -1 or 1) * tonumber(integer..decimal) * 10 ^ (decimal_shift - #decimal)
+end
+_M.load_aperture_parameter = load_aperture_parameter
+
+local function save_aperture_parameter(n)
+	local sign
+	if n < 0 then
+		sign = '-'
+		n = -n
+	else
+		sign = ''
+	end
+	local d = n % 10 ^ decimal_shift
+	local i = (n - d) / 10 ^ decimal_shift
+	n = tostring(i)
+	if d~=0 then
+		d = string.format('%f', d)
+		local di,dd = d:match('^(%d*)%.(%d*)$')
+		if not di then
+			di,dd = d,''
+		end
+		di = string.rep('0', decimal_shift - #di)..di
+		n = (n..'.'..di..dd):gsub('0*$', '')
+	end
+	return sign..n
+end
+_M.save_aperture_parameter = save_aperture_parameter
+
+if _NAME=='test' then
+	require 'test'
+	expect(8, decimal_shift)
+	
+	expect(0, load_aperture_parameter("0"))
+	expect(50000000, load_aperture_parameter("0.5"))
+	expect(10000000, load_aperture_parameter("0.1"))
+	expect(1000000, load_aperture_parameter("0.01"))
+	expect(100000, load_aperture_parameter("0.001"))
+	expect(10000, load_aperture_parameter("0.0001"))
+	expect(1000, load_aperture_parameter("0.00001"))
+	expect(6250000, load_aperture_parameter("0.0625"))
+	expect(1000000000, load_aperture_parameter("10"))
+	expect(1, load_aperture_parameter("0.00000001"))
+	expect(1.01, load_aperture_parameter("0.0000000101"))
+	expect(1001*10^-3, load_aperture_parameter("0.00000001001"))
+	expect(1.0001, load_aperture_parameter("0.000000010001"))
+	expect(0.5, load_aperture_parameter("0.000000005"))
+	
+	expect("0", save_aperture_parameter(0))
+	expect("0.5", save_aperture_parameter(50000000))
+	expect("0.1", save_aperture_parameter(10000000))
+	expect("0.01", save_aperture_parameter(1000000))
+	expect("0.001", save_aperture_parameter(100000))
+	expect("0.0001", save_aperture_parameter(10000))
+	expect("0.00001", save_aperture_parameter(1000))
+	expect("0.0625", save_aperture_parameter(6250000))
+	expect("10", save_aperture_parameter(1000000000))
+	expect("0.00000001", save_aperture_parameter(1))
+	expect("0.0000000101", save_aperture_parameter(1.01))
+	expect("0.00000001001", save_aperture_parameter(1.001))
+	expect("0.000000010001", save_aperture_parameter(1.0001))
+	expect("0.000000005", save_aperture_parameter(0.5))
 end
 
 ------------------------------------------------------------------------------
@@ -246,7 +375,16 @@ function aperture_getters:definition()
 	else
 		shape = self.shape
 	end
-	local parameters = self.parameters and ","..table.concat(self.parameters, "X") or ""
+	local parameters
+	if self.parameters then
+		parameters = {}
+		for i,parameter in ipairs(self.parameters) do
+			parameters[i] = save_aperture_parameter(parameter)
+		end
+		parameters = ","..table.concat(parameters, "X")
+	else
+		parameters = ""
+	end
 	return shape..parameters
 end
 
@@ -276,64 +414,13 @@ local function load_aperture(block)
 		assert(parameters ~= "")
 		local t = {}
 		for parameter in parameters:gmatch('[^X]+') do
-			parameter = assert(tonumber(parameter))
+			parameter = load_aperture_parameter(parameter)
 			table.insert(t, parameter)
 		end
 		parameters = t
 	end
 	return _M.aperture(dcode, shape, parameters)
 end
-
-------------------------------------------------------------------------------
-
--- numbers are scaled by a factor of 10^8 to keep as many digits as possible in the integer part of lua numbers
--- also 1e-8 inches and 1e-8 millimeters are both an integer number of picometers
-local decimal_shift = 8
-_M.decimal_shift = decimal_shift
-
-local function load_number(s, format)
-	local sign,base = s:match('^([+-]?)(%d+)$')
-	assert(sign and base)
-	local size = format.integer + format.decimal
-	if #base < size then
-		if format.zeroes == 'L' then
-			base = string.rep('0', size - #base) .. base
-		elseif format.zeroes == 'T' then
-			base = base .. string.rep('0', size - #base)
-		elseif format.zeroes == 'D' then
-			error("unexpected number "..s.." in format "..tostring(format))
-		end
-	end
-	return (sign=='-' and -1 or 1) * tonumber(base) * 10 ^ (decimal_shift - format.decimal)
-end
-_M.load_number = load_number
-
-local function save_number(n, format, long)
-	local sign
-	if n < 0 then
-		sign = '-'
-		n = -n
-	else
-		sign = ''
-	end
-	n = n / 10 ^ (decimal_shift - format.decimal)
-	local ni = math.floor(n + 0.5)
---	assert(math.abs(n - ni) < 1e-8, "rounding error")
-	local d = ni % 10 ^ format.decimal
-	local i = (ni - d) / 10 ^ format.decimal
-	assert(i < 10 ^ format.integer, "number is too big for format")
-	n = string.format('%0'..format.integer..'d%0'..format.decimal..'d', i, d)
-	assert(#n == format.integer + format.decimal)
-	if not long then
-		if format.zeroes == 'L' then
-			n = n:match('^0*(.*.)$')
-		elseif format.zeroes=='T' then
-			n = n:match('^(..-)0*$')
-		end
-	end
-	return sign..n
-end
-_M.save_number = save_number
 
 ------------------------------------------------------------------------------
 

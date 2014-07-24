@@ -20,20 +20,24 @@ end
 
 local function load_tool(data, unit)
 	local tcode = data.tcode
+	local scale = scales[unit]
+	
 	local d = data.parameters.C
 	assert(d, "tool "..tostring(tcode).." require at least a diameter (C parameter)")
 	return {
 		name = tcode,
-		unit = unit,
+		unit = 'pm',
 		shape = 'circle',
-		diameter = d,
+		diameter = d * scale,
 	}
 end
 
-local function save_tool(aperture)
+local function save_tool(aperture, unit)
 	local name = assert(aperture.save_name)
+	assert(aperture.unit=='pm', "basic apertures must be defined in picometers")
 	assert(aperture.shape == 'circle', "only circle apertures are supported")
-	local parameters = { 'C', C = aperture.diameter }
+	local scale = scales[unit]
+	local parameters = { 'C', C = aperture.diameter / scale }
 	return _M.blocks.tool(name, parameters)
 end
 
@@ -255,7 +259,7 @@ function _M.save(image, file_path)
 	end
 	
 	for _,aperture in ipairs(aperture_order) do
-		table.insert(data.headers, save_tool(aperture))
+		table.insert(data.headers, save_tool(aperture, unit))
 	end
 	
 	for _,layer in ipairs(image.layers) do

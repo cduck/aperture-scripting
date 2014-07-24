@@ -14,7 +14,7 @@ local tool_mt = {}
 function tool_mt:__tostring()
 	local parameters = {}
 	for _,name in ipairs(self.parameters) do
-		table.insert(parameters, name..self.parameters[name])
+		table.insert(parameters, name..gerber.save_aperture_parameter(self.parameters[name]))
 	end
 	return string.format('T%02d%s', self.tcode, table.concat(parameters))
 end
@@ -35,7 +35,7 @@ local function load_tool(block)
 	tcode = tonumber(tcode)
 	local parameters = {}
 	for name,value in string.gmatch(sparameters, '(%a)([%d%.-]+)') do
-		parameters[name] = tonumber(value)
+		parameters[name] = gerber.load_aperture_parameter(value)
 		table.insert(parameters, name) -- for order
 	end
 	return _M.tool(tcode, parameters)

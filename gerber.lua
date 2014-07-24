@@ -49,99 +49,122 @@ for k,v in pairs(gerber_shapes) do reverse_gerber_shapes[v] = k end
 local function load_aperture(data, macros, unit)
 	local dcode = data.dcode
 	local gerber_shape = data.shape
-	local parameters
+	local scale = scales[unit]
 	
 	local shape,macro = gerber_shapes[gerber_shape]
 	local aperture = {
 		name = dcode,
-		unit = unit,
 		shape = shape,
 	}
 	
 	if shape=='circle' then
 		local d,hx,hy = table.unpack(data.parameters)
 		assert(d, "circle apertures require at least 1 parameter")
-		aperture.diameter = d
-		aperture.hole_width = hx
-		aperture.hole_height = hy
+		aperture.unit = 'pm'
+		aperture.diameter = d * scale
+		aperture.hole_width = hx and hx * scale
+		aperture.hole_height = hy and hy * scale
 	elseif shape=='rectangle' then
 		local x,y,hx,hy = table.unpack(data.parameters)
 		assert(x and y, "rectangle apertures require at least 2 parameters")
-		aperture.width = x
-		aperture.height = y
-		aperture.hole_width = hx
-		aperture.hole_height = hy
+		aperture.unit = 'pm'
+		aperture.width = x * scale
+		aperture.height = y * scale
+		aperture.hole_width = hx and hx * scale
+		aperture.hole_height = hy and hy * scale
 	elseif shape=='obround' then
 		local x,y,hx,hy = table.unpack(data.parameters)
 		assert(x and y, "obround apertures require at least 2 parameters")
-		aperture.width = x
-		aperture.height = y
-		aperture.hole_width = hx
-		aperture.hole_height = hy
+		aperture.unit = 'pm'
+		aperture.width = x * scale
+		aperture.height = y * scale
+		aperture.hole_width = hx and hx * scale
+		aperture.hole_height = hy and hy * scale
 	elseif shape=='polygon' then
 		local d,steps,angle,hx,hy = table.unpack(data.parameters)
 		assert(d and steps, "polygon apertures require at least 2 parameter")
-		aperture.diameter = d
-		aperture.steps = steps
-		aperture.angle = angle
-		aperture.hole_width = hx
-		aperture.hole_height = hy
+		aperture.unit = 'pm'
+		aperture.diameter = d * scale
+		aperture.steps = steps / 1e8
+		aperture.angle = angle and angle / 1e8
+		aperture.hole_width = hx and hx * scale
+		aperture.hole_height = hy and hy * scale
 	else
+		aperture.unit = unit
 		aperture.macro = assert(macros[gerber_shape], "no macro with name "..tostring(gerber_shape))
 		assert(aperture.macro.unit == unit, "aperture and macro units don't match")
-		aperture.parameters = data.parameters
+		local scale = 1 / 10 ^ _M.blocks.decimal_shift
+		if data.parameters then
+			local parameters = {}
+			for i,value in ipairs(data.parameters) do
+				parameters[i] = value * scale
+			end
+			aperture.parameters = parameters
+		end
 	end
 	
 	return aperture
 end
 
-local function save_aperture(aperture)
+local function save_aperture(aperture, unit)
 	local name = assert(aperture.save_name)
-	local aperture_shape = aperture.shape
-	local shape,parameters = reverse_gerber_shapes[aperture_shape]
+	local gerber_shape,parameters
 	assert(aperture.macro or aperture.shape, "aperture has no shape and no macro")
 	if aperture.macro then
-		shape = aperture.macro.name
-		parameters = aperture.parameters
-	elseif aperture_shape=='circle' then
-		assert(aperture.diameter, "circle aperture has no diameter")
-		parameters = {
-			aperture.diameter,
-			aperture.hole_width,
-			aperture.hole_height,
-		}
-	elseif aperture_shape=='rectangle' then
-		assert(aperture.width, "rectangle aperture has no width")
-		assert(aperture.height, "rectangle aperture has no height")
-		parameters = {
-			aperture.width,
-			aperture.height,
-			aperture.hole_width,
-			aperture.hole_height,
-		}
-	elseif aperture_shape=='obround' then
-		assert(aperture.width, "obround aperture has no width")
-		assert(aperture.height, "obround aperture has no height")
-		parameters = {
-			aperture.width,
-			aperture.height,
-			aperture.hole_width,
-			aperture.hole_height,
-		}
-	elseif aperture_shape=='polygon' then
-		assert(aperture.diameter, "polygon aperture has no diameter")
-		assert(aperture.steps, "polygon aperture has no number of vertices")
-		parameters = {
-			aperture.diameter,
-			aperture.steps,
-			aperture.angle,
-			aperture.hole_width,
-			aperture.hole_height,
-		}
+		assert(aperture.unit == unit)
+		gerber_shape = aperture.macro.name
+		if aperture.parameters then
+			local scale = 10 ^ _M.blocks.decimal_shift
+			parameters = {}
+			for i,value in ipairs(aperture.parameters) do
+				parameters[i] = value * scale
+			end
+		end
 	else
-		error("unsupported shape "..tostring(shape))
+		assert(aperture.unit=='pm', "basic apertures must be defined in picometers")
+		local shape = aperture.shape
+		gerber_shape = assert(reverse_gerber_shapes[shape], "unsupported aperture shape "..tostring(shape))
+		local scale = scales[unit]
+		if shape=='circle' then
+			assert(aperture.diameter, "circle aperture has no diameter")
+			parameters = {
+				aperture.diameter / scale,
+				aperture.hole_width and aperture.hole_width / scale,
+				aperture.hole_height and aperture.hole_height / scale,
+			}
+		elseif shape=='rectangle' then
+			assert(aperture.width, "rectangle aperture has no width")
+			assert(aperture.height, "rectangle aperture has no height")
+			parameters = {
+				aperture.width / scale,
+				aperture.height / scale,
+				aperture.hole_width and aperture.hole_width / scale,
+				aperture.hole_height and aperture.hole_height / scale,
+			}
+		elseif shape=='obround' then
+			assert(aperture.width, "obround aperture has no width")
+			assert(aperture.height, "obround aperture has no height")
+			parameters = {
+				aperture.width / scale,
+				aperture.height / scale,
+				aperture.hole_width and aperture.hole_width / scale,
+				aperture.hole_height and aperture.hole_height / scale,
+			}
+		elseif shape=='polygon' then
+			assert(aperture.diameter, "polygon aperture has no diameter")
+			assert(aperture.steps, "polygon aperture has no number of vertices")
+			parameters = {
+				aperture.diameter / scale,
+				aperture.steps * 1e8,
+				aperture.angle and aperture.angle * 1e8,
+				aperture.hole_width and aperture.hole_width / scale,
+				aperture.hole_height and aperture.hole_height / scale,
+			}
+		else
+			error("unsupported shape "..tostring(shape))
+		end
 	end
-	return _M.blocks.aperture(name, shape, parameters)
+	return _M.blocks.aperture(name, gerber_shape, parameters)
 end
 
 ------------------------------------------------------------------------------
@@ -566,7 +589,7 @@ function _M.save(image, file_path, verbose)
 		table.insert(data, save_macro(macro))
 	end
 	for _,aperture in ipairs(aperture_order) do
-		table.insert(data, save_aperture(aperture))
+		table.insert(data, save_aperture(aperture, unit))
 	end
 	
 	for _,layer in ipairs(image.layers) do
