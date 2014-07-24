@@ -10,7 +10,7 @@ _M.blocks = require 'gerber.blocks'
 -- all positions in picometers (1e-12 meters)
 local scales = {
 	['in'] = 25400000000 / 10 ^ _M.blocks.decimal_shift,
-	mm =  1000000000 / 10 ^ _M.blocks.decimal_shift,
+	mm     =  1000000000 / 10 ^ _M.blocks.decimal_shift,
 }
 for unit,scale in pairs(scales) do
 	assert(math.floor(scale)==scale)
