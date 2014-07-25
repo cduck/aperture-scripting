@@ -9,3 +9,4 @@ test/simple.merge-a
 test/merged.drl
 test/merged.grb
 test/output
+luacov.*
