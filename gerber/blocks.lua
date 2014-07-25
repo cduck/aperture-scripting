@@ -72,12 +72,35 @@ function _M.format(zeroes, integer, decimal)
 end
 
 local function load_format(block)
-	local zeroes,mode,xi,xd,yi,yd = block:match('^FS(.)(.)X(%d)(%d)Y(%d)(%d)$')
-	assert(zeroes, "unrecognized format '"..block.."'")
-	assert(zeroes=='L' or zeroes=='T' or zeroes=='D', "unsupported zeroes mode "..zeroes.." in format '"..block.."'")
+	local zeroes,mode,xi,xd,yi,yd = block:match('^FS([LT])([AI])X(%d)(%d)Y(%d)(%d)$')
+	local warn
+	if not zeroes then
+		warn = true
+		local data = block:match('^FS(.*)$')
+		-- try to extract some information
+		for param in data:gmatch('%a%d*') do
+			if param=='L' or param=='T' then
+				zeroes = param
+			elseif param=='A' or param=='I' then
+				mode = param
+			elseif param:match('^X%d%d$') then
+				xi,xd = param:match('^X(%d)(%d)$')
+			elseif param:match('^Y%d%d$') then
+				yi,yd = param:match('^Y(%d)(%d)$')
+			else
+				error("unrecognized format '"..block.."'")
+			end
+		end
+	end
+	if not zeroes then zeroes = 'L' end
+--	assert(zeroes=='L' or zeroes=='T', "unsupported zeroes mode "..zeroes.." in format '"..block.."'")
 	assert(mode=='A', "only files with absolute coordinates are supported")
 	assert(xi==yi and xd==yd, "files with different precisions on X and Y axis are not yet supported")
-	return _M.format(zeroes, tonumber(xi), tonumber(xd))
+	local format = _M.format(zeroes, tonumber(xi), tonumber(xd))
+	if warn then
+		print("warning: invalid Gerber format "..block..", treating as "..tostring(format))
+	end
+	return format
 end
 
 ------------------------------------------------------------------------------
