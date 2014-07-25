@@ -20,11 +20,11 @@ end
 assert(gerber.load("test/example2.grb"))
 assert(boards.load("test/simple/simple"))
 
-assert(os.remove('test/copy.grb'))
+os.remove('test/copy.grb')
 assert(gerber.save(assert(gerber.load("test/example2.grb")), "test/copy.grb"))
 assert(diff('test/copy.grb.expected', 'test/copy.grb'))
 
-assert(os.remove('test/copy.drl'))
+os.remove('test/copy.drl')
 assert(excellon.save(assert(excellon.load("test/example.drl")), "test/copy.drl"))
 assert(diff('test/copy.drl.expected', 'test/copy.drl'))
 
