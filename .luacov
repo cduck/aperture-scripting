@@ -1,0 +1,20 @@
+return {
+	-- filename to store stats collected
+	statsfile = "luacov.stats.out",
+	
+	-- filename to store report
+	reportfile = "luacov.report.out",
+	
+	-- Delete stats file after reporting?
+	deletestats = true,
+	
+	-- Patterns for files to include when reporting
+	-- all will be included if nothing is listed
+	-- (exclude overrules include, do not include
+	-- the .lua extension, path separator is always '/')
+	include = {
+		"^./",
+	},
+	exclude = {},
+}
+-- vi: ft=lua
