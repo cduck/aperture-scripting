@@ -2,7 +2,7 @@
 export LUA_PATH=./?.lua;;
 
 .PHONY:test
-test:test-check test-copy test-offset test-merge test-misc
+test:
 	lua boards/manipulation.lua
 	lua test-misc.lua
 
