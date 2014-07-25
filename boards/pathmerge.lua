@@ -6,18 +6,30 @@ local region = require 'boards.region'
 
 ------------------------------------------------------------------------------
 
+local function copy_point(point)
+	return {
+		x = point.x,
+		y = point.y,
+		cx = point.cx,
+		cy = point.cy,
+		interpolation = point.interpolation,
+		quadrant = point.quadrant,
+	}
+end
+
 local function reverse_path(path)
 	local reverse = {}
 	for i=#path,1,-1 do
-		if path[i].interpolated then
+		local point = path[i]
+		if point.interpolated then
 			-- we should recompute interpolated regions
 			return nil
 		end
-		if i==1 and path[i].interpolation or i > 1 and path[i].interpolation~='linear' then
+		if i==1 and point.interpolation or i > 1 and point.interpolation~='linear' then
 			-- interpolation flag actually touches two points, so 
 			return nil
 		end
-		reverse[#path-i+1] = path[i]
+		reverse[#path-i+1] = copy_point(point)
 	end
 	reverse[1].interpolation = nil
 	reverse[#reverse].interpolation = 'linear'
@@ -27,11 +39,11 @@ end
 local function append_path(parent, child)
 	local nparent = #parent
 	if (child[1].x==child[2].x or child[1].y==child[2].y) and parent[nparent].x~=parent[nparent-1].x and parent[nparent].y~=parent[nparent-1].y then
-		parent[nparent] = child[1]
+		parent[nparent] = copy_point(child[1])
 		parent[nparent].interpolation = 'linear'
 	end
 	for i=2,#child do
-		parent[nparent+i-1] = child[i]
+		parent[nparent+i-1] = copy_point(child[i])
 	end
 end
 
@@ -40,13 +52,13 @@ local function prepend_path(parent, child)
 	local nchild = #child
 	parent[1].interpolation = 'linear'
 	for i=nparent+nchild-1,nchild,-1 do
-		parent[i] = parent[i-(nchild-1)]
+		parent[i] = copy_point(parent[i-(nchild-1)])
 	end
 	if (child[nchild].x==child[nchild-1].x or child[nchild].y==child[nchild-1].y) and parent[nchild].x~=parent[nchild+1].x and parent[nchild].y~=parent[nchild+1].y then
-		parent[nchild] = child[nchild]
+		parent[nchild] = copy_point(child[nchild])
 	end
 	for i=1,nchild-1 do
-		parent[i] = child[i]
+		parent[i] = copy_point(child[i])
 	end
 end
 
