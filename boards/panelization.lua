@@ -24,18 +24,7 @@ function _M.empty_board(width, height)
 	return {
 		unit = 'pm',
 		template = templates.default,
-		images = {
-			milling = empty_image(),
-			drill = empty_image(),
-			top_paste = empty_image(),
-			bottom_paste = empty_image(),
-			top_copper = empty_image(),
-			bottom_copper = empty_image(),
-			top_soldermask = empty_image(),
-			bottom_soldermask = empty_image(),
-			top_silkscreen = empty_image(),
-			bottom_silkscreen = empty_image(),
-		},
+		images = {},
 		extensions = {},
 		formats = {},
 		outline = width and height and {
