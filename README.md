@@ -38,7 +38,6 @@ If you're on Windows, and you don't have a working Lua installation, I recommend
 
 # 4 - Manual
 
-
 The gerber-ltools API is still fluctuating, so please consult the source and the examples to get an idea.
 
 # 5 - Examples
@@ -55,9 +54,10 @@ Then to load a board you use the `boards.load` function:
 
 	local simple = assert(boards.load('./simple'))
 
-This will simply print all the corresponding Gerber and Excellon file names, and validate the data (ie. if there is some loading error, you should get an error message). In all examples below we start from this *simple* board, which looks like this:
+This will simply print all the corresponding Gerber and Excellon file names, and validate the data (ie. if there is some loading error, you should get an error message). In all examples below we start from this *simple* board, which looks like that:
 
 ![](examples/simple.png)
+
 
 ## 5.2 - Saving a board
 
@@ -65,6 +65,11 @@ The final step of any manipulation script usually involves saving your board dat
 
 	local simple = assert(boards.load('./simple'))
 	
+	assert(boards.save(simple, './save'))
+
+However when you combine several boards into one (like in the panelization examples below), some data in the board may get duplicated, for example aperture definitions. To save on disk space a bit, and more importantly to simplify output files, it is a good idea to merge all identical apertures before saving:
+
+	boards.merge_apertures(simple)
 	assert(boards.save(simple, './save'))
 
 As expected the output is identical to the input:
@@ -87,7 +92,7 @@ The result is the same board as above, but rotated 90°:
 
 ![](examples/rotate.png)
 
-## 5.5 - Panelizing boards
+## 5.4 - Panelizing boards
 
 One of the most important features of gerber-ltools is its ability to panelize boards, ie. to assemble several boards into a larger one. This is probably why you want to use gerber-ltools. The module you need for that is `boards.panelization`:
 
@@ -97,9 +102,7 @@ There you will find a `panelization.panelize` function that receives a layout ta
 
 	local simple = assert(boards.load('./simple'))
 	
-	local layout = { simple, simple }
-	
-	local panel = assert(panelization.panelize(layout, {}, true))
+	local panel = assert(panelization.panelize({ simple, simple }, {}, true))
 	
 	boards.merge_apertures(panel)
 	assert(boards.save(panel, './panel'))
@@ -112,64 +115,80 @@ The resulting panel looks like that:
 
 As you can see the `panelize` function automatically placed the sub-boards with a 2 mm gap, and it created a break tab to connect the two boards.
 
-## 5.6 - Panelizing modified boards
+## 5.5 - Panelizing modified boards
 
 Of course you can combine the above operations to first modify the board, and then use the modified copy in a panel. Since our *simple* board has a slot on its left, we'll create a rotated copy with the slot on the right, so that we can create an horizontal panel.
 
 	local simple = assert(boards.load('./simple'))
 	local simple180 = manipulation.rotate_board(simple, 180)
 	
-	local layout = { simple, simple180 }
-	
-	local panel = assert(panelization.panelize(layout, {}, false))
+	local panel = assert(panelization.panelize({ simple, simple180 }, {}, false))
 	
 	boards.merge_apertures(panel)
-	assert(boards.save(panel, './panel2'))
+	assert(boards.save(panel, './panel-rotate'))
 
 As we have seen above the `rotate_board` function returns the rotated board. This means the original board is left intact, and we can use both in the panel. Generally the functions in the `boards.manipulation` module will create copies of the input data, which is kept unmodified.
 
 This time we passed `false` as third argument to `panelize`, which means we want a horizontal panel. The result of this panel is as follows:
 
-![](examples/panel2.png)
+![](examples/panel-rotate.png)
 
 To verify that the right board has been rotated and not mirrored, you can check the little hole in the trace, which the left board has on the top-right, but which the right board has on the bottom-left.
 
-## 5.7 - Panelizing in two dimensions
-
-We've seen above that the `panelize` function takes a panel layout as argument. A layout is a Lua array, so it can only have one dimension (either vertical or horizontal depending on the `panelize` third argument). But each element of the array can be either a board, or another sub-panel layout. This is how you construct complex panels recursively. As you can guess this limits the kind of panels you can create. To access a single board you always break the panel in two along a single line, several times if necessary depending on the layout depth. This has advantages (panel separation is easy) but also drawbacks (e.g. you cannot completely surround your panel with a rectangle frame to improve its stiffness).
-
-Here is an example script with a two level layout:
-
-	local simple = assert(boards.load('./simple'))
-	local simple90 = manipulation.rotate_board(simple, 90)
-	local simple180 = manipulation.rotate_board(simple, 180)
-	local simple270 = manipulation.rotate_board(simple, 270)
-	
-	local layout = {
-		{ simple90, simple180 },
-		{ simple, simple270 },
-	}
-	
-	local panel = assert(panelization.panelize(layout, {}, true))
-	
-	boards.merge_apertures(panel)
-	assert(boards.save(panel, './panel3'))
-	
-
-Each level of the layout has to be made of boards with the same size along the alignment direction. For a horizontal layout, all boards must be the same height. For a vertical layout, all boards must be the same width. Here our *simple* board is a square, so even rotated it will always have the same size on both axis.
-
-Another thing to keep in mind is that the layout describe panels from left to right, and from bottom to top. This means in the example above, the first sub-panel with `simple90` and `simple180` will actually be on the bottom of the output panel.
-
-The resulting 2D panels looks like this:
-
-![](examples/panel3.png)
-
-As we've seen before there is only one breaking tab between the left and right part of each sub-panel, but there are two between the top and bottom sub-panels. This is because the `panelize` function will insert breaking tabs in each segment of sub-panel edge that match on both sides of the gap, and sometimes more along long edges.
-
-## 5.8 - Creating boards
+## 5.6 - Creating empty boards
 
 Sometimes you not only want to manipulate and assemble existing boards, but you may want to create new boards on the fly. For example you may want to put spacers between boards in a panel to account for over-hanging components, or you might want to add a frame with tooling holes and fiduciaries.
 
-The `panelization` module has a function named `empty_board` that lets you create such an empty board. You can either pass dimensions so that your board is created with a rectangle outline, or call the function without arguments to get a completely empty board without dimensions (to be used as a canvas for drawing, see below).
+The `panelization` module has a function named `empty_board` that lets you create such an empty board. You can either pass dimensions so that your board is created with a rectangle outline, or call the function without arguments to get a completely empty board without dimensions (to be used as a canvas for drawing, see below). We'll try to create a 1 cm breaking tab the same width as the panel above. First we need the simple board dimensions:
 
+	local extents = require 'boards.extents'
+	
+	local simple_extents = extents.compute_board_extents(simple)
+
+Then we can create the tab based on these dimensions. We'll assume the default 2 mm gap between boards:
+
+	local height = 10*mm
+	local width = simple_extents.width * 2 + 2*mm
+	local tab = panelization.empty_board(width, height)
+
+However since the board has no image (it's empty), you cannot save it on its own. We'll see later how to save a board generated from scratch, but we already can use that empty board in panels.
+
+## 5.7 - Panelizing panels
+
+A panel is just a board, so you can use it as input in a `panelize` call. This way you can create more complex panels in several steps (we'll see below how to achieve the same in one step). We'll reuse the rotated-panel above, and the empty tab we just created:
+
+	local panel = panelization.panelize({ tab, panel, tab }, {}, true)
+	boards.merge_apertures(panel)
+	boards.save(panel, './panel-panel')
+
+And here is the result:
+
+![](examples/panel-panel.png)
+
+One interesting thing to note is that each copy of the empty board is joined to the center panel with two breaking tabs. The `panelize` function will try to be smart about where to place breaking tabs. This can be controlled to some extents with the `options` table, or in the way the outline path is defined in the input boards, but that's a story for another day.
+
+## 5.8 - Complex panels in one step
+
+We've seen above that the `panelize` function takes a layout table as first argument. A layout is a Lua array, so it can only have one dimension (either vertical or horizontal depending on the `panelize` third argument). But each element of the array can be either a board, or another sub-panel layout. This is how you construct complex panels in one step. Here we'll create a panel a bit more involved than in the previous example, with a single call to `panelize`:
+
+	local simple_extents = extents.compute_board_extents(simple)
+	local width = simple_extents.width * 2 + 2*mm
+	local height = simple_extents.height * 2 + 14*mm
+	local tabh = panelization.empty_board(width, 10*mm)
+	local tabv = panelization.empty_board(10*mm, height)
+	
+	local layout = { tabv, {
+		{ simple, simple180 },
+		tabh,
+		{ simple, simple180 },
+	}, tabv }
+	
+	local panel = panelization.panelize(layout, {}, false)
+	
+	boards.merge_apertures(panel)
+	boards.save(panel, './panel-layout')
+
+The resulting 2D panel looks like this:
+
+![](examples/panel-layout.png)
 

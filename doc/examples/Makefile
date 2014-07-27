@@ -1,4 +1,4 @@
-SCRIPTS=save rotate panel panel2 panel3
+SCRIPTS=save rotate panel panel-rotate panel-panel panel-layout
 #EXTS=oln drd gml gtl gto gts gbl gbo gbs
 EXTS=oln drd gml gtl gts gbl gbs
 

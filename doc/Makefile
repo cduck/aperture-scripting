@@ -1,6 +1,7 @@
 
 gendoc:logo.png
 	../../doc/gendoc
+	make -C examples
 
 logo.png:logo.ps gerber-2000.png Makefile
 	convert \
