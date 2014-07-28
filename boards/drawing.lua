@@ -180,7 +180,9 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 		error("unsupported horizontal alignment")
 	end
 	
-	table.insert(image.layers, { polarity = polarity })
+	if #image.layers == 0 then
+		table.insert(image.layers, { polarity = polarity })
+	end
 	local base_layer = #image.layers
 	local ilayer
 	for i,char in ipairs(text) do
@@ -209,9 +211,12 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 				end
 			end
 			local layer = image.layers[ilayer]
-			if layer.polarity ~= path_polarity then
-				layer = { polarity = path_polarity }
+			while layer and layer.polarity ~= path_polarity do
 				ilayer = ilayer + 1
+				layer = image.layers[ilayer]
+			end
+			if not layer then
+				layer = { polarity = path_polarity }
 				image.layers[ilayer] = layer
 			end
 			table.insert(layer, path)
