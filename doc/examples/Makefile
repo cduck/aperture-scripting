@@ -1,6 +1,5 @@
 SCRIPTS=save rotate panel panel-rotate panel-panel panel-layout drawing-fiducials
-#EXTS=oln drd gml gtl gto gts gbl gbo gbs
-EXTS=oln drd gml gtl gts gbl gbs
+EXTS=oln drd gml gtl gts gto gbl gbs gbo
 
 build:$(patsubst %,%.gtl,$(SCRIPTS))
 
