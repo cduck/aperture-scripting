@@ -30,7 +30,7 @@ endif
 
 export LUA_PATH=.$(SLASH)?.lua;;
 
-.PHONY:test test-init test-boards test-bom
+.PHONY:test test-init $(TESTS)
 
 test:test-init $(TESTS)
 	lua test-misc.lua
