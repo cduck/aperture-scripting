@@ -37,7 +37,7 @@ export LUA_PATH=.$(SLASH)?.lua;;
 test:test-init $(TESTS)
 	@$(LUA) test-misc.lua >/dev/null
 	@luacov
-	@lua -e "print((io.open('luacov.report.out', 'rb'):read('*all'):gsub('^.*\n(====*\nSummary)', '%1'):gsub('\n$$', '')))"
+	@$(LUA) -e "print((io.open('luacov.report.out', 'rb'):read('*all'):gsub('^.*\n(====*\r?\nSummary)', '%1'):gsub('\r?\n$$', '')))"
 
 test-init:
 	@rm -f luacov*
