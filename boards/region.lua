@@ -88,6 +88,40 @@ function _MT:__call(...)
 	return ctor(...)
 end
 
+if _NAME=='test' then
+	require 'test'
+	assert(_M.new())
+	assert(_M())
+	expect(region_mt, getmetatable(_M.new()))
+	expect(region_mt, getmetatable(_M()))
+	expect(true, _M().empty)
+	expect(nil, _M().foo)
+	local r = _M{left=1, bottom=3, right=4, top=5}
+	expect(3, r.width)
+	expect(2, r.height)
+	expect(6, r.area)
+	local r1 = _M{left=1, bottom=1, right=3, top=3}
+	local r2 = _M{left=2, bottom=2, right=4, top=4}
+	local r = r1 + r2
+	expect(1, r.left)
+	expect(1, r.bottom)
+	expect(4, r.right)
+	expect(4, r.top)
+	local p = {x=4, y=4}
+	local r = r1 + p
+	expect(1, r.left)
+	expect(1, r.bottom)
+	expect(4, r.right)
+	expect(4, r.top)
+	local r = r1 * r2
+	expect(3, r.left)
+	expect(3, r.bottom)
+	expect(7, r.right)
+	expect(7, r.top)
+	expect(false, pcall(function() return r + {} end))
+	expect(false, pcall(function() return r * {} end))
+end
+
 ------------------------------------------------------------------------------
 
 local sqrt,min,max,asin = math.sqrt,math.min,math.max,math.asin
