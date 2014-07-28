@@ -3,6 +3,7 @@ local fs = require 'lfs'
 local gerber = require 'gerber'
 local excellon = require 'excellon'
 local boards = require 'boards'
+local extents = require 'boards.extents'
 local manipulation = require 'boards.manipulation'
 
 ------------------------------------------------------------------------------
@@ -81,23 +82,64 @@ assert(boards.save(board, 'test/output/tmp'))
 
 ------------------------------------------------------------------------------
 
-local b = assert(boards.load("test/apertures"))
-boards.generate_aperture_paths(b)
-manipulation.rotate_board(b, 0)
-manipulation.rotate_board(b, 90)
-manipulation.rotate_board(b, 180)
-manipulation.rotate_board(b, 270)
+local board = assert(boards.load("test/apertures"))
+boards.generate_aperture_paths(board)
+manipulation.rotate_board(board, 0)
+manipulation.rotate_board(board, 90)
+manipulation.rotate_board(board, 180)
+manipulation.rotate_board(board, 270)
 
-local b = assert(boards.load("test/rotate"))
-boards.generate_aperture_paths(b)
-manipulation.rotate_board(b, 0)
-manipulation.rotate_board(b, 90)
-manipulation.rotate_board(b, 180)
-manipulation.rotate_board(b, 270)
-manipulation.rotate_board(b, 17)
-manipulation.rotate_board(b, 97)
-manipulation.rotate_board(b, 181)
-manipulation.rotate_board(b, 271)
+local apertures = {}
+for _,image in pairs(board.images) do
+	for _,layer in ipairs(image.layers) do
+		for  _,path in ipairs(layer) do
+			if path.aperture then
+				apertures[path.aperture] = true
+			end
+		end
+	end
+end
+for aperture in pairs(apertures) do
+	extents.compute_aperture_extents(aperture)
+end
+
+boards.merge_apertures(board)
+
+extents.compute_board_extents(board)
+board.outline = nil
+extents.compute_board_extents(board)
+
+local board = assert(boards.load("test/rotate"))
+boards.generate_aperture_paths(board)
+manipulation.rotate_board(board, 0)
+manipulation.rotate_board(board, 90)
+manipulation.rotate_board(board, 180)
+manipulation.rotate_board(board, 270)
+manipulation.rotate_board(board, 17)
+manipulation.rotate_board(board, 97)
+manipulation.rotate_board(board, 181)
+manipulation.rotate_board(board, 271)
+
+------------------------------------------------------------------------------
+
+local board = assert(boards.load("test/paths"))
+boards.interpolate_paths(board)
+
+local board = assert(boards.load("test/paths", {unit='mm'}))
+
+------------------------------------------------------------------------------
+
+fs.chdir('doc/examples')
+
+dofile('save.cfg')
+dofile('rotate.cfg')
+dofile('panel.cfg')
+dofile('panel-rotate.cfg')
+dofile('empty.cfg')
+dofile('panel-panel.cfg')
+dofile('panel-layout.cfg')
+dofile('drawing-fiducials.cfg')
+dofile('drawing-text.cfg')
 
 ------------------------------------------------------------------------------
 
