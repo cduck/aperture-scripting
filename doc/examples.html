@@ -191,18 +191,18 @@ boards.save(panel, './panel-panel')
 <p>We've seen above that the <code>panelize</code> function takes a layout table as first argument. A layout is a Lua array, so it can only have one dimension (either vertical or horizontal depending on the <code>panelize</code> third argument). But each element of the array can be either a board, or another sub-panel layout. This is how you construct complex panels in one step. Here we'll create a panel with two levels like in the previous example, with a single call to <code>panelize</code>:</p>
 
 <pre><code>local simple_extents = extents.compute_board_extents(simple)
-local width = simple_extents.width
-local height = simple_extents.height + 24*mm
-local tabh = panelization.empty_board(width, 10*mm)
+local height = simple_extents.height
+local width = simple_extents.width + 24*mm
 local tabv = panelization.empty_board(10*mm, height)
+local tabh = panelization.empty_board(width, 10*mm)
 
 local layout = {
-    tabv,
-    { tabh, simple, tabh, },
-    tabv
+    tabh,
+    { tabv, simple, tabv },
+    tabh,
 }
 
-local panel = panelization.panelize(layout, {}, false)
+local panel = panelization.panelize(layout, {}, true)
 
 boards.merge_apertures(panel)
 boards.save(panel, './panel-layout')
@@ -255,7 +255,7 @@ draw_fiducial(width - 5*mm, height - 5*mm)
 </div>
 
 <div class="chapter" id="footer">
-<small>Last update: 2014-07-28 01:58:34 BST</small>
+<small>Last update: 2014-07-28 12:28:36 BST</small>
 </div>
 
 </body>
