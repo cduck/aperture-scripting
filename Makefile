@@ -33,6 +33,7 @@ export LUA_PATH=.$(SLASH)?.lua;;
 .PHONY:test test-init test-boards test-bom
 
 test:test-init $(TESTS)
+	lua test-misc.lua
 	luacov
 
 test-init:
