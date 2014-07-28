@@ -81,4 +81,24 @@ assert(boards.save(board, 'test/output/tmp'))
 
 ------------------------------------------------------------------------------
 
+local b = assert(boards.load("test/apertures"))
+boards.generate_aperture_paths(b)
+manipulation.rotate_board(b, 0)
+manipulation.rotate_board(b, 90)
+manipulation.rotate_board(b, 180)
+manipulation.rotate_board(b, 270)
+
+local b = assert(boards.load("test/rotate"))
+boards.generate_aperture_paths(b)
+manipulation.rotate_board(b, 0)
+manipulation.rotate_board(b, 90)
+manipulation.rotate_board(b, 180)
+manipulation.rotate_board(b, 270)
+manipulation.rotate_board(b, 17)
+manipulation.rotate_board(b, 97)
+manipulation.rotate_board(b, 181)
+manipulation.rotate_board(b, 271)
+
+------------------------------------------------------------------------------
+
 print("all tests passed successfully")
