@@ -1,4 +1,4 @@
-SCRIPTS=save rotate panel panel-rotate panel-panel panel-layout
+SCRIPTS=save rotate panel panel-rotate panel-panel panel-layout drawing-fiducials
 #EXTS=oln drd gml gtl gto gts gbl gbo gbs
 EXTS=oln drd gml gtl gts gbl gbs
 

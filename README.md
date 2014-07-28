@@ -169,19 +169,19 @@ One interesting thing to note is that each copy of the empty board is joined to 
 
 ## 5.8 - Complex panels in one step
 
-We've seen above that the `panelize` function takes a layout table as first argument. A layout is a Lua array, so it can only have one dimension (either vertical or horizontal depending on the `panelize` third argument). But each element of the array can be either a board, or another sub-panel layout. This is how you construct complex panels in one step. Here we'll create a panel a bit more involved than in the previous example, with a single call to `panelize`:
+We've seen above that the `panelize` function takes a layout table as first argument. A layout is a Lua array, so it can only have one dimension (either vertical or horizontal depending on the `panelize` third argument). But each element of the array can be either a board, or another sub-panel layout. This is how you construct complex panels in one step. Here we'll create a panel with two levels like in the previous example, with a single call to `panelize`:
 
 	local simple_extents = extents.compute_board_extents(simple)
-	local width = simple_extents.width * 2 + 2*mm
-	local height = simple_extents.height * 2 + 14*mm
+	local width = simple_extents.width
+	local height = simple_extents.height + 24*mm
 	local tabh = panelization.empty_board(width, 10*mm)
 	local tabv = panelization.empty_board(10*mm, height)
 	
-	local layout = { tabv, {
-		{ simple, simple180 },
-		tabh,
-		{ simple, simple180 },
-	}, tabv }
+	local layout = {
+		tabv,
+		{ tabh, simple, tabh, },
+		tabv
+	}
 	
 	local panel = panelization.panelize(layout, {}, false)
 	
@@ -191,4 +191,37 @@ We've seen above that the `panelize` function takes a layout table as first argu
 The resulting 2D panel looks like this:
 
 ![](examples/panel-layout.png)
+
+## 5.9 - Drawing on boards
+
+Gerber-ltools support some basic drawing functions that will let you add elements to your boards. This is mostly useful for panel tabs that you may add in your script, since it's usually better to add anything to your board in your CAD software if you can. However these gerber-ltools features can be useful if your CAD software is limited in a way or another. All these functions are in the `drawnig` submodule:
+
+	local drawing = require 'boards.drawing'
+
+As a first example we'll add three fiducials to the tabs in the previous panel. To avoid repetition we'll define a function to draw one fiducial. This is where using a programming language like Lua to define your panels starts to become really useful. First we need to define some apertures. Our fiducials will have a 1 millimeter disk on the copper layers, and a 3 millimeter disc on the soldermask layers:
+
+	local fiducial_dot = drawing.circle_aperture(1*mm)
+	local fiducial_ring = drawing.circle_aperture(3*mm)
+
+Then we'll define a function taking an X and a Y position as parameters, and drawing a fiducial on all appropriate layers:
+
+	local function draw_fiducial(x, y)
+		drawing.draw_path(panel.images.top_copper, fiducial_dot, x, y)
+		drawing.draw_path(panel.images.bottom_copper, fiducial_dot, x, y)
+		drawing.draw_path(panel.images.top_soldermask, fiducial_ring, x, y)
+		drawing.draw_path(panel.images.bottom_soldermask, fiducial_ring, x, y)
+	end
+
+The drawing function is named `draw_path` because the same functions can be used for flashes and strokes. If a single point is specified (as is the case here) it will be a flash, if more points are specified it will be a stroke. Finally we'll call the function three times with the three fiducial positions (calculated from the panel dimensions):
+
+	local panel_extents = extents.compute_board_extents(panel)
+	local width = panel_extents.width
+	local height = panel_extents.height
+	draw_fiducial(5*mm, height - 5*mm)
+	draw_fiducial(width - 5*mm, 5*mm)
+	draw_fiducial(width - 5*mm, height - 5*mm)
+
+And the resulting boards:
+
+![](examples/drawing-fiducials.png)
 
