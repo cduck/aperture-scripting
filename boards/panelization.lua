@@ -258,11 +258,13 @@ local function merge_panels(panel_a, panel_b, options, vertical)
 	-- check subpanel dimensions match
 	local outline_a_extents = extents.compute_outline_extents(outline_a)
 	local outline_b_extents = extents.compute_outline_extents(outline_b)
+	local dimensions_match
 	if vertical then
-		assert(outline_a_extents.left == outline_b_extents.left and outline_a_extents.right == outline_b_extents.right)
+		dimensions_match = outline_a_extents.left == outline_b_extents.left and outline_a_extents.right == outline_b_extents.right
 	else
-		assert(outline_a_extents.bottom == outline_b_extents.bottom and outline_a_extents.top == outline_b_extents.top)
+		dimensions_match = outline_a_extents.bottom == outline_b_extents.bottom and outline_a_extents.top == outline_b_extents.top
 	end
+	assert(dimensions_match, "subpanel dimensions do no match")
 	
 	-- generate a new outline
 	merged.outline = {
