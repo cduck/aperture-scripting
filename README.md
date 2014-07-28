@@ -225,3 +225,15 @@ And the resulting boards:
 
 ![](examples/drawing-fiducials.png)
 
+## 5.10 - Drawing text
+
+Gerber-ltools has some basic support to load vector fonts and draw text. At the moment glyph outlines are approximated with Gerber regions made of small linear segments, so the output files may be very large.
+
+To draw text, simply call the `drawing.draw_text` function. Parameters are the image on which to draw, the drawing polarity (`'dark'` for normal, `'clear'` for inverted), the font filename, the font size (roughly an uppercase letter height, but that depends on the font), a boolean telling whether to mirror the text (for bottom layers) or not, an alignment side (`'left'` or `'center'`), X and Y positions, and finally a string with the text itself in UTF-8. For example (reusing the horizontal tab width from the previous example):
+
+	drawing.draw_text(panel.images.top_silkscreen, 'dark', "constantine.ttf", 6*mm, false, 'center', width / 2, 2.5*mm, "Gerber-ltools")
+
+The resulting board now has some nice silkscreen text on the bottom tab:
+
+![](examples/drawing-text.png)
+
