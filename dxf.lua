@@ -5,7 +5,6 @@ local math = require 'math'
 local table = require 'table'
 local defaults_generic = require 'dxf.defaults'
 local defaults_inkscape = require 'dxf.defaults_inkscape'
-local interpolation = require 'boards.interpolation'
 
 local tinsert = table.insert
 local tremove = table.remove
@@ -1684,23 +1683,19 @@ function _M.load(file_path)
 			local dy0 = radius * math.sin(angle0)
 			local dx1 = radius * math.cos(angle1)
 			local dy1 = radius * math.sin(angle1)
-			local quadrant,i,j
+			local quadrant
 			if angle1 < angle0 then
 				angle1 = angle1 + math.pi * 2
 			end
 			if angle1 - angle0 < math.pi / 2 then
 				quadrant = 'single'
-				i = math.abs(dx0)
-				j = math.abs(dy0)
 			else
 				quadrant = 'multi'
-				i = -dx0
-				j = -dy0
 			end
 			local path = {
 				aperture = aperture,
 				{ x = center.x + dx0, y = center.y + dy0 },
-				{ x = center.x + dx1, y = center.y + dy0, i = i, j = j, interpolation = 'counterclockwise', quadrant = quadrant },
+				{ x = center.x + dx1, y = center.y + dy0, cx = center.x, cy = center.y, interpolation = 'counterclockwise', quadrant = quadrant },
 			}
 			table.insert(layer, path)
 		else
@@ -1772,17 +1767,8 @@ function _M.save(image, file_path)
 					end
 					dxf_point0 = dxf_point1
 				elseif point.interpolation == 'clockwise' or point.interpolation == 'counterclockwise' then
-					local i = point.i / scale
-					local j = point.j / scale
-					local cx,cy
-					if point.quadrant == 'single' then
-						cx,cy = interpolation.single_quadrant_center(dxf_point0.x, dxf_point0.y, i, j, x, y, point.interpolation)
-					elseif point.quadrant == 'multi' then
-						cx = dxf_point0.x + i
-						cy = dxf_point0.y + j
-					else
-						error("unsupported circular interpolation quadrant "..tostring(point.quadrant))
-					end
+					local cx = point.cx / scale
+					local cy = point.cy / scale
 					local r,a0,a1
 					local dx0,dy0 = dxf_point0.x - cx, dxf_point0.y - cy
 					local r = math.sqrt(dx0^2 + dy0^2)
