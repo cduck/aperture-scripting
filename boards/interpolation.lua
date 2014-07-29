@@ -5,12 +5,12 @@ local table = require 'table'
 
 ------------------------------------------------------------------------------
 
-local function interpolate_point(path, point)
+local function interpolate_point(path, point, epsilon, allowed)
 	local interpolation = point.interpolation
-	local quadrant = point.quadrant
-	if interpolation == 'linear' then
-		-- no intermediates
-	elseif interpolation == 'clockwise' or interpolation == 'counterclockwise' then
+	if allowed[interpolation] then
+		table.insert(path, point)
+	elseif (interpolation == 'clockwise' or interpolation == 'counterclockwise') and allowed.linear then
+		local quadrant = point.quadrant
 		local point0 = path[#path]
 		local cx,cy = point.cx,point.cy
 		
@@ -39,49 +39,54 @@ local function interpolate_point(path, point)
 			local r = (t - ta) / (tb - ta) * (rb - ra) + ra
 			local x = cx + r * math.cos(math.rad(t))
 			local y = cy + r * math.sin(math.rad(t))
-			table.insert(path, {x=x, y=y, interpolated=true})
+			table.insert(path, {x=x, y=y, interpolation='linear'})
 		end
+		table.insert(path, {x=point.x, y=point.y, interpolation='linear'})
 	else
 		error("unsupported interpolation mode "..tostring(interpolation))
 	end
-	
-	table.insert(path, point)
 end
 
-local function interpolate_path(path)
+local function interpolate_path(path, epsilon, allowed)
+	assert(epsilon==nil, "interpolation epsilon is not yet supported")
+	if not allowed then allowed = { linear = true } end
+	assert(allowed.linear, "interpolation require at least linear segment support")
+	local path_allowed = true
+	for i,point in ipairs(path) do
+		if i >= 2 and not allowed[point.interpolation] then
+			path_allowed = false
+			break
+		end
+	end
+	if path_allowed then return path end
 	local interpolated = { aperture = path.aperture }
 	for i,point in ipairs(path) do
 		if i == 1 then
-			table.insert(interpolated, point)
+			assert(next(point)=='x' and next(point, 'x')=='y' and next(point, 'y')==nil or
+				next(point)=='y' and next(point, 'y')=='x' and next(point, 'x')==nil)
+			table.insert(interpolated, {x=point.x, y=point.y})
 		else
-			interpolate_point(interpolated, point)
+			interpolate_point(interpolated, point, epsilon, allowed)
 		end
-	end
-	for i,point in ipairs(interpolated) do
-		point.interpolated = nil
-		point.cx = nil
-		point.cy = nil
-		point.quadrant = nil
-		if i > 1 then point.interpolation = 'linear' end
 	end
 	return interpolated
 end
 
-local function interpolate_image_paths(image)
+local function interpolate_image_paths(image, epsilon, allowed)
 	for _,layer in ipairs(image.layers) do
 		for ipath,path in ipairs(layer) do
-			layer[ipath] = interpolate_path(path)
+			layer[ipath] = interpolate_path(path, epsilon, allowed)
 		end
 	end
 end
 _M.interpolate_image_paths = interpolate_image_paths
 
-function _M.interpolate_board_paths(board)
+function _M.interpolate_board_paths(board, epsilon, allowed)
 	for _,image in pairs(board.images) do
-		interpolate_image_paths(image)
+		interpolate_image_paths(image, epsilon, allowed)
 	end
 	if board.outline then
-		board.outline.path = interpolate_path(board.outline.path)
+		board.outline.path = interpolate_path(board.outline.path, epsilon, allowed)
 	end
 end
 
