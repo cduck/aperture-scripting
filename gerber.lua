@@ -574,7 +574,7 @@ function _M.save(image, file_path, verbose)
 	local region = false
 	local interpolation,quadrant,aperture,path
 	local unit = assert(image.unit, "image has no unit")
-	assert(scales[unit], "unsupported image unit")
+	assert(scales[unit], "unsupported image unit "..tostring(unit))
 	
 	if image_name then
 		table.insert(data, _M.blocks.parameter('IN', image_name))
