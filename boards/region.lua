@@ -50,14 +50,14 @@ function region_getters:height()
 end
 
 function region_mt.__add(self, extension)
-	if extension.x and extension.y then
+	if self and extension and extension.x and extension.y then
 		return ctor{
 			left = math.min(self.left, extension.x),
 			right = math.max(self.right, extension.x),
 			bottom = math.min(self.bottom, extension.y),
 			top = math.max(self.top, extension.y),
 		}
-	elseif extension.left and extension.right and extension.bottom and extension.top then
+	elseif self and extension and extension.left and extension.right and extension.bottom and extension.top then
 		return ctor{
 			left = math.min(self.left, extension.left),
 			right = math.max(self.right, extension.right),
@@ -70,7 +70,7 @@ function region_mt.__add(self, extension)
 end
 
 function region_mt.__mul(a, b)
-	if a.left and a.right and a.bottom and a.top and b.left and b.right and b.bottom and b.top then
+	if a and b and a.left and a.right and a.bottom and a.top and b.left and b.right and b.bottom and b.top then
 		return ctor{
 			left = a.left + b.left,
 			right = a.right + b.right,
