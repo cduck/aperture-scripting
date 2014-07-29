@@ -84,9 +84,7 @@ local function load_path(str)
 			local cos = math.cos(angle)
 			local cx = (x0+x)/2 - dy * r * cos
 			local cy = (y0+y)/2 + dx * r * cos
-			local i = math.abs(cx-x0)
-			local j = math.abs(cy-y0)
-			table.insert(path, {x=x, y=y, i=i, j=j, interpolation='counterclockwise', quadrant='single'})
+			table.insert(path, {x=x, y=y, cx=cx, cy=cy, interpolation='counterclockwise', quadrant='single'})
 		elseif letter=='Z' then
 			local x0,y0 = path[1].x,path[1].y
 			local x1,y1 = path[#path].x,path[#path].y
@@ -206,9 +204,8 @@ function _M.save(image, filepath)
 			if path.aperture then
 				-- stroke
 				assert(path.aperture.shape=='circle', "only circle apertures are supported")
-				local d,hx,hy = table.unpack(path.aperture.parameters)
-				assert(d, "circle apertures require at least 1 parameter")
-				assert(not hx and not hy, "circle apertures with holes are not yet supported")
+				local d = assert(path.aperture.diameter, "circle apertures has no diameter")
+				assert(not path.aperture.hole_width and not path.aperture.hole_height, "circle apertures with holes are not yet supported")
 				local width
 				if d == 0 then
 					width = '0'
@@ -238,7 +235,11 @@ function _M.save(image, filepath)
 						assert(file:write('L'..(point.x / xscale)..','..(point.y / yscale)..''))
 					end
 				elseif (point.interpolation=='clockwise' or point.interpolation=='counterclockwise') and point.quadrant=='single' then
-					local r = math.sqrt(point.i * point.i + point.j * point.j)
+					local x0,y0 = path[i-1].x,path[i-1].y
+					local cx,cy = point.cx,point.cy
+					local dx = x0 - cx
+					local dy = y0 - cy
+					local r = math.sqrt(dx * dx + dy * dy)
 					local large = false
 					local sweep = point.interpolation=='clockwise'
 					assert(file:write('A'..(r / scale)..','..(r / scale)..' 0 '..(large and '1' or '0')..','..(sweep and '1' or '0')..' '..(point.x / xscale)..','..(point.y / yscale)..''))
@@ -246,10 +247,11 @@ function _M.save(image, filepath)
 						assert(file:write('Z'))
 					end
 				elseif (point.interpolation=='clockwise' or point.interpolation=='counterclockwise') and point.quadrant=='multi' then
-					local r = math.sqrt(point.i * point.i + point.j * point.j)
 					local x0,y0 = path[i-1].x,path[i-1].y
 					local x1,y1 = point.x,point.y
-					local dx0,dy0 = -point.i,-point.j
+					local cx,cy = point.cx,point.cy
+					local dx0 = x0 - cx
+					local dy0 = y0 - cy
 					local dx1 = dx0 + x1 - x0
 					local dy1 = dy0 + y1 - y0
 					local a0 = math.atan2(dy0, dx0)
@@ -257,6 +259,7 @@ function _M.save(image, filepath)
 					local da = a1 - a0
 					if point.interpolation=='clockwise' then da = -da end
 					if da <= 0 then da = da + 2 * math.pi end
+					local r = math.sqrt(dx0 * dx0 + dx0 * dx0)
 					local large = da >= math.pi
 					local sweep = point.interpolation=='clockwise'
 					assert(file:write('A'..(r / scale)..','..(r / scale)..' 0 '..(large and '1' or '0')..','..(sweep and '1' or '0')..' '..(x1 / xscale)..','..(y1 / yscale)..''))
