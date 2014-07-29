@@ -5,6 +5,7 @@ local excellon = require 'excellon'
 local boards = require 'boards'
 local extents = require 'boards.extents'
 local manipulation = require 'boards.manipulation'
+local interpolation = require 'boards.interpolation'
 
 ------------------------------------------------------------------------------
 
@@ -123,7 +124,7 @@ manipulation.rotate_board(board, 271)
 ------------------------------------------------------------------------------
 
 local board = assert(boards.load("test/paths"))
-boards.interpolate_paths(board)
+interpolation.interpolate_board_paths(board)
 
 local board = assert(boards.load("test/paths", {unit='mm'}))
 

@@ -5,7 +5,7 @@ local table = require 'table'
 
 ------------------------------------------------------------------------------
 
-function _M.interpolate(path, point)
+local function interpolate_point(path, point)
 	local interpolation = point.interpolation
 	local quadrant = point.quadrant
 	if interpolation == 'linear' then
@@ -46,6 +46,43 @@ function _M.interpolate(path, point)
 	end
 	
 	table.insert(path, point)
+end
+
+local function interpolate_path(path)
+	local interpolated = { aperture = path.aperture }
+	for i,point in ipairs(path) do
+		if i == 1 then
+			table.insert(interpolated, point)
+		else
+			interpolate_point(interpolated, point)
+		end
+	end
+	for i,point in ipairs(interpolated) do
+		point.interpolated = nil
+		point.cx = nil
+		point.cy = nil
+		point.quadrant = nil
+		if i > 1 then point.interpolation = 'linear' end
+	end
+	return interpolated
+end
+
+local function interpolate_image_paths(image)
+	for _,layer in ipairs(image.layers) do
+		for ipath,path in ipairs(layer) do
+			layer[ipath] = interpolate_path(path)
+		end
+	end
+end
+_M.interpolate_image_paths = interpolate_image_paths
+
+function _M.interpolate_board_paths(board)
+	for _,image in pairs(board.images) do
+		interpolate_image_paths(image)
+	end
+	if board.outline then
+		board.outline.path = interpolate_path(board.outline.path)
+	end
 end
 
 ------------------------------------------------------------------------------
