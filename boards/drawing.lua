@@ -2,6 +2,7 @@ local _M = {}
 
 local table = require 'table'
 local region = require 'boards.region'
+local manipulation = require 'boards.manipulation'
 
 ------------------------------------------------------------------------------
 
@@ -70,7 +71,6 @@ local function get_glyph(fontname, char)
 		local paths = {}
 		local path
 		local lastpos
-		local curve_steps = 16
 		assert(FT.Outline_Decompose(glyph.outline, {
 			move_to = function(pos)
 				path = {pos}
@@ -79,39 +79,15 @@ local function get_glyph(fontname, char)
 			end,
 			line_to = function(pos)
 				assert(pos.x and pos.y)
-				table.insert(path, pos)
+				table.insert(path, {x=pos.x, y=pos.y, interpolation='linear'})
 				lastpos = pos
 			end,
 			conic_to = function(control, pos)
-				local P0 = lastpos
-				local P1 = control
-				local P2 = pos
-				for t=1,curve_steps do
-					t = t / curve_steps
-					local k1 = (1 - t) ^ 2
-					local k2 = 2 * (1 - t) * t
-					local k3 = t ^ 2
-					local px = k1 * P0.x + k2 * P1.x + k3 * P2.x
-					local py = k1 * P0.y + k2 * P1.y + k3 * P2.y
-					table.insert(path, {x=px, y=py})
-				end
+				table.insert(path, {x1=control.x, y1=control.y, x=pos.x, y=pos.y, interpolation='quadratic'})
 				lastpos = pos
 			end,
 			cubic_to = function(control1, control2, pos)
-				local P0 = lastpos
-				local P1 = control1
-				local P2 = control2
-				local P3 = pos
-				for t=1,curve_steps do
-					t = t / curve_steps
-					local k1 = (1 - t) ^ 3
-					local k2 = 3 * (1 - t) ^ 2 * t
-					local k3 = 3 * (1 - t) * t ^ 2
-					local k4 = t ^ 3
-					local px = k1 * P0.x + k2 * P1.x + k3 * P2.x + k4 * P3.x
-					local py = k1 * P0.y + k2 * P1.y + k3 * P2.y + k4 * P3.y
-					table.insert(path, {x=px, y=py})
-				end
+				table.insert(path, {x1=control1.x, y1=control1.y, x2=control2.x, y2=control2.y, x=pos.x, y=pos.y, interpolation='cubic'})
 				lastpos = pos
 			end,
 		}))
@@ -194,14 +170,7 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 		
 		ilayer = base_layer
 		for icontour,contour in ipairs(glyph.contours) do
-			local path = {}
-			for i,point in ipairs(contour) do
-				if i == 1 then
-					table.insert(path, {x = x + point.x * scale, y = y + point.y * scale})
-				else
-					table.insert(path, {x = x + point.x * scale, y = y + point.y * scale, interpolation='linear'})
-				end
-			end
+			local path = manipulation.offset_path(manipulation.scale_path(contour, scale), x, y)
 			local clockwise_outline = not glyph.flags.REVERSE_FILL
 			local outline = clockwise(path) == clockwise_outline -- compare before mirror
 			local path_polarity = outline and polarity or (polarity=='clear' and 'dark' or 'clear')

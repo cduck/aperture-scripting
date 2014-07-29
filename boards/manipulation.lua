@@ -7,14 +7,27 @@ local region = require 'boards.region'
 ------------------------------------------------------------------------------
 
 function _M.offset_point(point, dx, dy)
+	assert(point.x and point.y, "only points with x and y can be offset")
 	local copy = {}
 	for k,v in pairs(point) do
 		copy[k] = v
 	end
-	if copy.x then copy.x = copy.x + dx end
-	if copy.y then copy.y = copy.y + dy end
-	if copy.cx then copy.cx = copy.cx + dx end
-	if copy.cy then copy.cy = copy.cy + dy end
+	-- fix x,y
+	copy.x = copy.x + dx
+	copy.y = copy.y + dy
+	-- fix optional data
+	if copy.cx or copy.cy then
+		copy.cx = copy.cx + dx
+		copy.cy = copy.cy + dy
+	end
+	if copy.x1 or copy.y1 then
+		copy.x1 = copy.x1 + dx
+		copy.y1 = copy.y1 + dy
+	end
+	if copy.x2 or copy.y2 then
+		copy.x2 = copy.x2 + dx
+		copy.y2 = copy.y2 + dy
+	end
 	return copy
 end
 
@@ -604,21 +617,24 @@ function _M.rotate_aperture(aperture, angle, macros)
 end
 
 function _M.rotate_point(point, angle)
+	assert(point.x and point.y, "only points with x and y can be rotated")
 	angle = angle % 360
 	local copy = {}
 	for k,v in pairs(point) do
 		copy[k] = v
 	end
 	-- fix x,y
-	assert(point.x and point.y, "only points with x and y can be rotated")
-	local x,y = rotate_xy(point.x, point.y, angle)
-	copy.x,copy.y = x,y
-	-- fix cx,cy
-	local cx,cy
+	copy.x,copy.y = rotate_xy(point.x, point.y, angle)
+	-- fix optional data
 	if point.cx or point.cy then
-		cx,cy = rotate_xy(point.cx, point.cy, angle)
+		copy.cx,copy.cy = rotate_xy(point.cx, point.cy, angle)
 	end
-	copy.cx,copy.cy = cx,cy
+	if point.x1 or point.y1 then
+		copy.x1,copy.y1 = rotate_xy(point.x1, point.y1, angle)
+	end
+	if point.x2 or point.y2 then
+		copy.x2,copy.y2 = rotate_xy(point.x2, point.y2, angle)
+	end
 	-- fix angle
 	if copy.angle then copy.angle = (copy.angle + angle) % 360 end
 	return copy
@@ -836,6 +852,7 @@ function _M.scale_aperture(aperture, scale, macros)
 end
 
 function _M.scale_point(point, scale)
+	assert(point.x and point.y, "only points with x and y can be scaled")
 	local copy = {}
 	for k,v in pairs(point) do
 		copy[k] = v
@@ -843,13 +860,19 @@ function _M.scale_point(point, scale)
 	-- fix x,y
 	copy.x = point.x * scale
 	copy.y = point.y * scale
-	-- fix cx,cy
-	local cx,cy
+	-- fix optional data
 	if point.cx or point.cy then
-		cx = point.cx * scale
-		cy = point.cy * scale
+		copy.cx = point.cx * scale
+		copy.cy = point.cy * scale
 	end
-	copy.cx,copy.cy = cx,cy
+	if point.x1 or point.y1 then
+		copy.x1 = point.x1 * scale
+		copy.y1 = point.y1 * scale
+	end
+	if point.x2 or point.y2 then
+		copy.x2 = point.x2 * scale
+		copy.y2 = point.y2 * scale
+	end
 	return copy
 end
 

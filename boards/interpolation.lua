@@ -5,6 +5,8 @@ local table = require 'table'
 
 ------------------------------------------------------------------------------
 
+local curve_steps = 16
+
 local function interpolate_point(path, point, epsilon, allowed)
 	local interpolation = point.interpolation
 	if allowed[interpolation] then
@@ -42,6 +44,35 @@ local function interpolate_point(path, point, epsilon, allowed)
 			table.insert(path, {x=x, y=y, interpolation='linear'})
 		end
 		table.insert(path, {x=point.x, y=point.y, interpolation='linear'})
+	elseif interpolation == 'quadratic' and allowed.linear then
+		local P0 = path[#path]
+		local P1 = {x=point.x1, y=point.y1}
+		local P2 = point
+		for t=1,curve_steps do
+			t = t / curve_steps
+			local k1 = (1 - t) ^ 2
+			local k2 = 2 * (1 - t) * t
+			local k3 = t ^ 2
+			local px = k1 * P0.x + k2 * P1.x + k3 * P2.x
+			local py = k1 * P0.y + k2 * P1.y + k3 * P2.y
+			table.insert(path, {x=px, y=py, interpolation='linear'})
+		end
+		assert(path[#path].x==P2.x and path[#path].y==P2.y)
+	elseif interpolation == 'cubic' and allowed.linear then
+		local P0 = path[#path]
+		local P1 = {x=point.x1, y=point.y1}
+		local P2 = {x=point.x2, y=point.y2}
+		local P3 = point
+		for t=1,curve_steps do
+			t = t / curve_steps
+			local k1 = (1 - t) ^ 3
+			local k2 = 3 * (1 - t) ^ 2 * t
+			local k3 = 3 * (1 - t) * t ^ 2
+			local k4 = t ^ 3
+			local px = k1 * P0.x + k2 * P1.x + k3 * P2.x + k4 * P3.x
+			local py = k1 * P0.y + k2 * P1.y + k3 * P2.y + k4 * P3.y
+			table.insert(path, {x=px, y=py, interpolation='linear'})
+		end
 	else
 		error("unsupported interpolation mode "..tostring(interpolation))
 	end
@@ -71,6 +102,7 @@ local function interpolate_path(path, epsilon, allowed)
 	end
 	return interpolated
 end
+_M.interpolate_path = interpolate_path
 
 local function interpolate_image_paths(image, epsilon, allowed)
 	for _,layer in ipairs(image.layers) do

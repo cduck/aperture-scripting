@@ -4,6 +4,7 @@ local math = require 'math'
 local table = require 'table'
 local dump = require 'dump'
 _M.blocks = require 'gerber.blocks'
+local interpolationlib = require 'boards.interpolation'
 
 ------------------------------------------------------------------------------
 
@@ -599,6 +600,7 @@ function _M.save(image, file_path, verbose)
 			table.insert(data, _M.blocks.parameter('LN', layer.name))
 		end
 		for _,path in ipairs(layer) do
+			path = interpolationlib.interpolate_path(path, nil, {linear=true, clockwise=true, counterclockwise=true})
 			if path.aperture then
 				if path.aperture ~= aperture then
 					aperture = path.aperture
@@ -621,56 +623,55 @@ function _M.save(image, file_path, verbose)
 			else
 				assert(#path >= 2)
 				for i,point in ipairs(path) do
-					if not point.interpolated then
-						if point.quadrant and point.quadrant ~= quadrant then
-							quadrant = point.quadrant
-							table.insert(data, _M.blocks.directive{G=quadrants[quadrant]})
-						end
-						local D = i == 1 and 2 or 1
-						local interpolation_changed = false
-						if D==1 then
-							assert(point.interpolation)
-							if point.interpolation ~= interpolation then
-								interpolation = point.interpolation
-								interpolation_changed = true
-							end
-						end
-						local G
-						if verbose then
-							-- in verbose mode specify G for each stroke command
-							if D == 1 then
-								G = interpolations[interpolation]
-							end
-						else
-							-- in compact mode specifies interpolation on its own when it changes
-							if interpolation_changed then
-								table.insert(data, _M.blocks.directive{G=interpolations[interpolation]})
-							end
-						end
-						local px,py = point.x / scale,point.y / scale
-						if D ~= 2 or x ~= px or y ~= py then -- don't move to the current pos
-							local i,j
-							local cx = point.cx and point.cx / scale
-							local cy = point.cy and point.cy / scale
-							if cx and (verbose or cx ~= x) then
-								i = cx - x
-								if point.quadrant=='single' then i = math.abs(i) end
-							end
-							if cy and (verbose or cy ~= y) then
-								j = cy - y
-								if point.quadrant=='single' then j = math.abs(j) end
-							end
-							table.insert(data, _M.blocks.directive({
-								G = G,
-								D = D,
-								X = (verbose or px ~= x) and px or nil,
-								Y = (verbose or py ~= y) and py or nil,
-								I = i,
-								J = j,
-							}, image.format))
-						end
-						x,y = px,py
+					assert(i==1 or interpolations[point.interpolation], "unsupported interpolation "..tostring(point.interpolation).." in gerber format")
+					if point.quadrant and point.quadrant ~= quadrant then
+						quadrant = point.quadrant
+						table.insert(data, _M.blocks.directive{G=quadrants[quadrant]})
 					end
+					local D = i == 1 and 2 or 1
+					local interpolation_changed = false
+					if D==1 then
+						assert(point.interpolation)
+						if point.interpolation ~= interpolation then
+							interpolation = point.interpolation
+							interpolation_changed = true
+						end
+					end
+					local G
+					if verbose then
+						-- in verbose mode specify G for each stroke command
+						if D == 1 then
+							G = interpolations[interpolation]
+						end
+					else
+						-- in compact mode specifies interpolation on its own when it changes
+						if interpolation_changed then
+							table.insert(data, _M.blocks.directive{G=interpolations[interpolation]})
+						end
+					end
+					local px,py = point.x / scale,point.y / scale
+					if D ~= 2 or x ~= px or y ~= py then -- don't move to the current pos
+						local i,j
+						local cx = point.cx and point.cx / scale
+						local cy = point.cy and point.cy / scale
+						if cx and (verbose or cx ~= x) then
+							i = cx - x
+							if point.quadrant=='single' then i = math.abs(i) end
+						end
+						if cy and (verbose or cy ~= y) then
+							j = cy - y
+							if point.quadrant=='single' then j = math.abs(j) end
+						end
+						table.insert(data, _M.blocks.directive({
+							G = G,
+							D = D,
+							X = (verbose or px ~= x) and px or nil,
+							Y = (verbose or py ~= y) and py or nil,
+							I = i,
+							J = j,
+						}, image.format))
+					end
+					x,y = px,py
 				end
 			end
 			if not path.aperture then
