@@ -1695,7 +1695,7 @@ function _M.load(file_path)
 			local path = {
 				aperture = aperture,
 				{ x = center.x + dx0, y = center.y + dy0 },
-				{ x = center.x + dx1, y = center.y + dy0, cx = center.x, cy = center.y, interpolation = 'counterclockwise', quadrant = quadrant },
+				{ x = center.x + dx1, y = center.y + dy1, cx = center.x, cy = center.y, interpolation = 'counterclockwise', quadrant = quadrant },
 			}
 			table.insert(layer, path)
 		else
