@@ -11,7 +11,8 @@ local function interpolate_point(path, point, epsilon, allowed)
 	local interpolation = point.interpolation
 	if allowed[interpolation] then
 		table.insert(path, point)
-	elseif (interpolation == 'clockwise' or interpolation == 'counterclockwise') and allowed.linear then
+	elseif interpolation == 'circular' and allowed.linear then
+		local direction = assert(point.direction, "circular interpolation has no direction")
 		local quadrant = point.quadrant
 		local point0 = path[#path]
 		local cx,cy = point.cx,point.cy
@@ -25,17 +26,19 @@ local function interpolate_point(path, point, epsilon, allowed)
 		local tb = math.deg(math.atan2(dyb, dxb))
 		while tb < 0 do tb = tb + 360 end
 		local step,ta2,tb2 = 6
-		if interpolation == 'clockwise' then
+		if direction == 'clockwise' then
 			while ta < tb do ta = ta + 360 end
 			if quadrant == 'multi' and ta == tb then ta = ta + 360 end
 			ta2 = (math.ceil(ta / step) - 1) * step
 			tb2 = (math.floor(tb / step) + 1) * step
 			step = -step
-		else
+		elseif direction == 'counterclockwise' then
 			while tb < ta do tb = tb + 360 end
 			if quadrant == 'multi' and tb == ta then tb = tb + 360 end
 			ta2 = (math.floor(ta / step) + 1) * step
 			tb2 = (math.ceil(tb / step) - 1) * step
+		else
+			error("unsupported circular interpolation direction "..tostring(direction))
 		end
 		for t = ta2, tb2, step do
 			local r = (t - ta) / (tb - ta) * (rb - ra) + ra

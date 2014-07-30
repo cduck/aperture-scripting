@@ -1695,7 +1695,11 @@ function _M.load(file_path)
 			local path = {
 				aperture = aperture,
 				{ x = center.x + dx0, y = center.y + dy0 },
-				{ x = center.x + dx1, y = center.y + dy1, cx = center.x, cy = center.y, interpolation = 'counterclockwise', quadrant = quadrant },
+				{
+					x = center.x + dx1, y = center.y + dy1,
+					cx = center.x, cy = center.y,
+					interpolation = 'circular', direction = 'counterclockwise', quadrant = quadrant,
+				},
 			}
 			table.insert(layer, path)
 		else
@@ -1766,7 +1770,7 @@ function _M.save(image, file_path)
 						table.insert(dxf_paths, {type='line', dxf_point0, dxf_point1})
 					end
 					dxf_point0 = dxf_point1
-				elseif point.interpolation == 'clockwise' or point.interpolation == 'counterclockwise' then
+				elseif point.interpolation == 'circular' then
 					local cx = point.cx / scale
 					local cy = point.cy / scale
 					local r,a0,a1
@@ -1774,7 +1778,7 @@ function _M.save(image, file_path)
 					local r = math.sqrt(dx0^2 + dy0^2)
 					local a0 = math.deg(math.atan2(dy0, dx0))
 					local a1 = math.deg(math.atan2(y - cy, x - cx))
-					if point.interpolation == 'clockwise' then
+					if point.direction == 'clockwise' then
 						a0,a1 = a1,a0
 					end
 					local dxf_point1 = {x=x, y=y, z=0}

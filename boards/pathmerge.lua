@@ -13,6 +13,7 @@ local function copy_point(point)
 		cx = point.cx,
 		cy = point.cy,
 		interpolation = point.interpolation,
+		direction = point.direction,
 		quadrant = point.quadrant,
 	}
 end

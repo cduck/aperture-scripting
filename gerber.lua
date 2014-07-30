@@ -216,8 +216,8 @@ local layer_polarity_codes = {
 	clear = 'C',
 }
 
-local function circle_center(x0, y0, i, j, x1, y1, interpolation, quadrant)
-	assert(interpolation=='clockwise' or interpolation=='counterclockwise')
+local function circle_center(x0, y0, i, j, x1, y1, direction, quadrant)
+	assert(direction=='clockwise' or direction=='counterclockwise')
 	if quadrant=='single' then
 		local centers = {
 			{ x = x0 - i, y = y0 - j },
@@ -235,7 +235,7 @@ local function circle_center(x0, y0, i, j, x1, y1, interpolation, quadrant)
 			local ta = math.deg(math.atan2(dya, dxa))
 			local tb = math.deg(math.atan2(dyb, dxb))
 			local dt
-			if interpolation == 'clockwise' then
+			if direction == 'clockwise' then
 				while ta < tb do ta = ta + 360 end
 				dt = ta - tb
 			else
@@ -275,7 +275,7 @@ function _M.load(file_path)
 	local movements = { 'stroke', 'move', 'flash' }
 	local movement = nil
 	local region = false
-	local unit,quadrant,aperture,path
+	local unit,direction,quadrant,aperture,path
 	local format
 	for _,block in ipairs(data) do
 		local tb = block.type
@@ -369,10 +369,13 @@ function _M.load(file_path)
 				if block.G then
 					if block.G==1 then
 						interpolation = 'linear'
+						direction = nil
 					elseif block.G==2 then
-						interpolation = 'clockwise'
+						interpolation = 'circular'
+						direction = 'clockwise'
 					elseif block.G==3 then
-						interpolation = 'counterclockwise'
+						interpolation = 'circular'
+						direction = 'counterclockwise'
 					elseif block.G==55 then
 						assert(block.D==3, "G55 precedes a D-code different than D03")
 					else
@@ -402,14 +405,14 @@ function _M.load(file_path)
 					end
 					if interpolation=='linear' then
 						table.insert(path, {x=x, y=y, interpolation=interpolation})
-					elseif interpolation=='clockwise' or interpolation=='counterclockwise' then
+					elseif interpolation=='circular' then
 						assert(quadrant, "circular interpolation before a quadrant mode is specified")
 						local i = (block.I or 0) * scale
 						local j = (block.J or 0) * scale
 						local x0 = path[#path].x
 						local y0 = path[#path].y
-						local cx,cy = circle_center(x0, y0, i, j, x, y, interpolation, quadrant)
-						table.insert(path, {x=x, y=y, cx=cx, cy=cy, interpolation=interpolation, quadrant=quadrant})
+						local cx,cy = circle_center(x0, y0, i, j, x, y, direction, quadrant)
+						table.insert(path, {x=x, y=y, cx=cx, cy=cy, interpolation=interpolation, direction=direction, quadrant=quadrant})
 					elseif interpolation then
 						error("unsupported interpolation mode "..interpolation)
 					else
@@ -446,10 +449,13 @@ function _M.load(file_path)
 				end
 			elseif block.G==1 then
 				interpolation = 'linear'
+				direction = nil
 			elseif block.G==2 then
-				interpolation = 'clockwise'
+				interpolation = 'circular'
+				direction = 'clockwise'
 			elseif block.G==3 then
-				interpolation = 'counterclockwise'
+				interpolation = 'circular'
+				direction = 'counterclockwise'
 			elseif block.G==70 then
 				assert(not unit or unit=='in', "gerber files with mixtures of units not supported")
 				unit = 'in'
@@ -499,6 +505,18 @@ function _M.load(file_path)
 	}
 	
 	return image
+end
+
+local function compute_G(interpolation, direction)
+	if interpolation=='linear' then
+		return 1
+	elseif interpolation=='circular' and direction=='clockwise' then
+		return 2
+	elseif interpolation=='circular' and direction=='counterclockwise' then
+		return 3
+	else
+		error("unsupported interpolation")
+	end
 end
 
 function _M.save(image, file_path, verbose)
@@ -570,10 +588,9 @@ function _M.save(image, file_path, verbose)
 	local image_name = image.name
 	local x,y = 0,0
 	local layer_name
-	local interpolations = { linear=1, clockwise=2, counterclockwise=3 }
 	local quadrants = { single=74, multi=75 }
 	local region = false
-	local interpolation,quadrant,aperture,path
+	local interpolation,direction,quadrant,aperture,path
 	local unit = assert(image.unit, "image has no unit")
 	assert(scales[unit], "unsupported image unit "..tostring(unit))
 	
@@ -600,7 +617,7 @@ function _M.save(image, file_path, verbose)
 			table.insert(data, _M.blocks.parameter('LN', layer.name))
 		end
 		for _,path in ipairs(layer) do
-			path = interpolationlib.interpolate_path(path, nil, {linear=true, clockwise=true, counterclockwise=true})
+			path = interpolationlib.interpolate_path(path, nil, {linear=true, circular=true})
 			if path.aperture then
 				if path.aperture ~= aperture then
 					aperture = path.aperture
@@ -623,7 +640,6 @@ function _M.save(image, file_path, verbose)
 			else
 				assert(#path >= 2)
 				for i,point in ipairs(path) do
-					assert(i==1 or interpolations[point.interpolation], "unsupported interpolation "..tostring(point.interpolation).." in gerber format")
 					if point.quadrant and point.quadrant ~= quadrant then
 						quadrant = point.quadrant
 						table.insert(data, _M.blocks.directive{G=quadrants[quadrant]})
@@ -632,8 +648,9 @@ function _M.save(image, file_path, verbose)
 					local interpolation_changed = false
 					if D==1 then
 						assert(point.interpolation)
-						if point.interpolation ~= interpolation then
+						if point.interpolation ~= interpolation or point.direction ~= direction then
 							interpolation = point.interpolation
+							direction = point.direction
 							interpolation_changed = true
 						end
 					end
@@ -641,12 +658,12 @@ function _M.save(image, file_path, verbose)
 					if verbose then
 						-- in verbose mode specify G for each stroke command
 						if D == 1 then
-							G = interpolations[interpolation]
+							G = compute_G(interpolation, direction)
 						end
 					else
 						-- in compact mode specifies interpolation on its own when it changes
 						if interpolation_changed then
-							table.insert(data, _M.blocks.directive{G=interpolations[interpolation]})
+							table.insert(data, _M.blocks.directive{G=compute_G(interpolation, direction)})
 						end
 					end
 					local px,py = point.x / scale,point.y / scale
