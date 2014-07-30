@@ -110,26 +110,6 @@ local function get_kerning(fontname, leftchar, rightchar)
 	return kerning.x
 end
 
-local function clockwise(path)
-	local total = 0
-	for i=1,#path-1 do
-		local p0 = path[i-1] or path[#path-1]
-		local p1 = path[i]
-		local p2 = path[i+1] or path[1]
-		local dx1 = p1.x - p0.x
-		local dy1 = p1.y - p0.y
-		local dx2 = p2.x - p1.x
-		local dy2 = p2.y - p1.y
-		local l1 = math.sqrt(dx1*dx1+dy1*dy1)
-		local l2 = math.sqrt(dx2*dx2+dy2*dy2)
-		if l1 * l2 ~= 0 then
-			local angle = math.asin((dx1*dy2-dy1*dx2)/(l1*l2))
-			total = total + angle
-		end
-	end
-	return total < 0
-end
-
 local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, text)
 	if #text == 0 then return end
 	local scale = size / font_size
@@ -172,7 +152,7 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 		for icontour,contour in ipairs(glyph.contours) do
 			local path = manipulation.offset_path(manipulation.scale_path(contour, scale), x, y)
 			local clockwise_outline = not glyph.flags.REVERSE_FILL
-			local outline = clockwise(path) == clockwise_outline -- compare before mirror
+			local outline = region.exterior(path) ~= clockwise_outline -- compare before mirror
 			local path_polarity = outline and polarity or (polarity=='clear' and 'dark' or 'clear')
 			if mirror then
 				for _,point in ipairs(path) do
