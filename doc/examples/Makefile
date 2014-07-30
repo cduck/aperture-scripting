@@ -1,9 +1,9 @@
-SCRIPTS=save rotate panel panel-rotate panel-panel panel-layout drawing-fiducials drawing-text
+SCRIPTS=save rotate panel panel-rotate panel-panel panel-layout drawing-fiducials drawing-text empty-save
 EXTS=oln drd gml gtl gts gto gbl gbs gbo
 
-build:$(patsubst %,%.gtl,$(SCRIPTS))
+build:$(patsubst %,%.gto,$(SCRIPTS))
 
-%.gtl:%.cfg $(patsubst %,simple.%,$(EXTS))
+%.gto:%.cfg $(patsubst %,simple.%,$(EXTS))
 	lua $<
 
 clean:
