@@ -56,7 +56,7 @@ Then to load a board you use the `boards.load` function:
 
 This will simply print all the corresponding Gerber and Excellon file names, and validate the data (ie. if there is some loading error, you should get an error message). In all examples below we start from this *simple* board, which looks like that:
 
-![](raw/tip/doc/examples/simple.png)
+![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/simple.png)
 
 
 ## 5.2 - Saving a board
@@ -74,7 +74,7 @@ However when you combine several boards into one (like in the panelization examp
 
 As expected the output is identical to the input:
 
-![](raw/tip/doc/examples/save.png)
+![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/save.png)
 
 ## 5.3 - Rotating a board
 
@@ -90,7 +90,7 @@ To rotate a board call `manipulation.rotate_board` with the board and a direct a
 
 The result is the same board as above, but rotated 90°:
 
-![](raw/tip/doc/examples/rotate.png)
+![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/rotate.png)
 
 ## 5.4 - Panelizing boards
 
@@ -111,7 +111,7 @@ Here the layout contains two copies of the *simple* board. These are actually Lu
 
 The resulting panel looks like that:
 
-![](raw/tip/doc/examples/panel.png)
+![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/panel.png)
 
 As you can see the `panelize` function automatically placed the sub-boards with a 2 mm gap, and it created a break tab to connect the two boards.
 
@@ -131,7 +131,7 @@ As we have seen above the `rotate_board` function returns the rotated board. Thi
 
 This time we passed `false` as third argument to `panelize`, which means we want a horizontal panel. The result of this panel is as follows:
 
-![](raw/tip/doc/examples/panel-rotate.png)
+![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/panel-rotate.png)
 
 To verify that the right board has been rotated and not mirrored, you can check the little hole in the trace, which the left board has on the top-right, but which the right board has on the bottom-left.
 
@@ -163,7 +163,7 @@ A panel is just a board, so you can use it as input in a `panelize` call. This w
 
 And here is the result:
 
-![](raw/tip/doc/examples/panel-panel.png)
+![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/panel-panel.png)
 
 One interesting thing to note is that each copy of the empty board is joined to the center panel with two breaking tabs. The `panelize` function will try to be smart about where to place breaking tabs. This can be controlled to some extents with the `options` table, or in the way the outline path is defined in the input boards, but that's a story for another day.
 
@@ -190,7 +190,7 @@ We've seen above that the `panelize` function takes a layout table as first argu
 
 The resulting 2D panel looks like this:
 
-![](raw/tip/doc/examples/panel-layout.png)
+![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/panel-layout.png)
 
 ## 5.9 - Drawing on boards
 
@@ -223,7 +223,7 @@ The drawing function is named `draw_path` because the same functions can be used
 
 And the resulting boards:
 
-![](raw/tip/doc/examples/drawing-fiducials.png)
+![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/drawing-fiducials.png)
 
 ## 5.10 - Drawing text
 
@@ -235,7 +235,7 @@ To draw text, simply call the `drawing.draw_text` function. Parameters are the i
 
 The resulting board now has some nice silkscreen text on the bottom tab:
 
-![](raw/tip/doc/examples/drawing-text.png)
+![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/drawing-text.png)
 
 ## 5.11 - Saving a board made from scratch
 
@@ -272,5 +272,5 @@ Now we can draw some text on the board (so it's not too boring) and save it:
 
 And the final result is that:
 
-![](raw/tip/doc/examples/empty-save.png)
+![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/empty-save.png)
 
