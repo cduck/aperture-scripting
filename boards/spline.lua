@@ -251,34 +251,60 @@ local function intersect(p0, v0, p1, v1)
 --	p0.x * v1.y + k0 * v0.x * v1.y = p1.x * v1.y + p0.y * v1.x + k0 * v0.y * v1.x - p1.y * v1.x
 --	k0 * v0.x * v1.y - k0 * v0.y * v1.x = p1.x * v1.y + p0.y * v1.x - p1.y * v1.x - p0.x * v1.y
 --	k0 * (v0.x * v1.y - v0.y * v1.x) = p1.x * v1.y + p0.y * v1.x - p1.y * v1.x - p0.x * v1.y
-	local k0 = (p1.x * v1.y + p0.y * v1.x - p1.y * v1.x - p0.x * v1.y) / (v0.x * v1.y - v0.y * v1.x)
-	return p0 + k0 * v0
+	local denom = v0.x * v1.y - v0.y * v1.x
+	if denom ~= 0 then
+		local k0 = (p1.x * v1.y + p0.y * v1.x - p1.y * v1.x - p0.x * v1.y) / denom
+		return p0 + k0 * v0
+	end
 end
 
 local function biarc(spline)
 	local A,B,ta,tb
 	if spline.mode=='quadratic' then
 		A = vector(spline.x0, spline.y0)
-		ta = vector(spline.x1 - spline.x0, spline.y1 - spline.y0).normalized
+		tA = vector(spline.x1 - spline.x0, spline.y1 - spline.y0).normalized
 		B = vector(spline.x2, spline.y2)
-		tb = vector(spline.x1 - spline.x2, spline.y1 - spline.y2).normalized
+		tB = vector(spline.x1 - spline.x2, spline.y1 - spline.y2).normalized
 	elseif spline.mode=='cubic' then
 		A = vector(spline.x0, spline.y0)
-		ta = vector(spline.x1 - spline.x0, spline.y1 - spline.y0).normalized
+		tA = vector(spline.x1 - spline.x0, spline.y1 - spline.y0).normalized
 		B = vector(spline.x3, spline.y3)
-		tb = vector(spline.x2 - spline.x3, spline.y2 - spline.y3).normalized
+		tB = vector(spline.x2 - spline.x3, spline.y2 - spline.y3).normalized
 	else
 		error("unsuported spline mode")
 	end
-	local C = intersect(A, ta, B, tb)
-	assert((C-A) * ta > 0)
-	assert((C-B) * tb > 0)
+	local up = (tA ^ -tB).z
+	assert(up ~= 0)
+	if up > 0 then
+		up = 'counterclockwise'
+	else
+		up = 'clockwise'
+	end
+	local nA = vector(-tA.y, tA.x)
+	local nB = vector(-tB.y, tB.x)
+	local C = intersect(A, tA, B, tB)
+	assert((C-A) * tA > 0)
+	assert((C-B) * tB > 0)
 	local a = (C-B).norm
 	local b = (A-C).norm
 	local c = (B-A).norm
 	local P = (a*A + b*B + c*C) * (1 / (a + b + c))
 	-- arc from A to P
+	local AP = P - A
+	local D = (P + A) * 0.5
+	local tD = AP.normalized
+	local nD = vector(-tD.y, tD.x)
+	local C1 = intersect(A, nA, D, nD)
+	local arc1 = {mode='arc', x0=A.x, y0=A.y, cx=C1.x, cy=C1.y, x1=P.x, y1=P.y, direction=up}
 	-- arc from P to B
+	local BP = P - B
+	local E = (P + B) * 0.5
+	local tE = BP.normalized
+	local nE = vector(-tE.y, tE.x)
+	local C2 = intersect(B, nB, E, nE)
+	local arc2 = {mode='arc', x0=P.x, y0=P.y, cx=C2.x, cy=C2.y, x1=B.x, y1=B.y, direction=up}
+	
+	return arc1,arc2
 end
 
 function _M.convert_to_arcs(spline, epsilon)
@@ -292,16 +318,22 @@ function _M.convert_to_arcs(spline, epsilon)
 		table.insert(arcs, b)
 		i = i + 1
 	end
+	return arcs
 end
 
 if _NAME=='test' then
+	local c = _M.quadratic(0, 0, 1, 1, 2, 0)
+	local arcs = _M.convert_to_arcs(c, epsilon)
+	expect(4, #arcs)
+	--[[
+	for i,arc in ipairs(arcs) do
+		print(i)
+		for k,v in pairs(arc) do print("", k, v) end
+	end
+	--]]
 	local c = _M.cubic(0, 0, 0, 1, 2, 1, 2, 0)
 	local arcs = _M.convert_to_arcs(c, epsilon)
 	expect(8, #arcs)
---	expect(true, monotonic(t[1]))
---	expect(true, monotonic(t[2]))
---	expect(true, monotonic(t[3]))
---	expect(true, monotonic(t[4]))
 end
 
 return _M

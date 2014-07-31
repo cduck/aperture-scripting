@@ -10,6 +10,7 @@ MODULES= \
 	boards.panelization \
 	boards.pathmerge \
 	boards.region \
+	boards.spline \
 	boards.templates \
 	bom \
 	dxf \

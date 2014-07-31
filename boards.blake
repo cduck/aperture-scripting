@@ -24,6 +24,7 @@ return {
 			"panelization.lua",
 			"pathmerge.lua",
 			"region.lua",
+			"spline.lua",
 			"templates.lua",
 		},
 		{

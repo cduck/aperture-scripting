@@ -2,6 +2,7 @@ local _M = {}
 
 local math = require 'math'
 local table = require 'table'
+local spline = require 'boards.spline'
 
 ------------------------------------------------------------------------------
 
@@ -47,6 +48,22 @@ local function interpolate_point(path, point, epsilon, allowed)
 			table.insert(path, {x=x, y=y, interpolation='linear'})
 		end
 		table.insert(path, {x=point.x, y=point.y, interpolation='linear'})
+	elseif interpolation == 'quadratic' and allowed.circular and allowed.linear then
+		local c = spline.quadratic(path[#path].x, path[#path].y, point.x1, point.y1, point.x, point.y)
+		local arcs = spline.convert_to_arcs(c, epsilon)
+		for _,arc in ipairs(arcs) do
+			assert(arc.x0==path[#path].x)
+			assert(arc.y0==path[#path].y)
+			table.insert(path, {interpolation='circular', quadrant='single', direction=arc.direction, cx=arc.cx, cy=arc.cy, x=arc.x1, y=arc.y1})
+		end
+	elseif interpolation == 'cubic' and allowed.circular and allowed.linear then
+		local c = spline.cubic(path[#path].x, path[#path].y, point.x1, point.y1, point.x2, point.y2, point.x, point.y)
+		local arcs = spline.convert_to_arcs(c, epsilon)
+		for _,arc in ipairs(arcs) do
+			assert(arc.x0==path[#path].x)
+			assert(arc.y0==path[#path].y)
+			table.insert(path, {interpolation='circular', quadrant='single', direction=arc.direction, cx=arc.cx, cy=arc.cy, x=arc.x1, y=arc.y1})
+		end
 	elseif interpolation == 'quadratic' and allowed.linear then
 		local P0 = path[#path]
 		local P1 = {x=point.x1, y=point.y1}
