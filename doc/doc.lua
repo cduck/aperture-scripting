@@ -1,7 +1,7 @@
 
 ------------------------------------------------------------------------------
 
-readme '../README.md'
+readme('../README.md', 'raw/tip/doc/')
 index {
 	title = 'Gerber-ltools',
 	header = [[A set of libraries and tools to manipulate PCB data files]],
