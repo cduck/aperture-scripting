@@ -593,6 +593,7 @@ function _M.save(image, file_path, verbose)
 	local interpolation,direction,quadrant,aperture,path
 	local unit = assert(image.unit, "image has no unit")
 	assert(scales[unit], "unsupported image unit "..tostring(unit))
+	local epsilon = 1e7 -- default to 0.01mm for bezier to arcs
 	
 	if image_name then
 		table.insert(data, _M.blocks.parameter('IN', image_name))
@@ -617,7 +618,7 @@ function _M.save(image, file_path, verbose)
 			table.insert(data, _M.blocks.parameter('LN', layer.name))
 		end
 		for _,path in ipairs(layer) do
-			path = interpolationlib.interpolate_path(path, nil, {linear=true, circular=true})
+			path = interpolationlib.interpolate_path(path, epsilon, {linear=true, circular=true})
 			if path.aperture then
 				if path.aperture ~= aperture then
 					aperture = path.aperture

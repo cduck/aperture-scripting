@@ -31,7 +31,17 @@ local function interpolate_point(path, point, epsilon, allowed)
 		while ta < 0 do ta = ta + 360 end
 		local tb = math.deg(math.atan2(dyb, dxb))
 		while tb < 0 do tb = tb + 360 end
-		local step,ta2,tb2 = 6
+		
+		-- error is r * (1 - cos(step / 2))
+		local r = math.max(ra, rb)
+		local re = math.min(epsilon/r, 1)
+		local step = math.deg(2 * math.acos(1 - re)) - 1e-12
+		assert(r * (1 - math.cos(math.rad(step / 2))) <= epsilon)
+		step = 90 / math.ceil(90 / step) -- improve precision so that we get points on both axis
+		assert(r * (1 - math.cos(math.rad(step / 2))) <= epsilon)
+		step = math.max(step, 0.1)
+		
+		local ta2,tb2
 		if direction == 'clockwise' then
 			while ta < tb do ta = ta + 360 end
 			if quadrant == 'multi' and ta == tb then ta = ta + 360 end
@@ -46,13 +56,15 @@ local function interpolate_point(path, point, epsilon, allowed)
 		else
 			error("unsupported circular interpolation direction "..tostring(direction))
 		end
-		for t = ta2, tb2, step do
+		for t = ta2, tb2+0.5*step, step do
 			local r = (t - ta) / (tb - ta) * (rb - ra) + ra
 			local x = cx + r * math.cos(math.rad(t))
 			local y = cy + r * math.sin(math.rad(t))
 			table.insert(path, {x=x, y=y, interpolation='linear'})
 		end
-		table.insert(path, {x=point.x, y=point.y, interpolation='linear'})
+		if point.x~=path[#path].x or point.y~=path[#path].y then
+			table.insert(path, {x=point.x, y=point.y, interpolation='linear'})
+		end
 	elseif interpolation == 'quadratic' and allowed.circular and allowed.linear then
 		local c = spline.quadratic(path[#path].x, path[#path].y, point.x1, point.y1, point.x, point.y)
 		local arcs = spline.convert_to_arcs(c, epsilon)
@@ -70,6 +82,7 @@ local function interpolate_point(path, point, epsilon, allowed)
 			table.insert(path, {interpolation='circular', quadrant='single', direction=arc.direction, cx=arc.cx, cy=arc.cy, x=arc.x1, y=arc.y1})
 		end
 	elseif interpolation == 'quadratic' and allowed.linear then
+		-- :TODO: use epsilon instead of curve_steps
 		local P0 = path[#path]
 		local P1 = {x=point.x1, y=point.y1}
 		local P2 = point
@@ -84,6 +97,7 @@ local function interpolate_point(path, point, epsilon, allowed)
 		end
 		assert(path[#path].x==P2.x and path[#path].y==P2.y)
 	elseif interpolation == 'cubic' and allowed.linear then
+		-- :TODO: use epsilon instead of curve_steps
 		local P0 = path[#path]
 		local P1 = {x=point.x1, y=point.y1}
 		local P2 = {x=point.x2, y=point.y2}
@@ -106,20 +120,24 @@ end
 if _NAME=='test' then
 	local path = {{x=0, y=0}}
 	local point = {interpolation='circular', cx=1, cy=0, x=1, y=1, direction='clockwise', quadrant='single'}
-	interpolate_point(path, point, nil, {linear=true})
-	expect(16, #path)
+	interpolate_point(path, point, 0.001, {linear=true})
+	expect(19, #path)
 	local path = {{x=0, y=0}}
 	local point = {interpolation='circular', cx=1, cy=0, x=0, y=0, direction='clockwise', quadrant='single'}
-	interpolate_point(path, point, nil, {linear=true})
-	expect(2, #path)
+	interpolate_point(path, point, 0.001, {linear=true})
+	expect(1, #path)
 	local path = {{x=0, y=0}}
 	local point = {interpolation='circular', cx=1, cy=0, x=0, y=0, direction='clockwise', quadrant='multi'}
-	interpolate_point(path, point, nil, {linear=true})
-	expect(61, #path)
+	interpolate_point(path, point, 0.001, {linear=true})
+	expect(73, #path)
+	local path = {{x=0, y=0}}
+	local point = {interpolation='circular', cx=2.54, cy=2.54, x=0, y=5.08, direction='clockwise', quadrant='single'}
+	interpolate_point(path, point, 0.01, {linear=true})
+	expect(13, #path)
 end
 
 local function interpolate_path(path, epsilon, allowed)
-	assert(epsilon==nil, "interpolation epsilon is not yet supported")
+	assert(epsilon~=nil, "interpolation epsilon is required")
 	if not allowed then allowed = { linear = true } end
 	assert(allowed.linear, "interpolation require at least linear segment support")
 	local path_allowed = true
