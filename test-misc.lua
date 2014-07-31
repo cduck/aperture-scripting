@@ -141,6 +141,7 @@ dofile('panel-panel.cfg')
 dofile('panel-layout.cfg')
 dofile('drawing-fiducials.cfg')
 dofile('drawing-text.cfg')
+dofile('empty-save.cfg')
 
 ------------------------------------------------------------------------------
 
