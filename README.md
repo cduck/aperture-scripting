@@ -237,3 +237,40 @@ The resulting board now has some nice silkscreen text on the bottom tab:
 
 ![](examples/drawing-text.png)
 
+## 5.11 - Saving a board made from scratch
+
+We've seen above how to create an empty board, but we can't draw on it or even save it empty readily: you first need to specify how it's structured and how it's to be serialized. So let's create a new empty board:
+
+	local board = panelization.empty_board(50*mm, 10*mm)
+
+The first step consist in adding some images to the board, because gerber-ltools doesn't know what kind of image you need (it could try a standard board, but then you'd have to remove what you don't want or add what's non-standard anyway). Here we'll create an outline image, a top soldermask to get a nice color and a top silkscreen to write some text on top of it:
+
+	board.images.outline = panelization.empty_image()
+	board.images.top_silkscreen = panelization.empty_image()
+	board.images.top_soldermask = panelization.empty_image()
+
+Now all these are empty, including the outline, even though we said above that specifying dimensions for an empty board would create an outline. Gerber-ltools keeps tracks of outlines separately from other drawings on the board, because usually you don't want it to be drawn (for example if you have the outline on the copper layers you don't actually want a thin copper trace all around your board). But ultimately you want the outline to be saved in a Gerber image, either in a dedicated image as is the case here, or in another image (common cases are top silkscreen, top copper, or sometimes all layers). To do that, you will have to associate the outline with an aperture on each image you want it saved on. Here we'll create a zero-sized aperture and draw the outline on the *outline* image:
+
+	board.outline.apertures.outline = drawing.circle_aperture(0)
+
+So now we have some images, and even an outline drawn on one of them. But before you can save the board you need to specify what will be the filename of each image. This is done through a table in the board called *extensions*. It's named like that because when you save the board you specify a base name, and all you really need for individual images is the extension to append to the base name. So each extension is a pattern where the `%` character will be replaced with the base name.
+
+	board.extensions.outline = '%.oln'
+	board.extensions.top_silkscreen = '%.gto'
+	board.extensions.top_soldermask = '%.gts'
+
+The final step consist in telling gerber-ltools what format each image should be saved as. Because despite its name, gerber-ltools has (partial) support for more than just the Gerber format. At the moment you can decently save drill data in Excellon format, BOM data in tab-separated text files, and there is some basic support for SVG and DXF images (please ask if you need more of that). But right now we only need Gerber:
+
+	board.formats.outline = 'gerber'
+	board.formats.top_silkscreen = 'gerber'
+	board.formats.top_soldermask = 'gerber'
+
+Now we can draw some text on the board (so it's not too boring) and save it:
+
+	drawing.draw_text(board.images.top_silkscreen, 'dark', "constantine.ttf", 6*mm, false, 'center', 25*mm, 2.5*mm, "Gerber-ltools")
+	boards.save(board, './empty-save')
+
+And the final result is that:
+
+![](examples/empty-save.png)
+
