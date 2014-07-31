@@ -1,8 +1,13 @@
 local _M = {}
+local _NAME = ... or 'test'
 
 local math = require 'math'
 local table = require 'table'
 local spline = require 'boards.spline'
+
+if _NAME=='test' then
+	require 'test'
+end
 
 ------------------------------------------------------------------------------
 
@@ -96,6 +101,21 @@ local function interpolate_point(path, point, epsilon, allowed)
 	else
 		error("unsupported interpolation mode "..tostring(interpolation))
 	end
+end
+
+if _NAME=='test' then
+	local path = {{x=0, y=0}}
+	local point = {interpolation='circular', cx=1, cy=0, x=1, y=1, direction='clockwise', quadrant='single'}
+	interpolate_point(path, point, nil, {linear=true})
+	expect(16, #path)
+	local path = {{x=0, y=0}}
+	local point = {interpolation='circular', cx=1, cy=0, x=0, y=0, direction='clockwise', quadrant='single'}
+	interpolate_point(path, point, nil, {linear=true})
+	expect(2, #path)
+	local path = {{x=0, y=0}}
+	local point = {interpolation='circular', cx=1, cy=0, x=0, y=0, direction='clockwise', quadrant='multi'}
+	interpolate_point(path, point, nil, {linear=true})
+	expect(61, #path)
 end
 
 local function interpolate_path(path, epsilon, allowed)
