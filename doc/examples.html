@@ -257,7 +257,7 @@ draw_fiducial(width - 5*mm, height - 5*mm)
 <div class="section">
 <a id="drawing-text"/><h2>5.10 - Drawing text</h2>
 
-<p>Gerber-ltools has some basic support to load vector fonts and draw text. At the moment glyph outlines are approximated with Gerber regions made of small linear segments, so the output files may be very large.</p>
+<p>Gerber-ltools has some basic support to load vector fonts and draw text. At the moment glyph outlines are approximated with Gerber regions made of circular arc segments, so they might not precisely fit the Bezier curves of your font (please tell me if you need something more precise, I can add some subdivision code).</p>
 
 <p>To draw text, simply call the <code>drawing.draw_text</code> function. Parameters are the image on which to draw, the drawing polarity (<code>'dark'</code> for normal, <code>'clear'</code> for inverted), the font filename, the font size (roughly an uppercase letter height, but that depends on the font), a boolean telling whether to mirror the text (for bottom layers) or not, an alignment side (<code>'left'</code> or <code>'center'</code>), X and Y positions, and finally a string with the text itself in UTF-8. For example (reusing the horizontal tab width from the previous example):</p>
 
@@ -317,7 +317,7 @@ boards.save(board, './empty-save')
 </div>
 
 <div class="chapter" id="footer">
-<small>Last update: 2014-08-01 00:19:42 BST</small>
+<small>Last update: 2014-08-01 01:13:30 BST</small>
 </div>
 
 </body>
