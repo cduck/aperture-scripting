@@ -1,6 +1,7 @@
 local _M = {}
 local _NAME = ... or 'test'
 
+local table = require 'table'
 local geometry = require 'geometry'
 local vector = geometry.vector
 

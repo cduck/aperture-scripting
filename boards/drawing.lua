@@ -1,5 +1,6 @@
 local _M = {}
 
+local io = require 'io'
 local table = require 'table'
 local region = require 'boards.region'
 local manipulation = require 'boards.manipulation'

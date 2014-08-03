@@ -1,6 +1,7 @@
 local _M = {}
 local _NAME = ... or 'test'
 
+local math = require 'math'
 local table = require 'table'
 local region = require 'boards.region'
 

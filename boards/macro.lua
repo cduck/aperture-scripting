@@ -1,5 +1,7 @@
 local _M = {}
 
+local math = require 'math'
+local table = require 'table'
 local region = require 'boards.region'
 
 ------------------------------------------------------------------------------
