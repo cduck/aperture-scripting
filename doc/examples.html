@@ -4,14 +4,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"
 lang="en">
 <head>
-<title>Gerber-ltools</title>
+<title>Aperture Scripting</title>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <link rel="stylesheet" href="doc.css" type="text/css"/>
 </head>
 <body>
 
 <div class="chapter" id="header">
-<img width="128" height="128" alt="Gerber-ltools" src="logo.png"/>
+<img width="128" height="128" alt="Aperture Scripting" src="logo.png"/>
 <p>A set of libraries and tools to manipulate PCB data files</p>
 <p class="bar">
 <a href="index.html">home</a> &middot;
@@ -25,14 +25,14 @@ lang="en">
 <div class="chapter">
 <a id="examples"/><h1>5 - Examples</h1>
 
-<p>Here are some progressively more complex example scripts showing how you can use gerber-ltools.</p>
+<p>Here are some progressively more complex example scripts showing how you can use Aperture Scripting.</p>
 
 </div>
 
 <div class="section">
 <a id="simple"/><h2>5.1 - Loading a board</h2>
 
-<p>The first step when using gerber-ltools usually consist in loading some board that you exported from your CAD software. First you need to load the <code>boards</code> module:</p>
+<p>The first step when using Aperture Scripting usually consist in loading some board that you exported from your CAD software. First you need to load the <code>boards</code> module:</p>
 
 <pre><code>local boards = require 'boards'
 </code></pre>
@@ -95,7 +95,7 @@ assert(boards.save(rotate, './rotate'))
 <div class="section">
 <a id="panel"/><h2>5.4 - Panelizing boards</h2>
 
-<p>One of the most important features of gerber-ltools is its ability to panelize boards, ie. to assemble several boards into a larger one. This is probably why you want to use gerber-ltools. The module you need for that is <code>boards.panelization</code>:</p>
+<p>One of the most important features of Aperture Scripting is its ability to panelize boards, ie. to assemble several boards into a larger one. This is probably why you want to use Aperture Scripting. The module you need for that is <code>boards.panelization</code>:</p>
 
 <pre><code>local panelization = require 'boards.panelization'
 </code></pre>
@@ -217,7 +217,7 @@ boards.save(panel, './panel-layout')
 <div class="section">
 <a id="drawing-fiducials"/><h2>5.9 - Drawing on boards</h2>
 
-<p>Gerber-ltools support some basic drawing functions that will let you add elements to your boards. This is mostly useful for panel tabs that you may add in your script, since it's usually better to add anything to your board in your CAD software if you can. However these gerber-ltools features can be useful if your CAD software is limited in a way or another. All these functions are in the <code>drawnig</code> submodule:</p>
+<p>Aperture Scripting support some basic drawing functions that will let you add elements to your boards. This is mostly useful for panel tabs that you may add in your script, since it's usually better to add anything to your board in your CAD software if you can. However these Aperture Scripting features can be useful if your CAD software is limited in a way or another. All these functions are in the <code>drawing</code> submodule:</p>
 
 <pre><code>local drawing = require 'boards.drawing'
 </code></pre>
@@ -257,11 +257,11 @@ draw_fiducial(width - 5*mm, height - 5*mm)
 <div class="section">
 <a id="drawing-text"/><h2>5.10 - Drawing text</h2>
 
-<p>Gerber-ltools has some basic support to load vector fonts and draw text. At the moment glyph outlines are approximated with Gerber regions made of circular arc segments, so they might not precisely fit the Bezier curves of your font (please tell me if you need something more precise, I can add some subdivision code).</p>
+<p>Aperture Scripting has some basic support to load vector fonts and draw text. At the moment glyph outlines are approximated with Gerber regions made of circular arc segments, so they might not precisely fit the Bezier curves of your font (please tell me if you need something more precise, I can add some subdivision code).</p>
 
 <p>To draw text, simply call the <code>drawing.draw_text</code> function. Parameters are the image on which to draw, the drawing polarity (<code>'dark'</code> for normal, <code>'clear'</code> for inverted), the font filename, the font size (roughly an uppercase letter height, but that depends on the font), a boolean telling whether to mirror the text (for bottom layers) or not, an alignment side (<code>'left'</code> or <code>'center'</code>), X and Y positions, and finally a string with the text itself in UTF-8. For example (reusing the horizontal tab width from the previous example):</p>
 
-<pre><code>drawing.draw_text(panel.images.top_silkscreen, 'dark', "constantine.ttf", 6*mm, false, 'center', width / 2, 2.5*mm, "Gerber-ltools")
+<pre><code>drawing.draw_text(panel.images.top_silkscreen, 'dark', "constantine.ttf", 6*mm, false, 'center', width / 2, 2.5*mm, "Aperture")
 </code></pre>
 
 <p>The resulting board now has some nice silkscreen text on the bottom tab:</p>
@@ -278,14 +278,14 @@ draw_fiducial(width - 5*mm, height - 5*mm)
 <pre><code>local board = panelization.empty_board(50*mm, 10*mm)
 </code></pre>
 
-<p>The first step consist in adding some images to the board, because gerber-ltools doesn't know what kind of image you need (it could try a standard board, but then you'd have to remove what you don't want or add what's non-standard anyway). Here we'll create an outline image, a top soldermask to get a nice color and a top silkscreen to write some text on top of it:</p>
+<p>The first step consist in adding some images to the board, because Aperture Scripting doesn't know what kind of image you need (it could try a standard board, but then you'd have to remove what you don't want or add what's non-standard anyway). Here we'll create an outline image, a top soldermask to get a nice color and a top silkscreen to write some text on top of it:</p>
 
 <pre><code>board.images.outline = panelization.empty_image()
 board.images.top_silkscreen = panelization.empty_image()
 board.images.top_soldermask = panelization.empty_image()
 </code></pre>
 
-<p>Now all these are empty, including the outline, even though we said above that specifying dimensions for an empty board would create an outline. Gerber-ltools keeps tracks of outlines separately from other drawings on the board, because usually you don't want it to be drawn (for example if you have the outline on the copper layers you don't actually want a thin copper trace all around your board). But ultimately you want the outline to be saved in a Gerber image, either in a dedicated image as is the case here, or in another image (common cases are top silkscreen, top copper, or sometimes all layers). To do that, you will have to associate the outline with an aperture on each image you want it saved on. Here we'll create a zero-sized aperture and draw the outline on the <em>outline</em> image:</p>
+<p>Now all these are empty, including the outline, even though we said above that specifying dimensions for an empty board would create an outline. Aperture Scripting keeps tracks of outlines separately from other drawings on the board, because usually you don't want it to be drawn (for example if you have the outline on the copper layers you don't actually want a thin copper trace all around your board). But ultimately you want the outline to be saved in a Gerber image, either in a dedicated image as is the case here, or in another image (common cases are top silkscreen, top copper, or sometimes all layers). To do that, you will have to associate the outline with an aperture on each image you want it saved on. Here we'll create a zero-sized aperture and draw the outline on the <em>outline</em> image:</p>
 
 <pre><code>board.outline.apertures.outline = drawing.circle_aperture(0)
 </code></pre>
@@ -297,7 +297,7 @@ board.extensions.top_silkscreen = '%.gto'
 board.extensions.top_soldermask = '%.gts'
 </code></pre>
 
-<p>The final step consist in telling gerber-ltools what format each image should be saved as. Because despite its name, gerber-ltools has (partial) support for more than just the Gerber format. At the moment you can decently save drill data in Excellon format, BOM data in tab-separated text files, and there is some basic support for SVG and DXF images (please ask if you need more of that). But right now we only need Gerber:</p>
+<p>The final step consist in telling Aperture Scripting what format each image should be saved as. Aperture Scripting has (partial) support for more than just the Gerber format. At the moment you can decently save drill data in Excellon format, BOM data in tab-separated text files, and there is some basic support for SVG and DXF images (please ask if you need more of that). But right now we only need Gerber:</p>
 
 <pre><code>board.formats.outline = 'gerber'
 board.formats.top_silkscreen = 'gerber'
@@ -306,7 +306,7 @@ board.formats.top_soldermask = 'gerber'
 
 <p>Now we can draw some text on the board (so it's not too boring) and save it:</p>
 
-<pre><code>drawing.draw_text(board.images.top_silkscreen, 'dark', "constantine.ttf", 6*mm, false, 'center', 25*mm, 2.5*mm, "Gerber-ltools")
+<pre><code>drawing.draw_text(board.images.top_silkscreen, 'dark', "constantine.ttf", 6*mm, false, 'center', 25*mm, 2.5*mm, "Aperture")
 boards.save(board, './empty-save')
 </code></pre>
 
@@ -317,7 +317,7 @@ boards.save(board, './empty-save')
 </div>
 
 <div class="chapter" id="footer">
-<small>Last update: 2014-08-01 01:13:30 BST</small>
+<small>Last update: 2014-08-03 02:10:20 BST</small>
 </div>
 
 </body>

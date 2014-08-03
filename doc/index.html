@@ -4,14 +4,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"
 lang="en">
 <head>
-<title>Gerber-ltools</title>
+<title>Aperture Scripting</title>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <link rel="stylesheet" href="doc.css" type="text/css"/>
 </head>
 <body>
 
 <div class="chapter" id="header">
-<img width="128" height="128" alt="Gerber-ltools" src="logo.png"/>
+<img width="128" height="128" alt="Aperture Scripting" src="logo.png"/>
 <p>A set of libraries and tools to manipulate PCB data files</p>
 <p class="bar">
 <a href="index.html">home</a> &middot;
@@ -23,9 +23,9 @@ lang="en">
 </div>
 
 <div class="chapter">
-<a id="about"/><h1>1 - About gerber-ltools</h1>
+<a id="about"/><h1>1 - About Aperture Scripting</h1>
 
-<p>Gerber-ltools is a set of Lua libraries to manipulate Gerber (RS-274X) files and other related vector files. It was designed as a generic framework to let custom scripts manipulate PCB design data, in particular assemble several PCBs into panels. It is also used by my <a href="http://piratery.net/grbv/">Gerber Viewer</a> application to load PCB data files for visualization.</p>
+<p>Aperture Scripting is a set of Lua libraries to manipulate Gerber (RS-274X) files and other related vector files. It was designed as a generic framework to let custom scripts manipulate PCB design data, in particular assemble several PCBs into panels. It is also used by my <a href="http://piratery.net/grbv/">Gerber Viewer</a> application to load PCB data files for visualization.</p>
 
 <h2>Support</h2>
 
@@ -37,28 +37,28 @@ lang="en">
 
 <p>These libraries are written and maintained by <a href="mailto:jerome.vuarand@gmail.com">Jérôme Vuarand</a>.</p>
 
-<p>Gerber-ltools is available under an <a href="LICENSE.txt">MIT-style license</a>.</p>
+<p>Aperture Scripting is available under an <a href="LICENSE.txt">MIT-style license</a>.</p>
 
-<p>The logo was inspired by another kind of <a href="http://www.gerber.com/">Gerber</a> and by the <a href="http://www.lua.org/images/">Lua logo</a>. Hopefully it will be seen as a tribute rather than a copyright infringement.</p>
+<p>The logo was inspired by another kind of <a href="http://en.wikipedia.org/wiki/Portal_(video_game">Aperture</a>, another kind of <a href="http://www.gerber.com/">Gerber</a> and by the <a href="http://www.lua.org/images/">Lua logo</a>. Hopefully it will be seen as a tribute rather than a copyright infringement.</p>
 
 </div>
 
 <div class="chapter">
 <a id="download"/><h1>2 - Download</h1>
 
-<p>Gerber-ltools sources are available in its <a href="http://hg.piratery.net/gerber-ltools/">Mercurial repository</a>:</p>
+<p>Aperture Scripting sources are available in its <a href="http://hg.piratery.net/aperture-scripting/">Mercurial repository</a>:</p>
 
-<pre><code>hg clone http://hg.piratery.net/gerber-ltools/
+<pre><code>hg clone http://hg.piratery.net/aperture-scripting/
 </code></pre>
 
-<p>Tarballs of the latest code can be downloaded directly from there: as <a href="http://hg.piratery.net/gerber-ltools/get/tip.tar.gz">gz</a>, <a href="http://hg.piratery.net/gerber-ltools/get/tip.tar.bz2">bz2</a> or <a href="http://hg.piratery.net/gerber-ltools/get/tip.zip">zip</a>.</p>
+<p>Tarballs of the latest code can be downloaded directly from there: as <a href="http://hg.piratery.net/aperture-scripting/get/tip.tar.gz">gz</a>, <a href="http://hg.piratery.net/aperture-scripting/get/tip.tar.bz2">bz2</a> or <a href="http://hg.piratery.net/aperture-scripting/get/tip.zip">zip</a>.</p>
 
 </div>
 
 <div class="chapter">
 <a id="installation"/><h1>3 - Installation</h1>
 
-<p>Gerber-ltools is not (at the moment) designed to be installed. Rather you should simply unzip one of the packages above or clone the source repository. Then make sure your Lua scripts can find its modules. It is written in pure Lua, so you don't need to compile anything.</p>
+<p>Aperture Scripting is not (at the moment) designed to be installed. Rather you should simply unzip one of the packages above or clone the source repository. Then make sure your Lua scripts can find its modules. It is written in pure Lua, so you don't need to compile anything.</p>
 
 <p>There are a few dependencies. The only mandatory dependency is <a href="http://keplerproject.github.io/luafilesystem/">LuaFileSystem</a>. If you want to load SVG files you will need my <a href="https://bitbucket.org/doub/xml">prtr-xml module</a>. For font loading and text drawing you will need my <a href="https://bitbucket.org/doub/luafreetype">LuaFreeType module</a>. All of these can be installed with <a href="http://luarocks.org/">LuaRocks</a>:</p>
 
@@ -67,12 +67,12 @@ luarocks install prtr-xml
 luarocks install freetype
 </code></pre>
 
-<p>If you're on Windows, and you don't have a working Lua installation, I recommend you download one of my <a href="http://piratery.net/grbv/downloads/">Gerber Viewer packages</a>. It contains gerber-ltools, along with a full working set of compiled libraries, a Lua interpreter and Lua modules, including all the optional dependencies for gerber-ltools. And as a bonus you get a 3D viewer for your generated PCBs files.</p>
+<p>If you're on Windows, and you don't have a working Lua installation, I recommend you download one of my <a href="http://piratery.net/grbv/downloads/">Gerber Viewer packages</a>. It contains Aperture Scripting, along with a full working set of compiled libraries, a Lua interpreter and Lua modules, including all the optional dependencies for Aperture Scripting. And as a bonus you get a 3D viewer for your generated PCBs files.</p>
 
 </div>
 
 <div class="chapter" id="footer">
-<small>Last update: 2014-07-18 02:38:03 BST</small>
+<small>Last update: 2014-08-03 02:15:40 BST</small>
 </div>
 
 </body>

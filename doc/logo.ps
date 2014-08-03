@@ -29,10 +29,6 @@
 %
 %------------------------------------------------------------------------------
 
-/LABEL		(Gerber-ltools) def
-
-%-- DO NOT CHANGE ANYTHING BELOW THIS LINE ------------------------------------
-
 /PLANETCOLOR	{1 255 div 67 255 div 125 255 div setrgbcolor} bind def
 /HOLECOLOR	{1.0 setgray} bind def
 /ORBITCOLOR	{0.5 setgray} bind def
@@ -82,109 +78,17 @@ MOONCOLOR
 %-0.5 moveto
 %LOGO show
 
-%------------------------------------------------------------------------------
-% based on code from Blue Book Program 10, on pages 167--169
-% available at ftp://ftp.adobe.com/pub/adobe/displaypostscript/bluebook.shar
-
-%	str ptsize centerangle radius	outsidecircletext	--
-/outsidecircletext {
-	circtextdict begin
-	/radius exch def
-	/centerangle exch def
-	/ptsize exch def
-	/str exch def
-
-	gsave
-	 str radius ptsize findhalfangle
-	 centerangle
-	 add rotate
-	 str
-		{ /charcode exch def
-		  ( ) dup 0 charcode put outsideplacechar
-		} forall
-	
-	grestore
-	end
-} def
-
-%	string radius ptsize	findhalfangle	halfangle
-/findhalfangle {
-	4 div add
-	exch
-	stringwidth pop 2 div
-	exch
-	2 mul 3.1415926535 mul div 360 mul
-} def
-
-/circtextdict 16 dict def
-circtextdict begin
-
- /outsideplacechar {
-	/char exch def
-	/halfangle char radius ptsize findhalfangle def
-	gsave
-	 halfangle neg rotate
-	 radius 0 translate
-	 -90 rotate
-	 char stringwidth pop 2 div neg 0 moveto
-	 char show
-	grestore
-	halfangle 2 mul neg rotate
- } def
-
-end
-
-%--------------------------------------------------------------------- label --
-LABELFONT
-F
-
-/LABELSIZE	LABELFONT exch pop def
-/LABELRADIUS	LABELSIZE 3 div 1 r add sub neg 1.02 mul def
-
-
-/HALFANGLE
-	LABEL LABELRADIUS LABELSIZE findhalfangle
-	HALFDASHANGLE div ceiling HALFDASHANGLE mul
-def
-
-/LABELANGLE
-	60 LABELANGLE HALFANGLE sub
-	lt
-	{
-	HALFANGLE
-	HALFANGLE DASHANGLE div floor DASHANGLE mul
-	eq
-		{LABELANGLE DASHANGLE div ceiling DASHANGLE mul}
-		{LABELANGLE HALFDASHANGLE sub DASHANGLE div round DASHANGLE mul HALFDASHANGLE add}
-	ifelse
-	}
-	{HALFANGLE 60 add}
-	ifelse
-def
-
-LABELCOLOR
-LABEL
-LABELSIZE
-LABELANGLE
-LABELRADIUS
-outsidecircletext
-
 %--------------------------------------------------------------------- orbit --
-ORBITCOLOR
-0.03 setlinewidth
-[1 r add 3.1415926535 180 div HALFDASHANGLE mul mul] 0 setdash
-newpath
-0 0
-1 r add
-3 copy
-30
-LABELANGLE HALFANGLE add
-arcn
-stroke
-60
-LABELANGLE HALFANGLE sub
-2 copy
-lt {arc stroke} {4 {pop} repeat} ifelse
+%ORBITCOLOR
+%0.03 setlinewidth
+%[1 r add 3.1415926535 180 div HALFDASHANGLE mul mul] 0 setdash
+%newpath
+%0 0
+%1 r add
+%3 copy
+%27 57
+%arcn
+%stroke
 
 %------------------------------------------------------------------ copyright --
 /COPYRIGHT

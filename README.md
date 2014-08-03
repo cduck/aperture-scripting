@@ -1,6 +1,6 @@
-# 1 - About gerber-ltools
+# 1 - About Aperture Scripting
 
-Gerber-ltools is a set of Lua libraries to manipulate Gerber (RS-274X) files and other related vector files. It was designed as a generic framework to let custom scripts manipulate PCB design data, in particular assemble several PCBs into panels. It is also used by my [Gerber Viewer](http://piratery.net/grbv/) application to load PCB data files for visualization.
+Aperture Scripting is a set of Lua libraries to manipulate Gerber (RS-274X) files and other related vector files. It was designed as a generic framework to let custom scripts manipulate PCB design data, in particular assemble several PCBs into panels. It is also used by my [Gerber Viewer](http://piratery.net/grbv/) application to load PCB data files for visualization.
 
 ## Support
 
@@ -12,21 +12,21 @@ Feel free to ask for further developments. I can't guarantee that I'll develop e
 
 These libraries are written and maintained by [Jérôme Vuarand](mailto:jerome.vuarand@gmail.com).
 
-Gerber-ltools is available under an [MIT-style license](LICENSE.txt).
+Aperture Scripting is available under an [MIT-style license](LICENSE.txt).
 
-The logo was inspired by another kind of [Gerber](http://www.gerber.com/) and by the [Lua logo](http://www.lua.org/images/). Hopefully it will be seen as a tribute rather than a copyright infringement.
+The logo was inspired by another kind of [Aperture](http://en.wikipedia.org/wiki/Portal_(video_game)#Setting), another kind of [Gerber](http://www.gerber.com/) and by the [Lua logo](http://www.lua.org/images/). Hopefully it will be seen as a tribute rather than a copyright infringement.
 
 # 2 - Download
 
-Gerber-ltools sources are available in its [Mercurial repository](http://hg.piratery.net/gerber-ltools/):
+Aperture Scripting sources are available in its [Mercurial repository](http://hg.piratery.net/aperture-scripting/):
 
-    hg clone http://hg.piratery.net/gerber-ltools/
+    hg clone http://hg.piratery.net/aperture-scripting/
 
-Tarballs of the latest code can be downloaded directly from there: as [gz](http://hg.piratery.net/gerber-ltools/get/tip.tar.gz), [bz2](http://hg.piratery.net/gerber-ltools/get/tip.tar.bz2) or [zip](http://hg.piratery.net/gerber-ltools/get/tip.zip).
+Tarballs of the latest code can be downloaded directly from there: as [gz](http://hg.piratery.net/aperture-scripting/get/tip.tar.gz), [bz2](http://hg.piratery.net/aperture-scripting/get/tip.tar.bz2) or [zip](http://hg.piratery.net/aperture-scripting/get/tip.zip).
 
 # 3 - Installation
 
-Gerber-ltools is not (at the moment) designed to be installed. Rather you should simply unzip one of the packages above or clone the source repository. Then make sure your Lua scripts can find its modules. It is written in pure Lua, so you don't need to compile anything.
+Aperture Scripting is not (at the moment) designed to be installed. Rather you should simply unzip one of the packages above or clone the source repository. Then make sure your Lua scripts can find its modules. It is written in pure Lua, so you don't need to compile anything.
 
 There are a few dependencies. The only mandatory dependency is [LuaFileSystem](http://keplerproject.github.io/luafilesystem/). If you want to load SVG files you will need my [prtr-xml module](https://bitbucket.org/doub/xml). For font loading and text drawing you will need my [LuaFreeType module](https://bitbucket.org/doub/luafreetype). All of these can be installed with [LuaRocks](http://luarocks.org/):
 
@@ -34,19 +34,19 @@ There are a few dependencies. The only mandatory dependency is [LuaFileSystem](h
 	luarocks install prtr-xml
 	luarocks install freetype
 
-If you're on Windows, and you don't have a working Lua installation, I recommend you download one of my [Gerber Viewer packages](http://piratery.net/grbv/downloads/). It contains gerber-ltools, along with a full working set of compiled libraries, a Lua interpreter and Lua modules, including all the optional dependencies for gerber-ltools. And as a bonus you get a 3D viewer for your generated PCBs files.
+If you're on Windows, and you don't have a working Lua installation, I recommend you download one of my [Gerber Viewer packages](http://piratery.net/grbv/downloads/). It contains Aperture Scripting, along with a full working set of compiled libraries, a Lua interpreter and Lua modules, including all the optional dependencies for Aperture Scripting. And as a bonus you get a 3D viewer for your generated PCBs files.
 
 # 4 - Manual
 
-The gerber-ltools API is still fluctuating, so please consult the source and the examples to get an idea.
+The Aperture Scripting API is still fluctuating, so please consult the source and the examples to get an idea.
 
 # 5 - Examples
 
-Here are some progressively more complex example scripts showing how you can use gerber-ltools.
+Here are some progressively more complex example scripts showing how you can use Aperture Scripting.
 
 ## 5.1 - Loading a board
 
-The first step when using gerber-ltools usually consist in loading some board that you exported from your CAD software. First you need to load the `boards` module:
+The first step when using Aperture Scripting usually consist in loading some board that you exported from your CAD software. First you need to load the `boards` module:
 
 	local boards = require 'boards'
 
@@ -56,7 +56,7 @@ Then to load a board you use the `boards.load` function:
 
 This will simply print all the corresponding Gerber and Excellon file names, and validate the data (ie. if there is some loading error, you should get an error message). In all examples below we start from this *simple* board, which looks like that:
 
-![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/simple.png)
+![](https://bitbucket.org/doub/aperture-scripting/raw/tip/doc/examples/simple.png)
 
 
 ## 5.2 - Saving a board
@@ -74,7 +74,7 @@ However when you combine several boards into one (like in the panelization examp
 
 As expected the output is identical to the input:
 
-![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/save.png)
+![](https://bitbucket.org/doub/aperture-scripting/raw/tip/doc/examples/save.png)
 
 ## 5.3 - Rotating a board
 
@@ -90,11 +90,11 @@ To rotate a board call `manipulation.rotate_board` with the board and a direct a
 
 The result is the same board as above, but rotated 90°:
 
-![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/rotate.png)
+![](https://bitbucket.org/doub/aperture-scripting/raw/tip/doc/examples/rotate.png)
 
 ## 5.4 - Panelizing boards
 
-One of the most important features of gerber-ltools is its ability to panelize boards, ie. to assemble several boards into a larger one. This is probably why you want to use gerber-ltools. The module you need for that is `boards.panelization`:
+One of the most important features of Aperture Scripting is its ability to panelize boards, ie. to assemble several boards into a larger one. This is probably why you want to use Aperture Scripting. The module you need for that is `boards.panelization`:
 
 	local panelization = require 'boards.panelization'
 
@@ -111,7 +111,7 @@ Here the layout contains two copies of the *simple* board. These are actually Lu
 
 The resulting panel looks like that:
 
-![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/panel.png)
+![](https://bitbucket.org/doub/aperture-scripting/raw/tip/doc/examples/panel.png)
 
 As you can see the `panelize` function automatically placed the sub-boards with a 2 mm gap, and it created a break tab to connect the two boards.
 
@@ -131,7 +131,7 @@ As we have seen above the `rotate_board` function returns the rotated board. Thi
 
 This time we passed `false` as third argument to `panelize`, which means we want a horizontal panel. The result of this panel is as follows:
 
-![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/panel-rotate.png)
+![](https://bitbucket.org/doub/aperture-scripting/raw/tip/doc/examples/panel-rotate.png)
 
 To verify that the right board has been rotated and not mirrored, you can check the little hole in the trace, which the left board has on the top-right, but which the right board has on the bottom-left.
 
@@ -163,7 +163,7 @@ A panel is just a board, so you can use it as input in a `panelize` call. This w
 
 And here is the result:
 
-![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/panel-panel.png)
+![](https://bitbucket.org/doub/aperture-scripting/raw/tip/doc/examples/panel-panel.png)
 
 One interesting thing to note is that each copy of the empty board is joined to the center panel with two breaking tabs. The `panelize` function will try to be smart about where to place breaking tabs. This can be controlled to some extents with the `options` table, or in the way the outline path is defined in the input boards, but that's a story for another day.
 
@@ -190,11 +190,11 @@ We've seen above that the `panelize` function takes a layout table as first argu
 
 The resulting 2D panel looks like this:
 
-![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/panel-layout.png)
+![](https://bitbucket.org/doub/aperture-scripting/raw/tip/doc/examples/panel-layout.png)
 
 ## 5.9 - Drawing on boards
 
-Gerber-ltools support some basic drawing functions that will let you add elements to your boards. This is mostly useful for panel tabs that you may add in your script, since it's usually better to add anything to your board in your CAD software if you can. However these gerber-ltools features can be useful if your CAD software is limited in a way or another. All these functions are in the `drawnig` submodule:
+Aperture Scripting support some basic drawing functions that will let you add elements to your boards. This is mostly useful for panel tabs that you may add in your script, since it's usually better to add anything to your board in your CAD software if you can. However these Aperture Scripting features can be useful if your CAD software is limited in a way or another. All these functions are in the `drawing` submodule:
 
 	local drawing = require 'boards.drawing'
 
@@ -223,19 +223,19 @@ The drawing function is named `draw_path` because the same functions can be used
 
 And the resulting boards:
 
-![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/drawing-fiducials.png)
+![](https://bitbucket.org/doub/aperture-scripting/raw/tip/doc/examples/drawing-fiducials.png)
 
 ## 5.10 - Drawing text
 
-Gerber-ltools has some basic support to load vector fonts and draw text. At the moment glyph outlines are approximated with Gerber regions made of circular arc segments, so they might not precisely fit the Bezier curves of your font (please tell me if you need something more precise, I can add some subdivision code).
+Aperture Scripting has some basic support to load vector fonts and draw text. At the moment glyph outlines are approximated with Gerber regions made of circular arc segments, so they might not precisely fit the Bezier curves of your font (please tell me if you need something more precise, I can add some subdivision code).
 
 To draw text, simply call the `drawing.draw_text` function. Parameters are the image on which to draw, the drawing polarity (`'dark'` for normal, `'clear'` for inverted), the font filename, the font size (roughly an uppercase letter height, but that depends on the font), a boolean telling whether to mirror the text (for bottom layers) or not, an alignment side (`'left'` or `'center'`), X and Y positions, and finally a string with the text itself in UTF-8. For example (reusing the horizontal tab width from the previous example):
 
-	drawing.draw_text(panel.images.top_silkscreen, 'dark', "constantine.ttf", 6*mm, false, 'center', width / 2, 2.5*mm, "Gerber-ltools")
+	drawing.draw_text(panel.images.top_silkscreen, 'dark', "constantine.ttf", 6*mm, false, 'center', width / 2, 2.5*mm, "Aperture")
 
 The resulting board now has some nice silkscreen text on the bottom tab:
 
-![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/drawing-text.png)
+![](https://bitbucket.org/doub/aperture-scripting/raw/tip/doc/examples/drawing-text.png)
 
 ## 5.11 - Saving a board made from scratch
 
@@ -243,13 +243,13 @@ We've seen above how to create an empty board, but we can't draw on it or even s
 
 	local board = panelization.empty_board(50*mm, 10*mm)
 
-The first step consist in adding some images to the board, because gerber-ltools doesn't know what kind of image you need (it could try a standard board, but then you'd have to remove what you don't want or add what's non-standard anyway). Here we'll create an outline image, a top soldermask to get a nice color and a top silkscreen to write some text on top of it:
+The first step consist in adding some images to the board, because Aperture Scripting doesn't know what kind of image you need (it could try a standard board, but then you'd have to remove what you don't want or add what's non-standard anyway). Here we'll create an outline image, a top soldermask to get a nice color and a top silkscreen to write some text on top of it:
 
 	board.images.outline = panelization.empty_image()
 	board.images.top_silkscreen = panelization.empty_image()
 	board.images.top_soldermask = panelization.empty_image()
 
-Now all these are empty, including the outline, even though we said above that specifying dimensions for an empty board would create an outline. Gerber-ltools keeps tracks of outlines separately from other drawings on the board, because usually you don't want it to be drawn (for example if you have the outline on the copper layers you don't actually want a thin copper trace all around your board). But ultimately you want the outline to be saved in a Gerber image, either in a dedicated image as is the case here, or in another image (common cases are top silkscreen, top copper, or sometimes all layers). To do that, you will have to associate the outline with an aperture on each image you want it saved on. Here we'll create a zero-sized aperture and draw the outline on the *outline* image:
+Now all these are empty, including the outline, even though we said above that specifying dimensions for an empty board would create an outline. Aperture Scripting keeps tracks of outlines separately from other drawings on the board, because usually you don't want it to be drawn (for example if you have the outline on the copper layers you don't actually want a thin copper trace all around your board). But ultimately you want the outline to be saved in a Gerber image, either in a dedicated image as is the case here, or in another image (common cases are top silkscreen, top copper, or sometimes all layers). To do that, you will have to associate the outline with an aperture on each image you want it saved on. Here we'll create a zero-sized aperture and draw the outline on the *outline* image:
 
 	board.outline.apertures.outline = drawing.circle_aperture(0)
 
@@ -259,7 +259,7 @@ So now we have some images, and even an outline drawn on one of them. But before
 	board.extensions.top_silkscreen = '%.gto'
 	board.extensions.top_soldermask = '%.gts'
 
-The final step consist in telling gerber-ltools what format each image should be saved as. Because despite its name, gerber-ltools has (partial) support for more than just the Gerber format. At the moment you can decently save drill data in Excellon format, BOM data in tab-separated text files, and there is some basic support for SVG and DXF images (please ask if you need more of that). But right now we only need Gerber:
+The final step consist in telling Aperture Scripting what format each image should be saved as. Aperture Scripting has (partial) support for more than just the Gerber format. At the moment you can decently save drill data in Excellon format, BOM data in tab-separated text files, and there is some basic support for SVG and DXF images (please ask if you need more of that). But right now we only need Gerber:
 
 	board.formats.outline = 'gerber'
 	board.formats.top_silkscreen = 'gerber'
@@ -267,10 +267,10 @@ The final step consist in telling gerber-ltools what format each image should be
 
 Now we can draw some text on the board (so it's not too boring) and save it:
 
-	drawing.draw_text(board.images.top_silkscreen, 'dark', "constantine.ttf", 6*mm, false, 'center', 25*mm, 2.5*mm, "Gerber-ltools")
+	drawing.draw_text(board.images.top_silkscreen, 'dark', "constantine.ttf", 6*mm, false, 'center', 25*mm, 2.5*mm, "Aperture")
 	boards.save(board, './empty-save')
 
 And the final result is that:
 
-![](https://bitbucket.org/doub/gerber-ltools/raw/tip/doc/examples/empty-save.png)
+![](https://bitbucket.org/doub/aperture-scripting/raw/tip/doc/examples/empty-save.png)
 
