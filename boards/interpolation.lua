@@ -35,7 +35,7 @@ local function interpolate_point(path, point, epsilon, allowed)
 		-- error is r * (1 - cos(step / 2))
 		local r = math.max(ra, rb)
 		local re = math.min(epsilon/r, 1)
-		local step = math.deg(2 * math.acos(1 - re)) - 1e-12
+		local step = math.deg(2 * math.acos(1 - re)) - 1e-11
 		assert(r * (1 - math.cos(math.rad(step / 2))) <= epsilon)
 		step = 90 / math.ceil(90 / step) -- improve precision so that we get points on both axis
 		assert(r * (1 - math.cos(math.rad(step / 2))) <= epsilon)
