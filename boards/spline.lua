@@ -260,7 +260,7 @@ local function intersect(p0, v0, p1, v1)
 end
 
 local function biarc(spline)
-	local A,B,ta,tb
+	local A,B,tA,tB
 	if spline.mode=='quadratic' then
 		A = vector(spline.x0, spline.y0)
 		tA = vector(spline.x1 - spline.x0, spline.y1 - spline.y0).normalized
@@ -323,6 +323,7 @@ function _M.convert_to_arcs(spline, epsilon)
 end
 
 if _NAME=='test' then
+	local epsilon = 0.01
 	local c = _M.quadratic(0, 0, 1, 1, 2, 0)
 	local arcs = _M.convert_to_arcs(c, epsilon)
 	expect(4, #arcs)

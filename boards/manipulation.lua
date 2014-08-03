@@ -137,8 +137,8 @@ local function rotate_xy(px, py, angle)
 	else
 		local a = math.rad(angle)
 		local c,s = math.cos(a),math.sin(a)
-		x = px*c - py*s
-		y = px*s + py*c
+		local x = px*c - py*s
+		local y = px*s + py*c
 		return x,y
 	end
 end
@@ -178,8 +178,8 @@ local function rotate_xy_expressions(px, py, angle)
 	else
 		local a = math.rad(angle)
 		local c,s = math.cos(a),math.sin(a)
-		x = '('..px..')x'..c..'-('..py..')x'..s
-		y = '('..px..')x'..s..'+('..py..')x'..c
+		local x = '('..px..')x'..c..'-('..py..')x'..s
+		local y = '('..px..')x'..s..'+('..py..')x'..c
 		return x,y
 	end
 end
