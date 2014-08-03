@@ -100,7 +100,9 @@ function _M.load(file_path)
 	local tools = {}
 	local layer = {polarity='dark'}
 	local layers = {layer}
-	local unit,tool
+	local unit = 'in'
+	local default_unit = true
+	local tool
 	local x,y = 0,0
 	local format = data.format
 	for _,header in ipairs(data.headers) do
@@ -113,17 +115,21 @@ function _M.load(file_path)
 			-- ignore
 		elseif th=='header' then
 			if header.name=='M72' then
-				assert(not unit or unit=='in', "excellon files with mixtures of units not supported")
+				assert(default_unit or unit=='in', "excellon files with mixtures of units not supported")
 				unit = 'in'
+				default_unit = false
 			elseif header.name=='M71' then
-				assert(not unit or unit=='mm', "excellon files with mixtures of units not supported")
+				assert(default_unit or unit=='mm', "excellon files with mixtures of units not supported")
 				unit = 'mm'
+				default_unit = false
 			elseif header.name=='INCH' then
-				assert(not unit or unit=='in', "excellon files with mixtures of units not supported")
+				assert(default_unit or unit=='in', "excellon files with mixtures of units not supported")
 				unit = 'in'
+				default_unit = false
 			elseif header.name=='METRIC' then
-				assert(not unit or unit=='mm', "excellon files with mixtures of units not supported")
+				assert(default_unit or unit=='mm', "excellon files with mixtures of units not supported")
 				unit = 'mm'
+				default_unit = false
 			elseif ignored_headers[header.name] then
 				print("ignored Excellon header "..header.name..(#header.parameters==0 and "" or (" with value "..table.concat(header.parameters, ","))))
 			else
@@ -131,12 +137,6 @@ function _M.load(file_path)
 			end
 		else
 			error("unsupported header type "..th)
-		end
-	end
-	if not unit then
-		unit = 'in'
-		for _,tool in pairs(tools) do
-			tool.unit = unit
 		end
 	end
 	for _,block in ipairs(data) do
@@ -157,11 +157,13 @@ function _M.load(file_path)
 			end
 		elseif tb=='directive' then
 			if block.M==72 then
-				assert(not unit or unit=='in', "excellon files with mixtures of units not supported")
+				assert(default_unit or unit=='in', "excellon files with mixtures of units not supported")
 				unit = 'in'
+				default_unit = false
 			elseif block.M==71 then
-				assert(not unit or unit=='mm', "excellon files with mixtures of units not supported")
+				assert(default_unit or unit=='mm', "excellon files with mixtures of units not supported")
 				unit = 'mm'
+				default_unit = false
 			elseif block.G==5 then
 				-- drill mode, ignore
 			elseif block.G==90 then
@@ -172,7 +174,7 @@ function _M.load(file_path)
 				-- drill
 				assert(not block.T and not block.M)
 				assert(tool, "no tool selected while drilling")
-				local scale = assert(scales[unit], "unsupported drill unit "..tostring(unit))
+				local scale = scales[unit]
 				if block.X then
 					x = block.X * scale
 				end
