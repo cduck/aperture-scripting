@@ -124,7 +124,7 @@ manipulation.rotate_board(board, 271)
 ------------------------------------------------------------------------------
 
 local board = assert(boards.load("test/paths"))
-interpolation.interpolate_board_paths(board)
+interpolation.interpolate_board_paths(board, 0.01e-9)
 
 local board = assert(boards.load("test/paths", {unit='mm'}))
 
