@@ -404,22 +404,31 @@ end
 
 if _NAME=='test' then
 	require 'test'
-	local aperture = {}
-	local layer = {
-		polarity = 'dark',
-		{ aperture=aperture, {x=0, y=0}, {x=1, y=0, interpolation='linear'} },
-		{ aperture=aperture, {x=1, y=0}, {x=1, y=1, interpolation='linear'} },
-		{ aperture=aperture, {x=1, y=1}, {x=0, y=1, interpolation='linear'} },
-		{ aperture=aperture, {x=0, y=1}, {x=0, y=0, interpolation='linear'} },
+	local function mklayer(data)
+		local aperture = {}
+		local layer = { polarity = 'dark' }
+		for ipath,path in ipairs(data) do
+			layer[ipath] = { aperture = aperture }
+			for ipoint,point in ipairs(path) do
+				layer[ipath][ipoint] = { x = point.x, y = point.y, interpolation = ipoint > 1 and 'linear' or nil }
+			end
+		end
+		return layer
+	end
+	
+	local layer = mklayer{
+		{ {x=0, y=0}, {x=1, y=0} },
+		{ {x=1, y=0}, {x=1, y=1} },
+		{ {x=1, y=1}, {x=0, y=1} },
+		{ {x=0, y=1}, {x=0, y=0} },
 	}
 	merge_layer_paths(layer, 0.1)
 	expect(1, #layer)
-	local layer = {
-		polarity = 'dark',
-		{ aperture=aperture, {x=1, y=0}, {x=0, y=0, interpolation='linear'} },
-		{ aperture=aperture, {x=1, y=1}, {x=1, y=0, interpolation='linear'} },
-		{ aperture=aperture, {x=0, y=1}, {x=1, y=1, interpolation='linear'} },
-		{ aperture=aperture, {x=0, y=0}, {x=0, y=1, interpolation='linear'} },
+	local layer = mklayer{
+		{ {x=1, y=0}, {x=0, y=0} },
+		{ {x=1, y=1}, {x=1, y=0} },
+		{ {x=0, y=1}, {x=1, y=1} },
+		{ {x=0, y=0}, {x=0, y=1} },
 	}
 	merge_layer_paths(layer, 0.1)
 	expect(1, #layer)
