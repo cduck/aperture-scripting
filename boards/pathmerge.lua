@@ -65,6 +65,7 @@ local function prepend_path(parent, child)
 end
 
 local function point_to_node(point, epsilon)
+	assert(epsilon ~= 0)
 	local x = math.floor(point.x / epsilon + 0.5)
 	local y = math.floor(point.y / epsilon + 0.5)
 	return x..':'..y
@@ -121,6 +122,7 @@ local function close_path(path, epsilon)
 end
 
 local function merge_layer_paths(layer, epsilon)
+	assert(epsilon ~= 0)
 	local layer_nodes = {}
 	local merged = {}
 	local indices = {}
