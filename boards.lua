@@ -138,7 +138,7 @@ local function path_to_region(path)
 	local reversible = true
 	local corner = 1
 	for i=2,#path-1 do
-		if path[i].interpolated or path[i].interpolation~='linear' then
+		if path[i].interpolation~='linear' then
 			reversible = false
 		end
 		if path[i].y < path[corner].y or path[i].y == path[corner].y and path[i].x < path[corner].x then
@@ -150,7 +150,7 @@ local function path_to_region(path)
 	
 	local region = {}
 	
-	if path[corner].interpolated or corner_interpolation~='linear' or not exterior and not reversible then
+	if corner_interpolation~='linear' or not exterior and not reversible then
 		-- don't alter the path (which will prevent panelization)
 		for _,point in ipairs(path) do
 			table.insert(region, point)
@@ -573,7 +573,6 @@ end
 local function round_image_paths(image, epsilon)
 	for _,layer in ipairs(image.layers) do
 		for _,path in ipairs(layer) do
-			local interpolated = { aperture = path.aperture }
 			for _,point in ipairs(path) do
 				for _,k in ipairs{'x', 'y', 'cx', 'cy'} do
 					point[k] = round(point[k], epsilon)

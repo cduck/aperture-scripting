@@ -23,10 +23,6 @@ local function reverse_path(path)
 	local reverse = {}
 	for i=#path,1,-1 do
 		local point = path[i]
-		if point.interpolated then
-			-- we should recompute interpolated regions
-			return nil
-		end
 		if i==1 and point.interpolation or i > 1 and point.interpolation~='linear' then
 			-- interpolation flag actually touches two points, so 
 			return nil

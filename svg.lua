@@ -226,8 +226,6 @@ function _M.save(image, filepath)
 			for i,point in ipairs(path) do
 				if i==1 then
 					assert(file:write('M'..(point.x / xscale)..','..(point.y / yscale)..''))
-				elseif point.interpolated then
-					-- skip
 				elseif point.interpolation=='linear' then
 					if i==#path and point.x==path[1].x and point.y==path[1].y then
 						assert(file:write('Z'))

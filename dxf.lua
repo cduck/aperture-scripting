@@ -1759,8 +1759,6 @@ function _M.save(image, file_path)
 			local x,y = point.x/scale,point.y/scale
 			if i == 1 then
 				dxf_point0 = {x=x, y=y, z=0}
-			elseif point.interpolated then
-				-- skip
 			else
 				if point.interpolation == 'linear' then
 					local dxf_point1 = {x=x, y=y, z=0}
