@@ -258,57 +258,45 @@ local function merge_layer_paths(layer, epsilon)
 					assert(a==la or a==lb)
 					nodes[la],nodes[lb] = nil
 					if lb==a then
+						assert(la ~= b) -- loops should have matched before
 						-- la -> lb -> a -> b
 						append_path(left, path)
 						merged[path] = true
-						if la ~= b then
-							assert(indices[left])
-							nodes[la] = left
-							nodes[b] = left
-						else
-							closed[left] = true
-						end
+						assert(indices[left])
+						nodes[la] = left
+						nodes[b] = left
 					else
+						assert(b ~= lb) -- loops should have matched before
 						-- lb <- la - a -> b
 						local rpath = reverse_path(path)
 						-- b -> a -> la -> lb
 						prepend_path(left, rpath)
 						merged[path] = true
-						if b ~= lb then
-							assert(indices[left])
-							nodes[b] = left
-							nodes[lb] = left
-						else
-							closed[left] = true
-						end
+						assert(indices[left])
+						nodes[b] = left
+						nodes[lb] = left
 					end
 				elseif right then
 					assert(b==ra or b==rb)
 					nodes[ra],nodes[rb] = nil
 					if b==ra then
+						assert(a ~= rb) -- loops should have matched before
 						-- a -> b -> ra -> rb
 						append_path(path, right)
 						merged[right] = true
-						if a ~= rb then
-							assert(indices[path])
-							nodes[a] = path
-							nodes[rb] = path
-						else
-							closed[path] = true
-						end
+						assert(indices[path])
+						nodes[a] = path
+						nodes[rb] = path
 					else
+						assert(ra ~= a) -- loops should have matched before
 						-- a -> b - rb <- ra
 						local rpath = reverse_path(path)
 						-- ra -> rb -> b -> a
 						append_path(right, rpath)
 						merged[path] = true
-						if ra ~= a then
-							assert(indices[right])
-							nodes[ra] = right
-							nodes[a] = right
-						else
-							closed[right] = true
-						end
+						assert(indices[right])
+						nodes[ra] = right
+						nodes[a] = right
 					end
 				else
 					assert(indices[path])
@@ -386,6 +374,77 @@ if _NAME=='test' then
 		return layer
 	end
 	
+	-- merge_layer_paths coverage
+	local layer = mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=1, y=1}, {x=0, y=0} },
+	}
+	merge_layer_paths(layer, 0.1)
+	
+	local layer = mklayer{
+		{ {x=1, y=0}, {x=1, y=1}, {x=0, y=0} },
+		{ {x=0, y=0}, {x=1, y=0} },
+	}
+	merge_layer_paths(layer, 0.1)
+	
+	local layer = mklayer{
+		{ {x=1, y=0}, {x=1, y=1}, {x=0, y=0} },
+		{ {x=1, y=0}, {x=0, y=0} },
+	}
+	merge_layer_paths(layer, 0.1)
+	
+	local layer = mklayer{
+		{ {x=0, y=0}, {x=0, y=1} },
+		{ {x=1, y=1}, {x=1, y=0} },
+		{ {x=0, y=1}, {x=1, y=1} },
+	}
+	merge_layer_paths(layer, 0.1)
+	
+	local layer = mklayer{
+		{ {x=0, y=1}, {x=0, y=0} },
+		{ {x=1, y=1}, {x=1, y=0} },
+		{ {x=0, y=1}, {x=1, y=1} },
+	}
+	merge_layer_paths(layer, 0.1)
+	
+	local layer = mklayer{
+		{ {x=0, y=0}, {x=0, y=1} },
+		{ {x=1, y=0}, {x=1, y=1} },
+		{ {x=0, y=1}, {x=1, y=1} },
+	}
+	merge_layer_paths(layer, 0.1)
+	
+	local layer = mklayer{
+		{ {x=0, y=1}, {x=0, y=0} },
+		{ {x=1, y=0}, {x=1, y=1} },
+		{ {x=0, y=1}, {x=1, y=1} },
+	}
+	merge_layer_paths(layer, 0.1)
+	
+	local layer = mklayer{
+		{ {x=0, y=0}, {x=0, y=1} },
+		{ {x=0, y=1}, {x=1, y=1} },
+	}
+	merge_layer_paths(layer, 0.1)
+	
+	local layer = mklayer{
+		{ {x=0, y=1}, {x=0, y=0} },
+		{ {x=0, y=1}, {x=1, y=1} },
+	}
+	merge_layer_paths(layer, 0.1)
+	
+	local layer = mklayer{
+		{ {x=1, y=1}, {x=1, y=0} },
+		{ {x=0, y=1}, {x=1, y=1} },
+	}
+	merge_layer_paths(layer, 0.1)
+	
+	local layer = mklayer{
+		{ {x=1, y=0}, {x=1, y=1} },
+		{ {x=0, y=1}, {x=1, y=1} },
+	}
+	merge_layer_paths(layer, 0.1)
+	
+	-- some specific tests that previously failed
 	local layer = mklayer{
 		{ {x=0, y=0}, {x=1, y=0} },
 		{ {x=1, y=0}, {x=1, y=1} },
