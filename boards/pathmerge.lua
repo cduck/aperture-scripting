@@ -29,7 +29,7 @@ local reverse_direction = {
 }
 
 local function reverse_path(path)
-	local reverse = {}
+	local reverse = {aperture=path.aperture}
 	-- start with the end point
 	reverse[1] = {x=path[#path].x, y=path[#path].y}
 	-- reverse each segment
