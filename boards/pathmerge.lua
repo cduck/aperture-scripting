@@ -197,7 +197,7 @@ local function merge_layer_paths(layer, epsilon)
 						close_path(left, epsilon)
 						merged[path] = true
 						-- path is closed, don't re-insert
-						closed[path] = true
+						closed[left] = true
 					else
 						-- la -> lb - b <- a
 						local rpath = reverse_path(path)
@@ -206,7 +206,7 @@ local function merge_layer_paths(layer, epsilon)
 						close_path(left, epsilon)
 						merged[path] = true
 						-- path is closed, don't re-insert
-						closed[path] = true
+						closed[left] = true
 					end
 				elseif left and right then
 					-- this path connects two other paths
