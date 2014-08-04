@@ -153,7 +153,9 @@ local function close_path(path, epsilon)
 		path[#path].x = path[1].x
 		path[#path].y = path[1].y
 	else
-		error("closing curved paths is not yet supported")
+		-- insert a linear segment
+		-- :TODO: try to drag one of the two curves instead
+		path[#path+1] = {x=path[1].x, y=path[1].y, interpolation='linear'}
 	end
 end
 
