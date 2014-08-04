@@ -13,32 +13,61 @@ local function copy_point(point)
 		y = point.y,
 		cx = point.cx,
 		cy = point.cy,
+		x1 = point.x1,
+		y1 = point.y1,
+		x2 = point.x2,
+		y2 = point.y2,
 		interpolation = point.interpolation,
 		direction = point.direction,
 		quadrant = point.quadrant,
 	}
 end
 
+local reverse_direction = {
+	clockwise = 'counterclockwise',
+	counterclockwise = 'clockwise',
+}
+
 local function reverse_path(path)
 	local reverse = {}
-	for i=#path,1,-1 do
+	-- start with the end point
+	reverse[1] = {x=path[#path].x, y=path[#path].y}
+	-- reverse each segment
+	for i=#path-1,1,-1 do
 		local point = path[i]
-		if i==1 and point.interpolation or i > 1 and point.interpolation~='linear' then
-			-- interpolation flag actually touches two points, so 
-			return nil
+		local params = path[i+1] -- interpolation params are in the previous point
+		local interpolation = params.interpolation
+		if interpolation=='linear' then
+			table.insert(reverse, {x=point.x, y=point.y, interpolation='linear'})
+		elseif interpolation=='circular' then
+			local direction = assert(reverse_direction[params.direction], "unsupported circular direction "..tostring(params.direction))
+			table.insert(reverse, {x=point.x, y=point.y, cx=params.cx, cy=params.cy, interpolation='circular', direction=direction, quadrant=params.quadrant})
+		elseif interpolation=='quadratic' then
+			-- single control point stays the same
+			table.insert(reverse, {x=point.x, y=point.y, x1=params.x1, y1=params.y1, interpolation='quadratic'})
+		elseif interpolation=='cubic' then
+			-- swap control points
+			table.insert(reverse, {x=point.x, y=point.y, x1=params.x2, y1=params.y2, x2=params.x1, y2=params.y1, interpolation='cubic'})
+		else
+			error("unsupported interpolation "..tostring(interpolation))
 		end
-		reverse[#path-i+1] = copy_point(point)
 	end
-	reverse[1].interpolation = nil
-	reverse[#reverse].interpolation = 'linear'
 	return reverse
 end
 
 local function append_path(parent, child)
 	local nparent = #parent
+	--[[
+	-- :FIXME: this code was somehow preserving corners but should check interpolation mode
 	if (child[1].x==child[2].x or child[1].y==child[2].y) and parent[nparent].x~=parent[nparent-1].x and parent[nparent].y~=parent[nparent-1].y then
 		parent[nparent] = copy_point(child[1])
 		parent[nparent].interpolation = 'linear'
+	end
+	--]]
+	if child[1].x~=parent[#parent].x or child[1].y~=parent[#parent].y then
+		-- insert a small linear segment
+		nparent = nparent + 1
+		parent[nparent] = {x=child[1].x, y=child[1].y, interpolation='linear'}
 	end
 	for i=2,#child do
 		parent[nparent+i-1] = copy_point(child[i])
@@ -48,14 +77,25 @@ end
 local function prepend_path(parent, child)
 	local nparent = #parent
 	local nchild = #child
-	parent[1].interpolation = 'linear'
-	for i=nparent+nchild-1,nchild,-1 do
-		parent[i] = copy_point(parent[i-(nchild-1)])
+	local keep_first = child[#child].x~=parent[1].x or child[#child].y~=parent[1].y
+	local a,b,offset
+	if keep_first then
+		-- insert a small linear segment
+		parent[1] = {x=parent[1].x, y=parent[1].y, interpolation='linear'}
+		a,b,offset = 1,nparent,nchild
+	else
+		a,b,offset = 2,nparent,nchild-1 -- this will drop parent[1]
 	end
+	for i=b,a,-1 do
+		parent[i+offset] = copy_point(parent[i])
+	end
+	--[[
+	-- :FIXME: this code was somehow preserving corners but should check interpolation mode
 	if (child[nchild].x==child[nchild-1].x or child[nchild].y==child[nchild-1].y) and parent[nchild].x~=parent[nchild+1].x and parent[nchild].y~=parent[nchild+1].y then
 		parent[nchild] = copy_point(child[nchild])
 	end
-	for i=1,nchild-1 do
+	--]]
+	for i=1,nchild do
 		parent[i] = copy_point(child[i])
 	end
 end
@@ -417,6 +457,45 @@ end
 
 if _NAME=='test' then
 	require 'test'
+	
+	local a = { {x=0, y=0}, {x=1, y=1, interpolation='linear'} }
+	local b = { {x=1, y=1}, {x=0, y=0, interpolation='linear'} }
+	expect(b, reverse_path(a))
+	local a = { {x=0, y=0}, {x=1, y=1, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'} }
+	local b = { {x=1, y=1}, {x=0, y=0, cx=1, cy=0, interpolation='circular', direction='counterclockwise', quadrant='single'} }
+	expect(b, reverse_path(a))
+	local a = { {x=0, y=0}, {x=1, y=1, cx=1, cy=0, interpolation='circular', direction='counterclockwise', quadrant='multi'} }
+	local b = { {x=1, y=1}, {x=0, y=0, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='multi'} }
+	expect(b, reverse_path(a))
+	local a = { {x=0, y=0}, {x1=1, y1=0, x=1, y=1, interpolation='quadratic'} }
+	local b = { {x=1, y=1}, {x1=1, y1=0, x=0, y=0, interpolation='quadratic'} }
+	expect(b, reverse_path(a))
+	local a = { {x=0, y=0}, {x1=0, y1=1, x2=1, y2=1, x=1, y=0, interpolation='cubic'} }
+	local b = { {x=1, y=0}, {x1=1, y1=1, x2=0, y2=1, x=0, y=0, interpolation='cubic'} }
+	expect(b, reverse_path(a))
+	
+	local a = { {x=0, y=0}, {x=1, y=0, interpolation='linear'} }
+	local b = { {x=1, y=0}, {x=1, y=1, interpolation='linear'} }
+	local c = { {x=0, y=0}, {x=1, y=0, interpolation='linear'}, {x=1, y=1, interpolation='linear'} }
+	append_path(a, b)
+	expect(c, a)
+	local a = { {x=0, y=0}, {x=1, y=0, interpolation='linear'} }
+	local b = { {x=1, y=1}, {x=1, y=2, interpolation='linear'} }
+	local c = { {x=0, y=0}, {x=1, y=0, interpolation='linear'}, {x=1, y=1, interpolation='linear'}, {x=1, y=2, interpolation='linear'} }
+	append_path(a, b)
+	expect(c, a)
+	
+	local a = { {x=0, y=0}, {x=1, y=0, interpolation='linear'} }
+	local b = { {x=1, y=0}, {x=1, y=1, interpolation='linear'} }
+	local c = { {x=0, y=0}, {x=1, y=0, interpolation='linear'}, {x=1, y=1, interpolation='linear'} }
+	prepend_path(b, a)
+	expect(c, b)
+	local a = { {x=0, y=0}, {x=1, y=0, interpolation='linear'} }
+	local b = { {x=1, y=1}, {x=1, y=2, interpolation='linear'} }
+	local c = { {x=0, y=0}, {x=1, y=0, interpolation='linear'}, {x=1, y=1, interpolation='linear'}, {x=1, y=2, interpolation='linear'} }
+	prepend_path(b, a)
+	expect(c, b)
+	
 	local function mklayer(data)
 		local aperture = {}
 		local layer = { polarity = 'dark' }
