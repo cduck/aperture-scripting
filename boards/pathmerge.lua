@@ -343,10 +343,10 @@ local function merge_layer_paths(layer, epsilon)
 						-- a -> b -> ra -> rb
 						append_path(path, right)
 						merged[right] = true
-						if ra ~= b then
+						if a ~= rb then
 							assert(indices[path])
-							nodes[ra] = path
-							nodes[b] = path
+							nodes[a] = path
+							nodes[rb] = path
 						end
 					else
 						-- a -> b - rb <- ra
