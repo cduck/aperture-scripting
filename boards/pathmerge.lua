@@ -199,29 +199,12 @@ local function merge_layer_paths(layer, epsilon)
 					else
 						-- la -> lb - b <- a
 						local rpath = reverse_path(path)
-						if rpath then
-							-- la -> lb -> b -> a
-							append_path(left, rpath)
-							close_path(left, epsilon)
-							merged[path] = true
-							-- path is closed, don't re-insert
-							closed[path] = true
-						else
-							local rleft = reverse_path(left)
-							if rleft then
-								-- a -> b -> lb -> la
-								append_path(path, rleft)
-								close_path(path, epsilon)
-								merged[left] = true
-								-- path is closed, don't re-insert
-								closed[path] = true
-							else
-								-- unmergeable paths
-								nodes[a] = left
-								nodes[b] = right
-								-- ignore new path
-							end
-						end
+						-- la -> lb -> b -> a
+						append_path(left, rpath)
+						close_path(left, epsilon)
+						merged[path] = true
+						-- path is closed, don't re-insert
+						closed[path] = true
 					end
 				elseif left and right then
 					-- this path connects two other paths
@@ -240,99 +223,36 @@ local function merge_layer_paths(layer, epsilon)
 					elseif la == a and b == ra then
 						-- lb <- la - a -> b -> ra -> rb
 						local rleft = reverse_path(left)
-						if rleft then
-							-- lb -> la -> a -> b -> ra -> rb
-							prepend_path(right, path)
-							prepend_path(right, rleft)
-							merged[path] = true
-							merged[left] = true
-							assert(indices[right])
-							nodes[lb] = right
-							nodes[rb] = right
-						else
-							local rpath,rright = reverse_path(path),reverse_path(right)
-							if rpath and rright then
-								-- rb -> ra -> b -> a -> la -> lb
-								prepend_path(left, rpath)
-								prepend_path(left, rright)
-								merged[path] = true
-								merged[right] = true
-								assert(indices[left])
-								nodes[rb] = left
-								nodes[lb] = left
-							else
-								-- unmergeable paths
-								nodes[la] = left
-								nodes[lb] = left
-								nodes[ra] = right
-								nodes[rb] = right
-								-- ignore new path
-							end
-						end
+						-- lb -> la -> a -> b -> ra -> rb
+						prepend_path(right, path)
+						prepend_path(right, rleft)
+						merged[path] = true
+						merged[left] = true
+						assert(indices[right])
+						nodes[lb] = right
+						nodes[rb] = right
 					elseif lb == a and b == rb then
 						-- la -> lb -> a -> b - rb <- ra
 						local rright = reverse_path(right)
-						if rright then
-							-- la -> lb -> a -> b -> rb -> ra
-							append_path(left, path)
-							append_path(left, rright)
-							merged[path] = true
-							merged[right] = true
-							assert(indices[left])
-							nodes[la] = left
-							nodes[ra] = left
-						else
-							local rleft,rpath = reverse_path(left),reverse_path(path)
-							if rleft and rpath then
-								-- ra -> rb -> b -> a -> lb -> la
-								append_path(right, rpath)
-								append_path(right, rleft)
-								merged[path] = true
-								merged[left] = true
-								assert(indices[right])
-								nodes[ra] = right
-								nodes[la] = right
-							else
-								-- unmergeable paths
-								nodes[la] = left
-								nodes[lb] = left
-								nodes[ra] = right
-								nodes[rb] = right
-								-- ignore new path
-							end
-						end
+						-- la -> lb -> a -> b -> rb -> ra
+						append_path(left, path)
+						append_path(left, rright)
+						merged[path] = true
+						merged[right] = true
+						assert(indices[left])
+						nodes[la] = left
+						nodes[ra] = left
 					elseif la == a and b == rb then
 						-- lb <- la - a -> b - rb <- ra
 						local rpath = reverse_path(path)
-						if rpath then
-							-- ra -> rb -> b -> a -> la -> lb
-							append_path(right, rpath)
-							append_path(right, left)
-							merged[path] = true
-							merged[left] = true
-							assert(indices[right])
-							nodes[ra] = right
-							nodes[lb] = right
-						else
-							local rleft,rright = reverse_path(left),reverse_path(right)
-							if rleft and rright then
-								-- lb -> la -> a -> b -> rb -> ra
-								prepend_path(path, left)
-								append_path(path, right)
-								merged[left] = true
-								merged[right] = true
-								assert(indices[path])
-								nodes[lb] = path
-								nodes[ra] = path
-							else
-								-- unmergeable paths
-								nodes[la] = left
-								nodes[lb] = left
-								nodes[ra] = right
-								nodes[rb] = right
-								-- ignore new path
-							end
-						end
+						-- ra -> rb -> b -> a -> la -> lb
+						append_path(right, rpath)
+						append_path(right, left)
+						merged[path] = true
+						merged[left] = true
+						assert(indices[right])
+						nodes[ra] = right
+						nodes[lb] = right
 					end
 				elseif left then
 					assert(a==la or a==lb)
@@ -351,36 +271,15 @@ local function merge_layer_paths(layer, epsilon)
 					else
 						-- lb <- la - a -> b
 						local rpath = reverse_path(path)
-						if rpath then
-							-- b -> a -> la -> lb
-							prepend_path(left, rpath)
-							merged[path] = true
-							if b ~= lb then
-								assert(indices[left])
-								nodes[b] = left
-								nodes[lb] = left
-							else
-								closed[left] = true
-							end
+						-- b -> a -> la -> lb
+						prepend_path(left, rpath)
+						merged[path] = true
+						if b ~= lb then
+							assert(indices[left])
+							nodes[b] = left
+							nodes[lb] = left
 						else
-							local rleft = reverse_path(left)
-							if rleft then
-								-- lb -> la -> a -> b
-								prepend_path(path, rleft)
-								merged[left] = true
-								if lb ~= b then
-									assert(indices[path])
-									nodes[lb] = path
-									nodes[b] = path
-								else
-									closed[path] = true
-								end
-							else
-								-- unmergeable paths
-								nodes[la] = left
-								nodes[lb] = left
-								-- ignore path
-							end
+							closed[left] = true
 						end
 					end
 				elseif right then
@@ -400,36 +299,15 @@ local function merge_layer_paths(layer, epsilon)
 					else
 						-- a -> b - rb <- ra
 						local rpath = reverse_path(path)
-						if rpath then
-							-- ra -> rb -> b -> a
-							append_path(right, rpath)
-							merged[path] = true
-							if ra ~= a then
-								assert(indices[right])
-								nodes[ra] = right
-								nodes[a] = right
-							else
-								closed[right] = true
-							end
+						-- ra -> rb -> b -> a
+						append_path(right, rpath)
+						merged[path] = true
+						if ra ~= a then
+							assert(indices[right])
+							nodes[ra] = right
+							nodes[a] = right
 						else
-							local rright = reverse_path(right)
-							if rright then
-								-- a -> b -> rb -> ra
-								append_path(path, rright)
-								merged[right] = true
-								if a ~= ra then
-									assert(indices[path])
-									nodes[a] = path
-									nodes[ra] = path
-								else
-									closed[path] = true
-								end
-							else
-								-- unmergeable paths
-								nodes[ra] = right
-								nodes[rb] = right
-								-- ignore path
-							end
+							closed[right] = true
 						end
 					end
 				else
