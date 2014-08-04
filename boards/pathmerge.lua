@@ -126,6 +126,7 @@ local function merge_layer_paths(layer, epsilon)
 	local layer_nodes = {}
 	local merged = {}
 	local indices = {}
+	local closed = {}
 	for ipath,path in ipairs(layer) do
 		if #path >= 2 and path.aperture then
 			indices[path] = ipath
@@ -133,6 +134,7 @@ local function merge_layer_paths(layer, epsilon)
 			local b = point_to_node(path[#path], epsilon)
 			if a==b then
 				-- ignore closed paths
+				closed[path] = true
 			else
 				-- only connect paths with the same aperture
 				local nodes = layer_nodes[path.aperture]
@@ -157,6 +159,7 @@ local function merge_layer_paths(layer, epsilon)
 						close_path(left, epsilon)
 						merged[path] = true
 						-- path is closed, don't re-insert
+						closed[path] = true
 					else
 						-- la -> lb - b <- a
 						local rpath = reverse_path(path)
@@ -166,6 +169,7 @@ local function merge_layer_paths(layer, epsilon)
 							close_path(left, epsilon)
 							merged[path] = true
 							-- path is closed, don't re-insert
+							closed[path] = true
 						else
 							local rleft = reverse_path(left)
 							if rleft then
@@ -174,6 +178,7 @@ local function merge_layer_paths(layer, epsilon)
 								close_path(path, epsilon)
 								merged[left] = true
 								-- path is closed, don't re-insert
+								closed[path] = true
 							else
 								-- unmergeable paths
 								nodes[a] = left
@@ -304,6 +309,8 @@ local function merge_layer_paths(layer, epsilon)
 							assert(indices[left])
 							nodes[la] = left
 							nodes[b] = left
+						else
+							closed[left] = true
 						end
 					else
 						-- lb <- la - a -> b
@@ -316,6 +323,8 @@ local function merge_layer_paths(layer, epsilon)
 								assert(indices[left])
 								nodes[b] = left
 								nodes[lb] = left
+							else
+								closed[left] = true
 							end
 						else
 							local rleft = reverse_path(left)
@@ -327,6 +336,8 @@ local function merge_layer_paths(layer, epsilon)
 									assert(indices[path])
 									nodes[lb] = path
 									nodes[b] = path
+								else
+									closed[path] = true
 								end
 							else
 								-- unmergeable paths
@@ -347,6 +358,8 @@ local function merge_layer_paths(layer, epsilon)
 							assert(indices[path])
 							nodes[a] = path
 							nodes[rb] = path
+						else
+							closed[path] = true
 						end
 					else
 						-- a -> b - rb <- ra
@@ -359,6 +372,8 @@ local function merge_layer_paths(layer, epsilon)
 								assert(indices[right])
 								nodes[ra] = right
 								nodes[a] = right
+							else
+								closed[right] = true
 							end
 						else
 							local rright = reverse_path(right)
@@ -370,6 +385,8 @@ local function merge_layer_paths(layer, epsilon)
 									assert(indices[path])
 									nodes[a] = path
 									nodes[ra] = path
+								else
+									closed[path] = true
 								end
 							else
 								-- unmergeable paths
