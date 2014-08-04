@@ -379,18 +379,27 @@ if _NAME=='test' then
 		{ {x=0, y=0}, {x=1, y=0}, {x=1, y=1}, {x=0, y=0} },
 	}
 	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=1, y=1}, {x=0, y=0} },
+	}, layer)
 	
 	local layer = mklayer{
 		{ {x=1, y=0}, {x=1, y=1}, {x=0, y=0} },
 		{ {x=0, y=0}, {x=1, y=0} },
 	}
 	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=1, y=0}, {x=1, y=1}, {x=0, y=0}, {x=1, y=0} },
+	}, layer)
 	
 	local layer = mklayer{
 		{ {x=1, y=0}, {x=1, y=1}, {x=0, y=0} },
 		{ {x=1, y=0}, {x=0, y=0} },
 	}
 	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=1, y=0}, {x=1, y=1}, {x=0, y=0}, {x=1, y=0} },
+	}, layer)
 	
 	local layer = mklayer{
 		{ {x=0, y=0}, {x=0, y=1} },
@@ -398,6 +407,9 @@ if _NAME=='test' then
 		{ {x=0, y=1}, {x=1, y=1} },
 	}
 	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=0, y=1}, {x=1, y=1}, {x=1, y=0} },
+	}, layer)
 	
 	local layer = mklayer{
 		{ {x=0, y=1}, {x=0, y=0} },
@@ -405,6 +417,9 @@ if _NAME=='test' then
 		{ {x=0, y=1}, {x=1, y=1} },
 	}
 	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=0, y=1}, {x=1, y=1}, {x=1, y=0} },
+	}, layer)
 	
 	local layer = mklayer{
 		{ {x=0, y=0}, {x=0, y=1} },
@@ -412,6 +427,9 @@ if _NAME=='test' then
 		{ {x=0, y=1}, {x=1, y=1} },
 	}
 	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=0, y=1}, {x=1, y=1}, {x=1, y=0} },
+	}, layer)
 	
 	local layer = mklayer{
 		{ {x=0, y=1}, {x=0, y=0} },
@@ -419,30 +437,45 @@ if _NAME=='test' then
 		{ {x=0, y=1}, {x=1, y=1} },
 	}
 	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=1, y=0}, {x=1, y=1}, {x=0, y=1}, {x=0, y=0} },
+	}, layer)
 	
 	local layer = mklayer{
-		{ {x=0, y=0}, {x=0, y=1} },
-		{ {x=0, y=1}, {x=1, y=1} },
+		{ {x=0, y=0}, {x=1, y=0} },
+		{ {x=1, y=0}, {x=1, y=1} },
 	}
 	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=1, y=1} },
+	}, layer)
 	
 	local layer = mklayer{
-		{ {x=0, y=1}, {x=0, y=0} },
-		{ {x=0, y=1}, {x=1, y=1} },
+		{ {x=1, y=0}, {x=0, y=0} },
+		{ {x=1, y=0}, {x=1, y=1} },
 	}
 	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=1, y=1}, {x=1, y=0}, {x=0, y=0} },
+	}, layer)
 	
 	local layer = mklayer{
+		{ {x=1, y=0}, {x=0, y=0} },
 		{ {x=1, y=1}, {x=1, y=0} },
-		{ {x=0, y=1}, {x=1, y=1} },
 	}
 	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=1, y=1}, {x=1, y=0}, {x=0, y=0} },
+	}, layer)
 	
 	local layer = mklayer{
-		{ {x=1, y=0}, {x=1, y=1} },
-		{ {x=0, y=1}, {x=1, y=1} },
+		{ {x=0, y=0}, {x=1, y=0} },
+		{ {x=1, y=1}, {x=1, y=0} },
 	}
 	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=1, y=1} },
+	}, layer)
 	
 	-- some specific tests that previously failed
 	local layer = mklayer{
