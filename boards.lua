@@ -135,6 +135,7 @@ end
 local function path_to_region(path)
 	-- find bottom-left corner
 	local exterior = region.exterior(path)
+	-- :TODO: all paths should now be easily reversible, so fix this function
 	local reversible = true
 	local corner = 1
 	for i=2,#path-1 do
