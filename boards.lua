@@ -133,50 +133,22 @@ end
 ------------------------------------------------------------------------------
 
 local function path_to_region(path)
+	assert(path[#path].x==path[1].x and path[#path].y==path[1].y, "path is not closed")
+	-- fix orientation
+	if not paths.exterior(path) then
+		path = paths.reverse_path(path)
+	end
 	-- find bottom-left corner
-	local exterior = paths.exterior(path)
-	-- :TODO: all paths should now be easily reversible, so fix this function
-	local reversible = true
 	local corner = 1
 	for i=2,#path-1 do
-		if path[i].interpolation~='linear' then
-			reversible = false
-		end
 		if path[i].y < path[corner].y or path[i].y == path[corner].y and path[i].x < path[corner].x then
 			corner = i
 		end
 	end
-	
-	local corner_interpolation = corner==1 and path[#path].interpolation or path[corner].interpolation
-	
-	local region = {}
-	
-	if corner_interpolation~='linear' or not exterior and not reversible then
-		-- don't alter the path (which will prevent panelization)
-		for _,point in ipairs(path) do
-			table.insert(region, point)
-		end
-	else
-		if not exterior then
-			-- if we're here, it means reversible is true, which means we're all linear interpolation
-			for i=corner,1,-1 do
-				table.insert(region, {x=path[i].x, y=path[i].y, interpolation='linear'})
-			end
-			for i=#path-1,corner,-1 do
-				table.insert(region, {x=path[i].x, y=path[i].y, interpolation='linear'})
-			end
-			region[1].interpolation = nil
-		else
-			table.insert(region, {x=path[corner].x, y=path[corner].y})
-			for i=corner+1,#path do
-				table.insert(region, path[i])
-			end
-			for i=2,corner do
-				table.insert(region, path[i])
-			end
-		end
-	end
-	
+	-- rotate the path
+	local region = paths.shift_path(path, corner)
+	-- make it a region
+	region.aperture = nil
 	return region
 end
 

@@ -60,6 +60,63 @@ end
 
 ------------------------------------------------------------------------------
 
+function _M.shift_path(path, i0)
+	assert(path[#path].x==path[1].x and path[#path].y==path[1].y, "path is not closed")
+	i0 = (i0 - 1) % #path + 1
+	local shifted = {aperture=path.aperture}
+	-- start with the end point
+	shifted[1] = {} -- empty point, for now
+	-- copy second half
+	for i=i0+1,#path do
+		table.insert(shifted, path[i])
+	end
+	for i=2,i0 do
+		table.insert(shifted, path[i])
+	end
+	-- close the path
+	shifted[1].x = shifted[#shifted].x
+	shifted[1].y = shifted[#shifted].y
+	return shifted
+end
+
+if _NAME=='test' then
+	local a = {
+		{x=-1, y= 0},
+		{x= 0, y= 1, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x= 1, y= 0, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x= 0, y=-1, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x=-1, y= 0, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+	}
+	expect(a, _M.shift_path(a, 1))
+	expect(a, _M.shift_path(a, 5))
+	local b = {
+		{x= 0, y= 1},
+		{x= 1, y= 0, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x= 0, y=-1, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x=-1, y= 0, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x= 0, y= 1, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+	}
+	expect(b, _M.shift_path(a, 2))
+	local b = {
+		{x= 1, y= 0},
+		{x= 0, y=-1, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x=-1, y= 0, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x= 0, y= 1, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x= 1, y= 0, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+	}
+	expect(b, _M.shift_path(a, 3))
+	local b = {
+		{x= 0, y=-1},
+		{x=-1, y= 0, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x= 0, y= 1, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x= 1, y= 0, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x= 0, y=-1, cx=0, cx=0, interpolation='circular', direction='clockwise', quadrant='single'},
+	}
+	expect(b, _M.shift_path(a, 4))
+end
+
+------------------------------------------------------------------------------
+
 local reverse_direction = {
 	clockwise = 'counterclockwise',
 	counterclockwise = 'clockwise',
