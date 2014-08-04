@@ -1,4 +1,5 @@
 local _M = {}
+local _NAME = ... or 'test'
 
 local math = require 'math'
 local table = require 'table'
@@ -395,6 +396,31 @@ function _M.merge_image_paths(image, epsilon)
 	for _,layer in ipairs(image.layers) do
 		merge_layer_paths(layer, epsilon)
 	end
+end
+
+------------------------------------------------------------------------------
+
+if _NAME=='test' then
+	require 'test'
+	local aperture = {}
+	local layer = {
+		polarity = 'dark',
+		{ aperture=aperture, {x=0, y=0}, {x=1, y=0, interpolation='linear'} },
+		{ aperture=aperture, {x=1, y=0}, {x=1, y=1, interpolation='linear'} },
+		{ aperture=aperture, {x=1, y=1}, {x=0, y=1, interpolation='linear'} },
+		{ aperture=aperture, {x=0, y=1}, {x=0, y=0, interpolation='linear'} },
+	}
+	merge_layer_paths(layer, 0.1)
+	expect(1, #layer)
+	local layer = {
+		polarity = 'dark',
+		{ aperture=aperture, {x=1, y=0}, {x=0, y=0, interpolation='linear'} },
+		{ aperture=aperture, {x=1, y=1}, {x=1, y=0, interpolation='linear'} },
+		{ aperture=aperture, {x=0, y=1}, {x=1, y=1, interpolation='linear'} },
+		{ aperture=aperture, {x=0, y=0}, {x=0, y=1, interpolation='linear'} },
+	}
+	merge_layer_paths(layer, 0.1)
+	expect(1, #layer)
 end
 
 ------------------------------------------------------------------------------
