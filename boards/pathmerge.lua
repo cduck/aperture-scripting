@@ -496,6 +496,117 @@ if _NAME=='test' then
 	}
 	merge_layer_paths(layer, 0.1)
 	expect(1, #layer)
+	
+	-- close_path coverage
+	local layer = mklayer{
+		{ {x=0, y=0}, {x=0, y=1}, {x=1, y=0}, {x=0, y=-1} },
+		{ {x=0, y=-1}, {x=0, y=0.01} },
+	}
+	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=0, y=1}, {x=1, y=0}, {x=0, y=-1}, {x=0, y=0} },
+	}, layer)
+	
+	local layer = mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=0, y=1}, {x=-1, y=0} },
+		{ {x=-1, y=0}, {x=0.01, y=0} },
+	}
+	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=0, y=1}, {x=-1, y=0}, {x=0, y=0} },
+	}, layer)
+	
+	local layer = mklayer{
+		{ {x=0, y=0}, {x=0, y=1}, {x=1, y=0} },
+		{ {x=1, y=0}, {x=0.01, y=0} },
+	}
+	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=0, y=1}, {x=1, y=0}, {x=0, y=0} },
+	}, layer)
+	
+	local layer = mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=0, y=1} },
+		{ {x=0, y=1}, {x=0, y=0.01} },
+	}
+	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=0, y=1}, {x=0, y=0} },
+	}, layer)
+	
+	local layer = mklayer{
+		{ {x=0, y=0.01}, {x=1, y=0}, {x=0, y=1} },
+		{ {x=0, y=1}, {x=0, y=0} },
+	}
+	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=0, y=1}, {x=0, y=0} },
+	}, layer)
+	
+	local layer = mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=0, y=1} },
+		{ {x=0, y=1}, {x=0.01, y=0} },
+	}
+	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=0, y=1}, {x=0, y=0} },
+	}, layer)
+	
+	local layer = mklayer{
+		{ {x=0, y=0.01}, {x=1, y=0}, {x=0, y=1} },
+		{ {x=0, y=1}, {x=0.01, y=0} },
+	}
+	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0.01, y=0}, {x=1, y=0}, {x=0, y=1}, {x=0.01, y=0} },
+	}, layer)
+	
+	local aperture = {}
+	local layer = { polarity = 'dark',
+		{ aperture=aperture,
+			{x=0, y=0},
+			{x=1, y=1, cx=0, cy=1, interpolation='circular', direction='counterclockwise', quadrant='single'},
+			{x=0, y=1, interpolation='linear' },
+		},
+		{ aperture=aperture,
+			{x=0, y=1},
+			{x=0.01, y=0, interpolation='linear'},
+		},
+	}
+	merge_layer_paths(layer, 0.1)
+	expect({ polarity = 'dark',
+		{ aperture=aperture,
+			{x=0, y=0},
+			{x=1, y=1, cx=0, cy=1, interpolation='circular', direction='counterclockwise', quadrant='single'},
+			{x=0, y=1, interpolation='linear' },
+			{x=0, y=0, interpolation='linear'},
+		},
+	}, layer)
+	
+	local aperture = {}
+	local layer = { polarity = 'dark',
+		{ aperture=aperture,
+			{x=0, y=0},
+			{x=1, y=1, cx=0, cy=1, interpolation='circular', direction='counterclockwise', quadrant='single'},
+			{x=0, y=1, interpolation='linear' },
+		},
+		{ aperture=aperture,
+			{x=0, y=1},
+			{x=-1, y=1, interpolation='linear' },
+			{x=0.01, y=0, cx=0, cy=1, interpolation='circular', direction='counterclockwise', quadrant='single'},
+		},
+	}
+	merge_layer_paths(layer, 0.1)
+	expect({ polarity = 'dark',
+		{ aperture=aperture,
+			{x=0, y=0},
+			{x=1, y=1, cx=0, cy=1, interpolation='circular', direction='counterclockwise', quadrant='single'},
+			{x=0, y=1, interpolation='linear' },
+			{x=-1, y=1, interpolation='linear'},
+			{x=0.01, y=0, cx=0, cy=1, interpolation='circular', direction='counterclockwise', quadrant='single'},
+			{x=0, y=0, interpolation='linear' },
+		},
+	}, layer)
 end
 
 ------------------------------------------------------------------------------
