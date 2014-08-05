@@ -2,8 +2,10 @@ local _M = {}
 
 local io = require 'io'
 local table = require 'table'
-local region = require 'boards.region'
+local path = require 'boards.path'
 local manipulation = require 'boards.manipulation'
+
+local exterior = path.exterior
 
 ------------------------------------------------------------------------------
 
@@ -153,7 +155,7 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 		for icontour,contour in ipairs(glyph.contours) do
 			local path = manipulation.offset_path(manipulation.scale_path(contour, scale), x, y)
 			local clockwise_outline = not glyph.flags.REVERSE_FILL
-			local outline = region.exterior(path) ~= clockwise_outline -- compare before mirror
+			local outline = exterior(path) ~= clockwise_outline -- compare before mirror
 			local path_polarity = outline and polarity or (polarity=='clear' and 'dark' or 'clear')
 			if mirror then
 				for _,point in ipairs(path) do

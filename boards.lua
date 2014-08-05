@@ -7,7 +7,7 @@ local lfs = require 'lfs'
 local pathlib = require 'path'
 local dump = require 'dump'
 
-local region = require 'boards.region'
+local paths = require 'boards.path'
 local drawing = require 'boards.drawing'
 local extents = require 'boards.extents'
 local aperture = require 'boards.aperture'
@@ -134,7 +134,7 @@ end
 
 local function path_to_region(path)
 	-- find bottom-left corner
-	local exterior = region.exterior(path)
+	local exterior = paths.exterior(path)
 	-- :TODO: all paths should now be easily reversible, so fix this function
 	local reversible = true
 	local corner = 1

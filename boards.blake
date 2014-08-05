@@ -22,6 +22,7 @@ return {
 			"macro.lua",
 			"manipulation.lua",
 			"panelization.lua",
+			"path.lua",
 			"pathmerge.lua",
 			"region.lua",
 			"spline.lua",

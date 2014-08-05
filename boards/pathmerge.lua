@@ -3,7 +3,7 @@ local _NAME = ... or 'test'
 
 local math = require 'math'
 local table = require 'table'
-local region = require 'boards.region'
+local paths = require 'boards.path'
 
 ------------------------------------------------------------------------------
 
@@ -21,38 +21,6 @@ local function copy_point(point)
 		direction = point.direction,
 		quadrant = point.quadrant,
 	}
-end
-
-local reverse_direction = {
-	clockwise = 'counterclockwise',
-	counterclockwise = 'clockwise',
-}
-
-local function reverse_path(path)
-	local reverse = {aperture=path.aperture}
-	-- start with the end point
-	reverse[1] = {x=path[#path].x, y=path[#path].y}
-	-- reverse each segment
-	for i=#path-1,1,-1 do
-		local point = path[i]
-		local params = path[i+1] -- interpolation params are in the previous point
-		local interpolation = params.interpolation
-		if interpolation=='linear' then
-			table.insert(reverse, {x=point.x, y=point.y, interpolation='linear'})
-		elseif interpolation=='circular' then
-			local direction = assert(reverse_direction[params.direction], "unsupported circular direction "..tostring(params.direction))
-			table.insert(reverse, {x=point.x, y=point.y, cx=params.cx, cy=params.cy, interpolation='circular', direction=direction, quadrant=params.quadrant})
-		elseif interpolation=='quadratic' then
-			-- single control point stays the same
-			table.insert(reverse, {x=point.x, y=point.y, x1=params.x1, y1=params.y1, interpolation='quadratic'})
-		elseif interpolation=='cubic' then
-			-- swap control points
-			table.insert(reverse, {x=point.x, y=point.y, x1=params.x2, y1=params.y2, x2=params.x1, y2=params.y1, interpolation='cubic'})
-		else
-			error("unsupported interpolation "..tostring(interpolation))
-		end
-	end
-	return reverse
 end
 
 local function append_path(parent, child)
@@ -200,7 +168,7 @@ local function merge_layer_paths(layer, epsilon)
 						closed[left] = true
 					else
 						-- la -> lb - b <- a
-						local rpath = reverse_path(path)
+						local rpath = paths.reverse_path(path)
 						-- la -> lb -> b -> a
 						append_path(left, rpath)
 						close_path(left, epsilon)
@@ -224,7 +192,7 @@ local function merge_layer_paths(layer, epsilon)
 						nodes[rb] = left
 					elseif la == a and b == ra then
 						-- lb <- la - a -> b -> ra -> rb
-						local rleft = reverse_path(left)
+						local rleft = paths.reverse_path(left)
 						-- lb -> la -> a -> b -> ra -> rb
 						prepend_path(right, path)
 						prepend_path(right, rleft)
@@ -235,7 +203,7 @@ local function merge_layer_paths(layer, epsilon)
 						nodes[rb] = right
 					elseif lb == a and b == rb then
 						-- la -> lb -> a -> b - rb <- ra
-						local rright = reverse_path(right)
+						local rright = paths.reverse_path(right)
 						-- la -> lb -> a -> b -> rb -> ra
 						append_path(left, path)
 						append_path(left, rright)
@@ -246,7 +214,7 @@ local function merge_layer_paths(layer, epsilon)
 						nodes[ra] = left
 					elseif la == a and b == rb then
 						-- lb <- la - a -> b - rb <- ra
-						local rpath = reverse_path(path)
+						local rpath = paths.reverse_path(path)
 						-- ra -> rb -> b -> a -> la -> lb
 						append_path(right, rpath)
 						append_path(right, left)
@@ -270,7 +238,7 @@ local function merge_layer_paths(layer, epsilon)
 					else
 						assert(b ~= lb) -- loops should have matched before
 						-- lb <- la - a -> b
-						local rpath = reverse_path(path)
+						local rpath = paths.reverse_path(path)
 						-- b -> a -> la -> lb
 						prepend_path(left, rpath)
 						merged[path] = true
@@ -292,7 +260,7 @@ local function merge_layer_paths(layer, epsilon)
 					else
 						assert(ra ~= a) -- loops should have matched before
 						-- a -> b - rb <- ra
-						local rpath = reverse_path(path)
+						local rpath = paths.reverse_path(path)
 						-- ra -> rb -> b -> a
 						append_path(right, rpath)
 						merged[path] = true
@@ -325,22 +293,6 @@ end
 
 if _NAME=='test' then
 	require 'test'
-	
-	local a = { {x=0, y=0}, {x=1, y=1, interpolation='linear'} }
-	local b = { {x=1, y=1}, {x=0, y=0, interpolation='linear'} }
-	expect(b, reverse_path(a))
-	local a = { {x=0, y=0}, {x=1, y=1, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'} }
-	local b = { {x=1, y=1}, {x=0, y=0, cx=1, cy=0, interpolation='circular', direction='counterclockwise', quadrant='single'} }
-	expect(b, reverse_path(a))
-	local a = { {x=0, y=0}, {x=1, y=1, cx=1, cy=0, interpolation='circular', direction='counterclockwise', quadrant='multi'} }
-	local b = { {x=1, y=1}, {x=0, y=0, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='multi'} }
-	expect(b, reverse_path(a))
-	local a = { {x=0, y=0}, {x1=1, y1=0, x=1, y=1, interpolation='quadratic'} }
-	local b = { {x=1, y=1}, {x1=1, y1=0, x=0, y=0, interpolation='quadratic'} }
-	expect(b, reverse_path(a))
-	local a = { {x=0, y=0}, {x1=0, y1=1, x2=1, y2=1, x=1, y=0, interpolation='cubic'} }
-	local b = { {x=1, y=0}, {x1=1, y1=1, x2=0, y2=1, x=0, y=0, interpolation='cubic'} }
-	expect(b, reverse_path(a))
 	
 	local a = { {x=0, y=0}, {x=1, y=0, interpolation='linear'} }
 	local b = { {x=1, y=0}, {x=1, y=1, interpolation='linear'} }

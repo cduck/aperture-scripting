@@ -2,7 +2,9 @@ local _M = {}
 
 local math = require 'math'
 local table = require 'table'
-local region = require 'boards.region'
+local path = require 'boards.path'
+
+local exterior = path.exterior
 
 ------------------------------------------------------------------------------
 
@@ -134,7 +136,7 @@ function macro_primitives.outline(...)
 	for i=1,#path do
 		path[i] = rotate(path[i], rotation)
 	end
-	if not region.exterior(path) then
+	if not exterior(path) then
 		local t = {}
 		for i=1,#path do
 			t[i] = path[#path+1-i]
@@ -453,7 +455,7 @@ function _M.compile(macro, circle_steps)
 						table.insert(c, path[i].x)
 						table.insert(c, path[i].y)
 					end
-					if region.exterior(path) then
+					if exterior(path) then
 						primpoly = primpoly + gpc.new():add(c)
 					else
 						primpoly = primpoly - gpc.new():add(c)
@@ -496,7 +498,7 @@ function _M.compile(macro, circle_steps)
 				path[i] = {x=x, y=y}
 			end
 			path[n+1] = {x=path[1].x, y=path[1].y}
-			if h == region.exterior(path) then
+			if h == exterior(path) then
 				local t = {}
 				for i=1,#path do
 					t[i] = path[#path+1-i]

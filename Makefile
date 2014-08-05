@@ -8,6 +8,7 @@ MODULES= \
 	boards.macro \
 	boards.manipulation \
 	boards.panelization \
+	boards.path \
 	boards.pathmerge \
 	boards.region \
 	boards.spline \
