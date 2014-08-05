@@ -86,11 +86,35 @@ local function get_glyph(fontname, char)
 				lastpos = pos
 			end,
 			conic_to = function(control, pos)
-				table.insert(path, {x1=control.x, y1=control.y, x=pos.x, y=pos.y, interpolation='quadratic'})
+				local p0,p1,p2 = lastpos,control,pos
+				if p1.x==p0.x and p1.y==p0.y or p2.x==p1.x and p2.y==p1.y then
+					p1,p2 = p2
+				end
+				if p2 and (p1.y-p0.y)/(p1.x-p0.x) == (p2.y-p1.y)/(p2.x-p1.x) then
+					p1,p2 = p2
+				end
+				if p2 then
+					table.insert(path, {x1=p1.x, y1=p1.y, x=p2.x, y=p2.y, interpolation='quadratic'})
+				else
+					table.insert(path, {x=p1.x, y=p1.y, interpolation='linear'})
+				end
 				lastpos = pos
 			end,
 			cubic_to = function(control1, control2, pos)
-				table.insert(path, {x1=control1.x, y1=control1.y, x2=control2.x, y2=control2.y, x=pos.x, y=pos.y, interpolation='cubic'})
+				local p0,p1,p2,p3 = lastpos,control1,control2,pos
+				if p2.x==p1.x and p2.y==p1.y or p3.x==p2.x and p3.y==p2.y then
+					p2,p3 = p3
+				end
+				if p1.x==p0.x and p1.y==p0.y or p2.x==p1.x and p2.y==p1.y then
+					p1,p2 = p2
+				end
+				if p3 then
+					table.insert(path, {x1=p1.x, y1=p1.y, x2=p2.x, y2=p2.y, x=p3.x, y=p3.y, interpolation='cubic'})
+				elseif p2 then
+					table.insert(path, {x1=p1.x, y1=p1.y, x=p2.x, y=p2.y, interpolation='quadratic'})
+				else
+					table.insert(path, {x=p1.x, y=p1.y, interpolation='linear'})
+				end
 				lastpos = pos
 			end,
 		}))
