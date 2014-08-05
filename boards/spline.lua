@@ -275,7 +275,7 @@ local function biarc(spline)
 		error("unsuported spline mode")
 	end
 	local up = (tA ^ -tB).z
-	assert(up ~= 0)
+	assert(up ~= 0, "linear "..spline.mode.." spline")
 	if up > 0 then
 		up = 'counterclockwise'
 	else
