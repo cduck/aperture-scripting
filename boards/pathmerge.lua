@@ -23,47 +23,90 @@ local function copy_point(point)
 	}
 end
 
-local function append_path(parent, child)
-	local nparent = #parent
-	--[[
-	-- :FIXME: this code was somehow preserving corners but should check interpolation mode
-	if (child[1].x==child[2].x or child[1].y==child[2].y) and parent[nparent].x~=parent[nparent-1].x and parent[nparent].y~=parent[nparent-1].y then
-		parent[nparent] = copy_point(child[1])
-		parent[nparent].interpolation = 'linear'
+local function align_edges(a0, a1, b0, b1)
+	assert(b0.interpolation == nil)
+	if a1.x==b0.x and a1.y==b0.y then
+		-- path is already closed
+		return
 	end
-	--]]
-	if child[1].x~=parent[#parent].x or child[1].y~=parent[#parent].y then
-		-- insert a small linear segment
-		nparent = nparent + 1
-		parent[nparent] = {x=child[1].x, y=child[1].y, interpolation='linear'}
+	local first_segment_is_linear = b1.interpolation == 'linear'
+	local first_segment_is_vertical = first_segment_is_linear and b0.x == b1.x
+	local first_segment_is_horizontal = first_segment_is_linear and b0.y == b1.y
+	local first_segment_is_axis_aligned = first_segment_is_vertical or first_segment_is_horizontal
+	local last_segment_is_linear = a1.interpolation == 'linear'
+	local last_segment_is_vertical = last_segment_is_linear and a1.x == a0.x
+	local last_segment_is_horizontal = last_segment_is_linear and a1.y == a0.y
+	local last_segment_is_axis_aligned = last_segment_is_vertical or last_segment_is_horizontal
+	if first_segment_is_axis_aligned and last_segment_is_axis_aligned then
+		-- adjust both segments both toward the point where their supporting lines intersect
+		assert(first_segment_is_vertical == not first_segment_is_horizontal)
+		assert(last_segment_is_vertical == not last_segment_is_horizontal)
+		if first_segment_is_vertical and last_segment_is_vertical then
+			a1.y = b0.y
+		elseif first_segment_is_horizontal and last_segment_is_horizontal then
+			a1.x = b0.x
+		elseif first_segment_is_vertical and last_segment_is_horizontal then
+			a1.x = b0.x
+			b0.y = a1.y
+		elseif first_segment_is_horizontal and last_segment_is_vertical then
+			a1.y = b0.y
+			b0.x = a1.x
+		else
+			error("unexpected case")
+		end
+	elseif last_segment_is_axis_aligned then
+		b0.x = a1.x
+		b0.y = a1.y
+	elseif first_segment_is_axis_aligned then
+		a1.x = b0.x
+		a1.y = b0.y
+	elseif first_segment_is_linear then
+		b0.x = a1.x
+		b0.y = a1.y
+	elseif last_segment_is_linear then
+		a1.x = b0.x
+		a1.y = b0.y
+	else
+		-- keep them disjoint
+		-- :TODO: try to drag one of the two curves instead
+	end
+end
+
+local function append_path(parent, child)
+	local a0 = parent[#parent-1]
+	local a1 = parent[#parent]
+	local b0 = copy_point(child[1])
+	local b1 = copy_point(child[2])
+	align_edges(a0, a1, b0, b1)
+	if a1.x~=b0.x or a1.y~=b0.y then
+		-- insert a linear segment
+		table.insert(parent, {x=b0.x, y=b0.y, interpolation='linear'})
 	end
 	for i=2,#child do
-		parent[nparent+i-1] = copy_point(child[i])
+		table.insert(parent, copy_point(child[i]))
 	end
 end
 
 local function prepend_path(parent, child)
-	local nparent = #parent
-	local nchild = #child
-	local keep_first = child[#child].x~=parent[1].x or child[#child].y~=parent[1].y
-	local a,b,offset
-	if keep_first then
-		-- insert a small linear segment
-		parent[1] = {x=parent[1].x, y=parent[1].y, interpolation='linear'}
-		a,b,offset = 1,nparent,nchild
+	local a0 = copy_point(child[#child-1])
+	local a1 = copy_point(child[#child])
+	local b0 = parent[1]
+	local b1 = parent[2]
+	align_edges(a0, a1, b0, b1)
+	if a1.x~=b0.x or a1.y~=b0.y then
+		-- insert a linear segment
+		parent[1].interpolation = 'linear'
+		table.insert(1, a1)
 	else
-		a,b,offset = 2,nparent,nchild-1 -- this will drop parent[1]
+		parent[1] = a1
 	end
-	for i=b,a,-1 do
-		parent[i+offset] = copy_point(parent[i])
+	-- shift all elements in parent
+	local offset = #child-1
+	for i=#parent,1,-1 do
+		parent[i+offset] = parent[i]
 	end
-	--[[
-	-- :FIXME: this code was somehow preserving corners but should check interpolation mode
-	if (child[nchild].x==child[nchild-1].x or child[nchild].y==child[nchild-1].y) and parent[nchild].x~=parent[nchild+1].x and parent[nchild].y~=parent[nchild+1].y then
-		parent[nchild] = copy_point(child[nchild])
-	end
-	--]]
-	for i=1,nchild do
+	-- copy child
+	for i=1,#child-1 do
 		parent[i] = copy_point(child[i])
 	end
 end
@@ -83,47 +126,14 @@ local function close_path(path, epsilon)
 		-- path is already closed
 		return
 	end
-	local first_segment_is_linear = path[2].interpolation == 'linear'
-	local first_segment_is_vertical = first_segment_is_linear and path[1].x == path[2].x
-	local first_segment_is_horizontal = first_segment_is_linear and path[1].y == path[2].y
-	local first_segment_is_axis_aligned = first_segment_is_vertical or first_segment_is_horizontal
-	local last_segment_is_linear = path[#path].interpolation == 'linear'
-	local last_segment_is_vertical = last_segment_is_linear and path[#path].x == path[#path-1].x
-	local last_segment_is_horizontal = last_segment_is_linear and path[#path].y == path[#path-1].y
-	local last_segment_is_axis_aligned = last_segment_is_vertical or last_segment_is_horizontal
-	if first_segment_is_axis_aligned and last_segment_is_axis_aligned then
-		-- adjust both segments both toward the point where their supporting lines intersect
-		assert(first_segment_is_vertical == not first_segment_is_horizontal)
-		assert(last_segment_is_vertical == not last_segment_is_horizontal)
-		if first_segment_is_vertical and last_segment_is_vertical then
-			path[#path].y = path[1].y
-		elseif first_segment_is_horizontal and last_segment_is_horizontal then
-			path[#path].x = path[1].x
-		elseif first_segment_is_vertical and last_segment_is_horizontal then
-			path[#path].x = path[1].x
-			path[1].y = path[#path].y
-		elseif first_segment_is_horizontal and last_segment_is_vertical then
-			path[#path].y = path[1].y
-			path[1].x = path[#path].x
-		else
-			error("unexpected case")
-		end
-	elseif last_segment_is_axis_aligned then
-		path[1].x = path[#path].x
-		path[1].y = path[#path].y
-	elseif first_segment_is_axis_aligned then
-		path[#path].x = path[1].x
-		path[#path].y = path[1].y
-	elseif first_segment_is_linear then
-		path[1].x = path[#path].x
-		path[1].y = path[#path].y
-	elseif last_segment_is_linear then
-		path[#path].x = path[1].x
-		path[#path].y = path[1].y
-	else
+	local a0 = path[#path-1]
+	local a1 = path[#path]
+	local b0 = path[1]
+	local b1 = path[2]
+	align_edges(a0, a1, b0, b1)
+	if a1.x~=b0.x or a1.y~=b0.y then
 		-- insert a linear segment
-		-- :TODO: try to drag one of the two curves instead
-		path[#path+1] = {x=path[1].x, y=path[1].y, interpolation='linear'}
+		path[#path+1] = {x=b0.x, y=b0.y, interpolation='linear'}
 	end
 end
 
@@ -301,7 +311,7 @@ if _NAME=='test' then
 	expect(c, a)
 	local a = { {x=0, y=0}, {x=1, y=0, interpolation='linear'} }
 	local b = { {x=1, y=1}, {x=1, y=2, interpolation='linear'} }
-	local c = { {x=0, y=0}, {x=1, y=0, interpolation='linear'}, {x=1, y=1, interpolation='linear'}, {x=1, y=2, interpolation='linear'} }
+	local c = { {x=0, y=0}, {x=1, y=0, interpolation='linear'}, {x=1, y=2, interpolation='linear'} }
 	append_path(a, b)
 	expect(c, a)
 	
@@ -312,7 +322,7 @@ if _NAME=='test' then
 	expect(c, b)
 	local a = { {x=0, y=0}, {x=1, y=0, interpolation='linear'} }
 	local b = { {x=1, y=1}, {x=1, y=2, interpolation='linear'} }
-	local c = { {x=0, y=0}, {x=1, y=0, interpolation='linear'}, {x=1, y=1, interpolation='linear'}, {x=1, y=2, interpolation='linear'} }
+	local c = { {x=0, y=0}, {x=1, y=0, interpolation='linear'}, {x=1, y=2, interpolation='linear'} }
 	prepend_path(b, a)
 	expect(c, b)
 	
@@ -448,6 +458,58 @@ if _NAME=='test' then
 	}
 	merge_layer_paths(layer, 0.1)
 	expect(1, #layer)
+	
+	local aperture = {}
+	local layer = {
+		polarity = "dark",
+		{
+			aperture = aperture,
+			{ x = 4000500000, y = 0, },
+			{ interpolation = "linear", x = 95999300000, y = 0, },
+		},
+		{
+			aperture = aperture,
+			{ x = 95999300000, y = 0, },
+			{ interpolation = "linear", x = 96194880000, y = 5080000, },
+			{ interpolation = "linear", x = 99994720000, y = 3804920000, },
+			{ interpolation = "linear", x = 99999800000, y = 4000500000, },
+			{ interpolation = "linear", x = 99999800000, y = 58000900000, },
+		},
+		{
+			aperture = aperture,
+			{ x = 95999300000, y = 62001400000, },
+			{ interpolation = "linear", x = 96194880000, y = 61996320000, },
+			{ interpolation = "linear", x = 99994720000, y = 58196480000, },
+			{ interpolation = "linear", x = 99999800000, y = 58000900000, },
+		},
+		{
+			aperture = aperture,
+			{ x = 95999300000, y = 61998860000, },
+			{ interpolation = "linear", x = 4000500000, y = 61998860000, },
+		},
+		{
+			aperture = aperture,
+			{ x = 0, y = 58000900000, },
+			{ interpolation = "linear", x = 5080000, y = 58196480000, },
+			{ interpolation = "linear", x = 3804920000, y = 61996320000, },
+			{ interpolation = "linear", x = 4000500000, y = 62001400000, },
+		},
+		{
+			aperture = aperture,
+			{ x = 0, y = 58000900000, },
+			{ interpolation = "linear", x = 0, y = 4000500000, },
+		},
+		{
+			aperture = aperture,
+			{ x = 0, y = 4000500000, },
+			{ interpolation = "linear", x = 5080000, y = 3804920000, },
+			{ interpolation = "linear", x = 3804920000, y = 5080000, },
+			{ interpolation = "linear", x = 4000500000, y = 0, },
+		},
+	}
+	merge_layer_paths(layer, 0.1e9)
+	expect(1, #layer)
+	expect(17, #layer[1])
 	
 	-- close_path coverage
 	local layer = mklayer{
