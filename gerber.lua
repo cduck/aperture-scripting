@@ -670,7 +670,7 @@ function _M.save(image, file_path, verbose)
 					local px,py = point.x / scale,point.y / scale
 					if D ~= 2 or x ~= px or y ~= py then -- don't move to the current pos
 						local I,J
-						if interpolation=='circular' then
+						if point.interpolation=='circular' then
 							local cx = point.cx / scale
 							local cy = point.cy / scale
 							if verbose or cx ~= x then
