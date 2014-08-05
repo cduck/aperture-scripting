@@ -183,7 +183,12 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 			local path_polarity = outline and polarity or (polarity=='clear' and 'dark' or 'clear')
 			if mirror then
 				for _,point in ipairs(path) do
-					point.x = -point.x
+					for _,k in ipairs{'x', 'x1', 'x2', 'cx'} do
+						local v = point[k]
+						if v then
+							point[k] = -v
+						end
+					end
 				end
 			end
 			local layer = image.layers[ilayer]
