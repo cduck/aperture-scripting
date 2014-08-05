@@ -65,18 +65,14 @@ local function interpolate_point(path, point, epsilon, allowed)
 		if point.x~=path[#path].x or point.y~=path[#path].y then
 			table.insert(path, {x=point.x, y=point.y, interpolation='linear'})
 		end
-	elseif interpolation == 'quadratic' and allowed.circular and allowed.linear then
-		local c = spline.quadratic(path[#path].x, path[#path].y, point.x1, point.y1, point.x, point.y)
-		local arcs = spline.convert_to_arcs(c, epsilon)
-		for _,arc in ipairs(arcs) do
-			assert(arc.x0==path[#path].x)
-			assert(arc.y0==path[#path].y)
-			assert(arc.mode=='arc')
-			table.insert(path, {interpolation='circular', quadrant='single', direction=arc.direction, cx=arc.cx, cy=arc.cy, x=arc.x1, y=arc.y1})
+	elseif (interpolation == 'quadratic' or interpolation == 'cubic') and allowed.circular and allowed.linear then
+		local curve
+		if interpolation == 'quadratic' then
+			curve = spline.quadratic(path[#path].x, path[#path].y, point.x1, point.y1, point.x, point.y)
+		elseif interpolation == 'cubic' then
+			curve = spline.cubic(path[#path].x, path[#path].y, point.x1, point.y1, point.x2, point.y2, point.x, point.y)
 		end
-	elseif interpolation == 'cubic' and allowed.circular and allowed.linear then
-		local c = spline.cubic(path[#path].x, path[#path].y, point.x1, point.y1, point.x2, point.y2, point.x, point.y)
-		local arcs = spline.convert_to_arcs(c, epsilon)
+		local arcs = spline.convert_to_arcs(curve, epsilon)
 		for _,arc in ipairs(arcs) do
 			assert(arc.x0==path[#path].x)
 			assert(arc.y0==path[#path].y)
