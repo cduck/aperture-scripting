@@ -250,7 +250,7 @@ local function circle_center(x0, y0, i, j, x1, y1, direction, quadrant)
 				end
 			end
 		end
-		assert(cx and cy)
+		assert(cx and cy, "could not find circle center in single quadrant mode")
 		return cx,cy
 	elseif quadrant=='multi' then
 		return x0+i,y0+j
