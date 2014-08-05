@@ -71,6 +71,7 @@ local function interpolate_point(path, point, epsilon, allowed)
 		for _,arc in ipairs(arcs) do
 			assert(arc.x0==path[#path].x)
 			assert(arc.y0==path[#path].y)
+			assert(arc.mode=='arc')
 			table.insert(path, {interpolation='circular', quadrant='single', direction=arc.direction, cx=arc.cx, cy=arc.cy, x=arc.x1, y=arc.y1})
 		end
 	elseif interpolation == 'cubic' and allowed.circular and allowed.linear then
@@ -79,6 +80,7 @@ local function interpolate_point(path, point, epsilon, allowed)
 		for _,arc in ipairs(arcs) do
 			assert(arc.x0==path[#path].x)
 			assert(arc.y0==path[#path].y)
+			assert(arc.mode=='arc')
 			table.insert(path, {interpolation='circular', quadrant='single', direction=arc.direction, cx=arc.cx, cy=arc.cy, x=arc.x1, y=arc.y1})
 		end
 	elseif interpolation == 'quadratic' and allowed.linear then
