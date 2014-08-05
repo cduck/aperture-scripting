@@ -669,17 +669,17 @@ function _M.save(image, file_path, verbose)
 					end
 					local px,py = point.x / scale,point.y / scale
 					if D ~= 2 or x ~= px or y ~= py then -- don't move to the current pos
-						local i,j
+						local I,J
 						if interpolation=='circular' then
 							local cx = point.cx / scale
 							local cy = point.cy / scale
 							if verbose or cx ~= x then
-								i = cx - x
-								if point.quadrant=='single' then i = math.abs(i) end
+								I = cx - x
+								if point.quadrant=='single' then I = math.abs(I) end
 							end
 							if verbose or cy ~= y then
-								j = cy - y
-								if point.quadrant=='single' then j = math.abs(j) end
+								J = cy - y
+								if point.quadrant=='single' then J = math.abs(J) end
 							end
 						end
 						table.insert(data, _M.blocks.directive({
@@ -687,8 +687,8 @@ function _M.save(image, file_path, verbose)
 							D = D,
 							X = (verbose or px ~= x) and px or nil,
 							Y = (verbose or py ~= y) and py or nil,
-							I = i,
-							J = j,
+							I = I,
+							J = J,
 						}, image.format))
 					end
 					x,y = px,py
