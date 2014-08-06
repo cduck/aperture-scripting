@@ -96,7 +96,7 @@ local function prepend_path(parent, child)
 	if a1.x~=b0.x or a1.y~=b0.y then
 		-- insert a linear segment
 		parent[1].interpolation = 'linear'
-		table.insert(1, a1)
+		table.insert(parent, 1, a1)
 	else
 		parent[1] = a1
 	end
@@ -314,6 +314,25 @@ if _NAME=='test' then
 	local c = { {x=0, y=0}, {x=1, y=0, interpolation='linear'}, {x=1, y=2, interpolation='linear'} }
 	append_path(a, b)
 	expect(c, a)
+	local a = { {x=0, y=0}, {x=1, y=1, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'} }
+	local b = { {x=1, y=1}, {x=2, y=0, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'} }
+	local c = {
+		{x=0, y=0},
+		{x=1, y=1, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x=2, y=0, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'},
+	}
+	append_path(a, b)
+	expect(c, a)
+	local a = { {x=0, y=0}, {x=1, y=1.01, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'} }
+	local b = { {x=1, y=1}, {x=2, y=0, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'} }
+	local c = {
+		{x=0, y=0},
+		{x=1, y=1.01, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x=1, y=1, interpolation='linear'},
+		{x=2, y=0, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'},
+	}
+	append_path(a, b)
+	expect(c, a)
 	
 	local a = { {x=0, y=0}, {x=1, y=0, interpolation='linear'} }
 	local b = { {x=1, y=0}, {x=1, y=1, interpolation='linear'} }
@@ -323,6 +342,25 @@ if _NAME=='test' then
 	local a = { {x=0, y=0}, {x=1, y=0, interpolation='linear'} }
 	local b = { {x=1, y=1}, {x=1, y=2, interpolation='linear'} }
 	local c = { {x=0, y=0}, {x=1, y=0, interpolation='linear'}, {x=1, y=2, interpolation='linear'} }
+	prepend_path(b, a)
+	expect(c, b)
+	local a = { {x=0, y=0}, {x=1, y=1, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'} }
+	local b = { {x=1, y=1}, {x=2, y=0, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'} }
+	local c = {
+		{x=0, y=0},
+		{x=1, y=1, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x=2, y=0, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'},
+	}
+	prepend_path(b, a)
+	expect(c, b)
+	local a = { {x=0, y=0}, {x=1, y=1.01, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'} }
+	local b = { {x=1, y=1}, {x=2, y=0, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'} }
+	local c = {
+		{x=0, y=0},
+		{x=1, y=1.01, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'},
+		{x=1, y=1, interpolation='linear'},
+		{x=2, y=0, cx=1, cy=0, interpolation='circular', direction='clockwise', quadrant='single'},
+	}
 	prepend_path(b, a)
 	expect(c, b)
 	
