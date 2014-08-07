@@ -3,7 +3,7 @@ return {
 	statsfile = "luacov.stats.out",
 	
 	-- filename to store report
-	reportfile = "luacov.report.out",
+	reportfile = "coverage.txt",
 	
 	-- Delete stats file after reporting?
 	deletestats = true,
