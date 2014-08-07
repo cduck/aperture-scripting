@@ -108,9 +108,12 @@ assert(boards.save(board, "test/output/apertures"))
 
 log 'rotate all apertures'
 manipulation.rotate_board(board, 0)
-manipulation.rotate_board(board, 90)
+local rotated = manipulation.rotate_board(board, 90)
 manipulation.rotate_board(board, 180)
 manipulation.rotate_board(board, 270)
+
+log 'save rotated apertures'
+assert(boards.save(rotated, "test/output/apertures-rotated"))
 
 log 'compute aperture extents'
 local apertures = {}
@@ -148,10 +151,15 @@ manipulation.rotate_board(board, 0)
 manipulation.rotate_board(board, 90)
 manipulation.rotate_board(board, 180)
 manipulation.rotate_board(board, 270)
-manipulation.rotate_board(board, 17)
+local rotated = manipulation.rotate_board(board, 17)
 manipulation.rotate_board(board, 97)
 manipulation.rotate_board(board, 181)
 manipulation.rotate_board(board, 271)
+
+--[[
+log 'save rotated rotatable apertures'
+assert(boards.save(rotated, "test/output/rotate-rotated"))
+--]]
 
 ------------------------------------------------------------------------------
 
@@ -171,9 +179,19 @@ local board = assert(boards.load("test/pwrsppl"))
 log 'save board with BOM'
 assert(boards.save(board, "test/output/pwrsppl"))
 
-log 'rotate board with BOM'
-manipulation.rotate_board(board, 90)
-manipulation.rotate_board(board, 17)
+log 'rotate board with BOM (90°)'
+local rotated = manipulation.rotate_board(board, 90)
+
+log 'save rotated board with BOM (90°)'
+assert(boards.save(rotated, "test/output/pwrsppl-rotated90"))
+
+log 'rotate board with BOM (17°)'
+local rotated = manipulation.rotate_board(board, 17)
+
+--[[
+log 'save rotated board with BOM (17°)'
+assert(boards.save(rotated, "test/output/pwrsppl-rotated17"))
+--]]
 
 ------------------------------------------------------------------------------
 
