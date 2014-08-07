@@ -32,7 +32,6 @@ end
 local function save_macro(macro)
 	local name = assert(macro.save_name)
 	local script = assert(macro.script)
-	assert(#script==1 and script[1].type=='primitive', "only macros with 1 primitive are supported")
 	return _M.blocks.macro(name, script)
 end
 

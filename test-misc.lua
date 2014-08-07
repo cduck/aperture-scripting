@@ -99,9 +99,13 @@ assert(boards.save(board, 'test/output/tmp'))
 
 ------------------------------------------------------------------------------
 
-log 'check all apertures'
+log 'load all apertures'
 local board = assert(boards.load("test/apertures"))
 boards.generate_aperture_paths(board)
+
+log 'save all apertures'
+assert(boards.save(board, "test/output/apertures"))
+
 log 'rotate all apertures'
 manipulation.rotate_board(board, 0)
 manipulation.rotate_board(board, 90)
@@ -132,9 +136,13 @@ log 'compute board extents (without outline)'
 board.outline = nil
 extents.compute_board_extents(board)
 
-log 'check rotatable apertures'
+log 'load rotatable apertures'
 local board = assert(boards.load("test/rotate"))
 boards.generate_aperture_paths(board)
+
+log 'save rotatable apertures'
+assert(boards.save(board, "test/output/rotate"))
+
 log 'rotate rotatable apertures'
 manipulation.rotate_board(board, 0)
 manipulation.rotate_board(board, 90)
