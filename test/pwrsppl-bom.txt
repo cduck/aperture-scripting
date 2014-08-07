@@ -1,0 +1,8 @@
+Part	Value	Attributes	Eagle Package	Part Num	X	Y	Angle	Side	Mfg Name	VID	Mouser Part Num	DigiKey Part Num	Description	Package	Value	Tolerance	Rating	Min Qty	3D Model	X Offset	Y Offset	Angle Offset
+GND1	1X1-2.54		2.54-1X1	-	-6.350000	-1.270000	270.000000	top	*	*	*	*	*	*	*	*	*	*	*	*	*	*
+GND2	1X1-2.54		2.54-1X1	-	6.350000	-1.270000	90.000000	top	*	*	*	*	*	*	*	*	*	*	*	*	*	*
+VIN	1X1-2.54		2.54-1X1	-	-6.350000	1.270000	270.000000	top	*	*	*	*	*	*	*	*	*	*	*	*	*	*
+VOUT	1X1-2.54		2.54-1X1	-	6.350000	1.270000	90.000000	top	*	*	*	*	*	*	*	*	*	*	*	*	*	*
+C1	2.2uF		1608	C1608X7R1A225K080AC	-3.500000	0.000000	90.000000	top	TDK	DK	810-C1608X7R1A225K	445-5958-1-ND	Ceramic capacitor	1608M, 0603i	2.2uF	10%	10V	1	C0603	*	*	*
+C2	2.2uF		1608	C1608X7R1A225K080AC	3.500000	0.000000	270.000000	top	TDK	DK	810-C1608X7R1A225K	445-5958-1-ND	Ceramic capacitor	1608M, 0603i	2.2uF	10%	10V	1	C0603	*	*	*
+VREG	V-REG-SOT-23-5		SOT-23-5	XC6210B332MR-G	0.000000	0.000000	270.000000	top	Torex Semiconductor Ltd	DK	*	893-1075-1-ND	Linear drop-out voltage regulator	SOT-23-5	3.3V	*	700mA, 6V	1	SOT23-5L	*	*	*

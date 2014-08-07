@@ -165,6 +165,18 @@ local board = assert(boards.load("test/paths", {unit='mm'}))
 
 ------------------------------------------------------------------------------
 
+log 'load board with BOM'
+local board = assert(boards.load("test/pwrsppl"))
+
+log 'save board with BOM'
+assert(boards.save(board, "test/output/pwrsppl"))
+
+log 'rotate board with BOM'
+manipulation.rotate_board(board, 90)
+manipulation.rotate_board(board, 17)
+
+------------------------------------------------------------------------------
+
 log 'run example panels'
 fs.chdir('doc/examples')
 
