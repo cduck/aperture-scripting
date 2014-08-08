@@ -96,11 +96,11 @@ $ANGLE=20*
 0 an offset moire*
 6,3.81,3.81,$OD,0.254,0.381,2,0.508,5.588,0*
 0 an offset thermal*
-7,3.81,-3.81,$OD,$ID,2.032,0*
+7,3.81,0-3.81,$OD,$ID,2.032,0*
 0 a rotated thermal*
 7,0,0,$OD,$ID,2.032,$ANGLE*
 0 a rotated moire*
-6,0,0,2.54,0.127,0.381,2,0.508,$OD x 1.1,$ANGLE*
+6,0,0,2.54,0.127,0.381,2,0.508,$ODx1.1,$ANGLE*
 0 a polygon hole covering the other primitives*
 5,0,8,3.81,0,$OD,0*
 ADD99COMPLEX*%
