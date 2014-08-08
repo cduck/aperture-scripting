@@ -163,6 +163,11 @@ assert(boards.save(rotated, "test/output/rotate-rotated"))
 
 ------------------------------------------------------------------------------
 
+log 'load all macros'
+local board = assert(boards.load("test/macros"))
+
+------------------------------------------------------------------------------
+
 log 'check all paths'
 local board = assert(boards.load("test/paths"))
 log 'interpolate paths'
