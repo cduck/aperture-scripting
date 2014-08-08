@@ -362,7 +362,7 @@ function _M.load(file_path)
 				-- terminate current path if any
 				path = nil
 				-- select new aperture
-				aperture = assert(apertures[block.D])
+				aperture = assert(apertures[block.D], "aperture "..tostring(block.D).." is used before being defined")
 			elseif block.D or block.X or block.Y then
 				local scale = assert(scales[unit], "unsupported directive unit "..tostring(unit))
 				if block.G then
