@@ -170,11 +170,11 @@ local function rotate_xy_expressions(px, py, angle)
 	if angle==0 then
 		return px,py
 	elseif angle==90 then
-		return '0-('..py..')',px
+		return {type='subtraction', 0, py},px
 	elseif angle==180 then
-		return '0-('..px..')','0-('..py..')'
+		return {type='subtraction', 0, px},{type='subtraction', 0, py}
 	elseif angle==270 then
-		return py,'0-('..px..')'
+		return py,{type='subtraction', 0, px}
 	else
 		local a = math.rad(angle)
 		local c,s = math.cos(a),math.sin(a)
@@ -194,17 +194,17 @@ local function rotate_xy_parameters(x, y, angle)
 			ix = {
 				type = 'variable',
 				name = 'TMPI',
-				expression = x,
+				value = x,
 			}
-			x = '$TMPI'
+			x = 'TMPI'
 		end
 		if type(y)=='string' then
 			iy = {
 				type = 'variable',
 				name = 'TMPJ',
-				expression = y,
+				value = y,
 			}
-			y = '$TMPJ'
+			y = 'TMPJ'
 		end
 		x,y = rotate_xy_expressions(x, y, angle)
 		return x,y,ix,iy
@@ -380,7 +380,7 @@ function _M.rotate_macro(macro, angle)
 			table.insert(copy.script, {
 				type = instruction.type,
 				name = instruction.name,
-				expression = instruction.expression,
+				value = instruction.value,
 			})
 		elseif instruction.type=='primitive' then
 			local primitive,ix,iy = rotate_macro_primitive(instruction, angle)

@@ -8,6 +8,7 @@ local pathlib = require 'path'
 local dump = require 'dump'
 
 local paths = require 'boards.path'
+local macros = require 'boards.macro'
 local drawing = require 'boards.drawing'
 local extents = require 'boards.extents'
 local aperture = require 'boards.aperture'
@@ -411,11 +412,11 @@ local function macro_hash(macro)
 			-- ignore
 		elseif type=='variable' then
 			table.insert(t, instruction.name)
-			table.insert(t, instruction.expression)
+			table.insert(t, macros.compile_expression(instruction.value))
 		elseif type=='primitive' then
 			table.insert(t, instruction.shape)
 			for _,expression in ipairs(instruction.parameters) do
-				table.insert(t, expression)
+				table.insert(t, macros.compile_expression(expression))
 			end
 		else
 			error("unsupported aperture macro instruction type "..tostring(type))

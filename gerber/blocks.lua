@@ -5,6 +5,11 @@ local io = require 'io'
 local math = require 'math'
 local table = require 'table'
 local string = require 'string'
+local lpeg = require 'lpeg'
+
+if _NAME=='test' then
+	require 'test'
+end
 
 ------------------------------------------------------------------------------
 
@@ -197,7 +202,6 @@ end
 _M.save_aperture_parameter = save_aperture_parameter
 
 if _NAME=='test' then
-	require 'test'
 	expect(8, decimal_shift)
 	
 	expect(0, load_aperture_parameter("0"))
@@ -252,6 +256,167 @@ end
 
 ------------------------------------------------------------------------------
 
+local ops = {
+	addition = '+',
+	subtraction = '-',
+	multiplication = 'X',
+	division = '/',
+}
+
+local function save_expression(value)
+	local t = type(value)
+	if t=='number' then
+		return tostring(value)
+	elseif t=='string' then
+		return '$'..value
+	elseif t=='table' then
+		assert(value.type)
+		local a,b = value[1],value[2]
+		local ta,tb = type(a),type(b)
+		ta = ta=='table' and a.type or ta
+		tb = tb=='table' and b.type or tb
+		a = save_expression(a)
+		b = save_expression(b)
+		if value.type=='multiplication' or value.type=='division' then
+			if ta=='addition' or ta=='subtraction' then
+				a = '('..a..')'
+			end
+			if tb=='addition' or tb=='subtraction' then
+				b = '('..b..')'
+			end
+		end
+		return a..assert(ops[value.type])..b
+	else
+		error("unsupported expression type "..tostring(t))
+	end
+end
+
+local ops = {
+	['+'] = 'addition',
+	['-'] = 'subtraction',
+	['x'] = 'multiplication',
+	['X'] = 'multiplication',
+	['/'] = 'division',
+}
+local function chain(exp)
+	assert(#exp % 2 == 1)
+	local tree = exp[1]
+	for i=2,#exp,2 do
+		tree = {
+			type = assert(ops[exp[i]]),
+			tree,
+			exp[i+1],
+		}
+	end
+	return tree
+end
+
+-- Lexical Elements
+local Integer = lpeg.R'09'^1
+local Number = (Integer^-1 * lpeg.S'.' * Integer^-1 + Integer) / tonumber
+local Variable = lpeg.S'$' * lpeg.C(lpeg.R('09','aw','yz','AW','YZ')^1)
+local Value = Number + Variable
+local TermOp = lpeg.C(lpeg.S'+-')
+local FactorOp = lpeg.C(lpeg.S'xX/')
+local Open = '('
+local Close = ')'
+
+-- Grammar
+local Exp, Term, Factor = lpeg.V'Exp', lpeg.V'Term', lpeg.V'Factor'
+local G = lpeg.P{ Exp,
+  Exp = lpeg.Ct(Term * (TermOp * Term)^0) / chain,
+  Term = lpeg.Ct(Factor * (FactorOp * Factor)^0) / chain,
+  Factor = Value + Open * Exp * Close;
+}
+
+local function load_expression(str)
+	return assert(lpeg.match(G * -1, str), "'"..str.."' didn't match the expression grammar")
+end
+
+if _NAME=='test' then
+	expect(1, load_expression("1"))
+	expect("1", load_expression("$1"))
+	expect("A", load_expression("$A"))
+	expect({
+		type = 'addition',
+		1,
+		2,
+	}, load_expression("1+2"))
+	expect({
+		type = 'subtraction',
+		"A",
+		1,
+	}, load_expression("$A-1"))
+	expect({
+		type = 'multiplication',
+		"A",
+		"B",
+	}, load_expression("$Ax$B"))
+	expect({
+		type = 'division',
+		1,
+		2,
+	}, load_expression("1/2"))
+	expect("A", load_expression("($A)"))
+	expect({
+		type = 'addition',
+		"A",
+		2,
+	}, load_expression("($A+2)"))
+	expect({
+		type = 'multiplication',
+		{
+			type = 'addition',
+			1,
+			2,
+		},
+		3,
+	}, load_expression("(1+2)x3"))
+	expect({
+		type = 'addition',
+		{
+			type = 'addition',
+			1,
+			2,
+		},
+		3,
+	}, load_expression("1+2+3"))
+	expect({
+		type = 'addition',
+		1,
+		{
+			type = 'multiplication',
+			2,
+			3,
+		},
+	}, load_expression("1+2x3"))
+	expect({
+		type = 'multiplication',
+		{
+			type = 'multiplication',
+			2,
+			3,
+		},
+		"4",
+	}, load_expression("2x3x$4"))
+	
+	expect("1", save_expression(load_expression("1")))
+	expect("$1", save_expression(load_expression("$1")))
+	expect("$A", save_expression(load_expression("$A")))
+	expect("1+2", save_expression(load_expression("1+2")))
+	expect("$A-1", save_expression(load_expression("$A-1")))
+	expect("$AX$B", save_expression(load_expression("$Ax$B")))
+	expect("1/2", save_expression(load_expression("1/2")))
+	expect("$A", save_expression(load_expression("($A)")))
+	expect("$A+2", save_expression(load_expression("($A+2)")))
+	expect("(1+2)X3", save_expression(load_expression("(1+2)x3")))
+	expect("1+2+3", save_expression(load_expression("1+2+3")))
+	expect("1+2X3", save_expression(load_expression("1+2x3")))
+	expect("2X3X$4", save_expression(load_expression("2x3x$4")))
+end
+
+------------------------------------------------------------------------------
+
 local shapes = {}
 for name,code in pairs{
 	circle = 1,
@@ -271,7 +436,11 @@ end
 local macro_primitive_mt = {}
 
 function macro_primitive_mt:__tostring()
-	return assert(shapes[self.shape])..','..table.concat(self.parameters, ',')
+	local parameters = {}
+	for i,expression in ipairs(self.parameters) do
+		parameters[i] = save_expression(expression)
+	end
+	return assert(shapes[self.shape])..','..table.concat(parameters, ',')
 end
 
 function _M.macro_primitive(shape, parameters)
@@ -287,12 +456,9 @@ local function load_macro_primitive(block)
 	local shape = assert(shapes[tonumber(sshape)], "invalid shape "..sshape)
 	local parameters = {}
 	for expression in sparameters:gmatch(',([^,]*)') do
-		if expression:match('^([%d.]+)$') then
-			expression = assert(tonumber(expression), "expression '"..expression.."' doesn't parse as a number")
-		end
-		table.insert(parameters, expression)
+		table.insert(parameters, (load_expression(expression)))
 	end
---	assert(','..table.concat(parameters, ',')==sparameters)
+	assert(select(2, sparameters:gsub(',', ''))==#parameters)
 	return _M.macro_primitive(shape, parameters)
 end
 
@@ -301,23 +467,23 @@ end
 local macro_variable_mt = {}
 
 function macro_variable_mt:__tostring()
-	return '$'..self.name..'='..self.expression
+	return '$'..self.name..'='..save_expression(self.value)
 end
 
-function _M.macro_variable(name, expression)
+function _M.macro_variable(name, value)
 	if type(name)=='string' and name:match('^%d+$') then
 		name = tonumber(name)
 	end
 	local macro_variable = setmetatable({type='variable'}, macro_variable_mt)
 	macro_variable.name = name
-	macro_variable.expression = expression
+	macro_variable.value = value
 	return macro_variable
 end
 
 local function load_macro_variable(block)
-	local name,expression = block:match('^%$([^=]+)=(.*)$')
-	assert(name and expression)
-	return _M.macro_variable(name, expression)
+	local name,value = block:match('^%$([^=]+)=(.*)$')
+	assert(name and value)
+	return _M.macro_variable(name, load_expression(value))
 end
 
 ------------------------------------------------------------------------------
@@ -329,7 +495,7 @@ function _M.macro_instruction(data)
 	elseif t=='primitive' then
 		return _M.macro_primitive(data.shape, data.parameters)
 	elseif t=='variable' then
-		return _M.macro_variable(data.name, data.expression)
+		return _M.macro_variable(data.name, data.value)
 	else
 		error("unsupported macro instruction type "..tostring(t))
 	end

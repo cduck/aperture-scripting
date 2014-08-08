@@ -1,8 +1,13 @@
 local _M = {}
+local _NAME = ... or 'test'
 
 local math = require 'math'
 local table = require 'table'
 local path = require 'boards.path'
+
+if _NAME=='test' then
+	require 'test'
+end
 
 local exterior = path.exterior
 
@@ -399,18 +404,55 @@ function macro_primitives.thermal(x, y, outer_diameter, inner_diameter, gap_thic
 	return paths
 end
 
-local function compile_expression(expression)
-	if type(expression)=='number' then
-		return expression
-	else
-		return expression
-			:gsub('[xX]', '*')
-			:gsub('%$(%d+)', function(n) return "_VARS["..n.."]" end)
-			:gsub('%$(%a%w*)', function(k) return "_VARS['"..k.."']" end)
+local ops = {
+	addition = '+',
+	subtraction = '-',
+	multiplication = '*',
+	division = '/',
+}
+
+local function compile_expression(value)
+	local t = type(value)
+	if t=='number' then
+		return value
+	elseif t=='string' then
+		if not value:match('^%d+$') then
+			value = "'"..value.."'"
+		end
+		return "_VARS["..value.."]"
+	elseif t=='table' then
+		assert(value.type)
+		local a,b = value[1],value[2]
+		local ta,tb = type(a),type(b)
+		ta = ta=='table' and a.type or ta
+		tb = tb=='table' and b.type or tb
+		a = compile_expression(a)
+		b = compile_expression(b)
+		if value.type=='multiplication' or value.type=='division' then
+			if ta=='addition' or ta=='subtraction' then
+				a = '('..a..')'
+			end
+			if tb=='addition' or tb=='subtraction' then
+				b = '('..b..')'
+			end
+		end
+		return a..assert(ops[value.type])..b
 	end
 end
-assert(compile_expression("1.08239x$1")=="1.08239*_VARS[1]")
-assert(compile_expression("$YX2")=="_VARS['Y']*2")
+_M.compile_expression = compile_expression
+
+if _NAME=='test' then
+	expect("1.08239*_VARS[1]", compile_expression({
+		type = 'multiplication',
+		1.08239,
+		"1",
+	}))
+	expect("_VARS['Y']*2", compile_expression({
+		type = 'multiplication',
+		"Y",
+		2,
+	}))
+end
 
 ------------------------------------------------------------------------------
 
@@ -428,7 +470,7 @@ function _M.compile(macro, circle_steps)
 			else
 				write("_VARS['"..instruction.name.."']")
 			end
-			write(" = "..compile_expression(instruction.expression).."\n")
+			write(" = "..compile_expression(instruction.value).."\n")
 		elseif instruction.type=='primitive' then
 			write(instruction.shape.."(")
 			for i,expression in ipairs(instruction.parameters) do
