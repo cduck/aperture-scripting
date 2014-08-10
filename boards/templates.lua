@@ -13,7 +13,7 @@ _M.default = {
 		bottom_silkscreen = '%.gbo',
 		bottom_paste = '%.gbp',
 		milling = {'%.gml', '%.gm1', '%.dxf'},
-		outline = {'%.oln', '%.out'},
+		outline = {'%.gko', '%.oln', '%.out'},
 		drill = {'%.drd', '%.txt'},
 		bom = '%-bom.txt',
 	},
