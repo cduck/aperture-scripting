@@ -111,7 +111,7 @@ local function save_aperture(aperture, unit)
 	local gerber_shape,parameters
 	assert(aperture.macro or aperture.shape, "aperture has no shape and no macro")
 	if aperture.macro then
-		assert(aperture.unit == unit)
+		assert(aperture.unit == unit, "can't convert aperture macro with unit '"..aperture.unit.."' to '"..unit.."'")
 		gerber_shape = aperture.macro.name
 		if aperture.parameters then
 			local scale = 10 ^ _M.blocks.decimal_shift
