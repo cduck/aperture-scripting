@@ -5,7 +5,6 @@ local io = require 'io'
 local math = require 'math'
 local table = require 'table'
 local string = require 'string'
-local lpeg = require 'lpeg'
 
 if _NAME=='test' then
 	require 'test'
@@ -291,6 +290,109 @@ local function save_expression(value)
 	end
 end
 
+local function tokenize(str)
+	local tokens = {}
+	for val,op in (str..'\0'):gmatch('([^%z()xX/+-]*)([%z()xX/+-])') do
+		if val~="" then
+			table.insert(tokens, val)
+		end
+		table.insert(tokens, op)
+	end
+	assert(tokens[#tokens]=='\0')
+	tokens[#tokens] = nil
+	return tokens
+end
+
+if _NAME=='test' then
+	expect({'1'}, tokenize("1"))
+	expect({'$1'}, tokenize("$1"))
+	expect({'$A'}, tokenize("$A"))
+	expect({'1','+','2'}, tokenize("1+2"))
+	expect({'$A','-','1'}, tokenize("$A-1"))
+	expect({'$A','x','$B'}, tokenize("$Ax$B"))
+	expect({'1','/','2'}, tokenize("1/2"))
+	expect({'(','$A',')'}, tokenize("($A)"))
+	expect({'(','$A','+','2',')'}, tokenize("($A+2)"))
+	expect({'(','1','+','2',')','x','3'}, tokenize("(1+2)x3"))
+	expect({'1','+','2','+','3'}, tokenize("1+2+3"))
+	expect({'1','+','2','x','3'}, tokenize("1+2x3"))
+	expect({'2','x','3','x','$4'}, tokenize("2x3x$4"))
+end
+
+local function maketree(tokens)
+	local node = {}
+	while #tokens >= 1 do
+		local token = table.remove(tokens, 1)
+		if token=='(' then
+			table.insert(node, maketree(tokens))
+		elseif token==')' then
+			break
+		else
+			table.insert(node, token)
+		end
+	end
+	if #node==1 then
+		node = node[1]
+	end
+	return node
+end
+
+if _NAME=='test' then
+	expect('1', maketree(tokenize("1")))
+	expect('$1', maketree(tokenize("$1")))
+	expect('$A', maketree(tokenize("$A")))
+	expect({'1','+','2'}, maketree(tokenize("1+2")))
+	expect({'$A','-','1'}, maketree(tokenize("$A-1")))
+	expect({'$A','x','$B'}, maketree(tokenize("$Ax$B")))
+	expect({'1','/','2'}, maketree(tokenize("1/2")))
+	expect('$A', maketree(tokenize("($A)")))
+	expect({'$A','+','2'}, maketree(tokenize("($A+2)")))
+	expect({{'1','+','2'},'x','3'}, maketree(tokenize("(1+2)x3")))
+	expect({'1','+','2','+','3'}, maketree(tokenize("1+2+3")))
+	expect({'1','+','2','x','3'}, maketree(tokenize("1+2x3")))
+	expect({'2','x','3','x','$4'}, maketree(tokenize("2x3x$4")))
+end
+
+local function prioritize(node)
+	if type(node)~='table' then return node end
+	local terms = {}
+	local term = {prioritize(node[1])}
+	local i = 2
+	while i <= #node+1 do
+		local token = node[i]
+		if token=='+' or token=='-' or token==nil then
+			if #term==1 then term = term[1] end
+			table.insert(terms, term)
+			if token==nil then break end
+			table.insert(terms, token)
+			term = {prioritize(node[i+1])}
+		else
+			table.insert(term, token)
+			table.insert(term, prioritize(node[i+1]))
+		end
+		i = i + 2
+	end
+	if #terms==1 then terms = terms[1] end
+	return terms
+end
+
+if _NAME=='test' then
+	expect('1', prioritize(maketree(tokenize("1"))))
+	expect('$1', prioritize(maketree(tokenize("$1"))))
+	expect('$A', prioritize(maketree(tokenize("$A"))))
+	expect({'1','+','2'}, prioritize(maketree(tokenize("1+2"))))
+	expect({'$A','-','1'}, prioritize(maketree(tokenize("$A-1"))))
+	expect({'$A','x','$B'}, prioritize(maketree(tokenize("$Ax$B"))))
+	expect({'1','/','2'}, prioritize(maketree(tokenize("1/2"))))
+	expect('$A', prioritize(maketree(tokenize("($A)"))))
+	expect({'$A','+','2'}, prioritize(maketree(tokenize("($A+2)"))))
+	expect({{'1','+','2'},'x','3'}, prioritize(maketree(tokenize("(1+2)x3"))))
+	expect({'1','+','2','+','3'}, prioritize(maketree(tokenize("1+2+3"))))
+	expect({'1','+',{'2','x','3'}}, prioritize(maketree(tokenize("1+2x3"))))
+	expect({'2','x','3','x','$4'}, prioritize(maketree(tokenize("2x3x$4"))))
+	expect({{{'1','+',{'2','x','3'}},'x','4'},'+',{'5','x','6'}}, prioritize(maketree(tokenize("(1+2x3)x4+5x6"))))
+end
+
 local ops = {
 	['+'] = 'addition',
 	['-'] = 'subtraction',
@@ -311,26 +413,25 @@ local function chain(exp)
 	return tree
 end
 
--- Lexical Elements
-local Integer = lpeg.R'09'^1
-local Number = (Integer^-1 * lpeg.S'.' * Integer^-1 + Integer) / tonumber
-local Variable = lpeg.S'$' * lpeg.C(lpeg.R('09','aw','yz','AW','YZ')^1)
-local Value = Number + Variable
-local TermOp = lpeg.C(lpeg.S'+-')
-local FactorOp = lpeg.C(lpeg.S'xX/')
-local Open = '('
-local Close = ')'
-
--- Grammar
-local Exp, Term, Factor = lpeg.V'Exp', lpeg.V'Term', lpeg.V'Factor'
-local G = lpeg.P{ Exp,
-  Exp = lpeg.Ct(Term * (TermOp * Term)^0) / chain,
-  Term = lpeg.Ct(Factor * (FactorOp * Factor)^0) / chain,
-  Factor = Value + Open * Exp * Close;
-}
+local function convert(node)
+	if type(node)=='table' then
+		for i,child in ipairs(node) do
+			node[i] = convert(child)
+		end
+		return chain(node)
+	elseif node:sub(1,1)=='$' then
+		return node:sub(2)
+	elseif ops[node] then
+		return node
+	else
+		return tonumber(node)
+	end
+end
 
 local function load_expression(str)
-	return assert(lpeg.match(G * -1, str), "'"..str.."' didn't match the expression grammar")
+	local tokens = tokenize(str)
+	local tree = prioritize(maketree(tokens))
+	return convert(tree)
 end
 
 if _NAME=='test' then
