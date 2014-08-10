@@ -441,7 +441,7 @@ function _M.rotate_aperture(aperture, angle, macros)
 		if angle % 90 ~= 0 and aperture.hole_height then
 			copy.shape = nil
 			copy.macro = {
-				name = aperture.name,
+				name = 'M'..aperture.name,
 				unit = aperture.unit,
 				script = {},
 			}
@@ -472,7 +472,7 @@ function _M.rotate_aperture(aperture, angle, macros)
 		if angle % 90 ~= 0 then
 			copy.shape = nil
 			copy.macro = {
-				name = aperture.name,
+				name = 'M'..aperture.name,
 				unit = aperture.unit,
 				script = {},
 			}
@@ -503,7 +503,7 @@ function _M.rotate_aperture(aperture, angle, macros)
 		if angle % 90 ~= 0 and (aperture.width ~= aperture.height or aperture.hole_height) then
 			copy.shape = nil
 			copy.macro = {
-				name = aperture.name,
+				name = 'M'..aperture.name,
 				unit = aperture.unit,
 				script = {},
 			}
@@ -574,7 +574,7 @@ function _M.rotate_aperture(aperture, angle, macros)
 		if angle % 90 ~= 0 and aperture.hole_height then
 			copy.shape = nil
 			copy.macro = {
-				name = aperture.name,
+				name = 'M'..aperture.name,
 				unit = aperture.unit,
 				script = {},
 			}
