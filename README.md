@@ -34,6 +34,8 @@ There are a few dependencies. The only mandatory dependency is [LuaFileSystem](h
 	luarocks install prtr-xml
 	luarocks install freetype
 
+There's one more optional dependency not available on LuaRocks, it's [lhf's lgpc](http://www.tecgraf.puc-rio.br/~lhf/ftp/lua/#lgpc). This is not required for panelization, only for an advanced function that most people will never use.
+
 If you're on Windows, and you don't have a working Lua installation, I recommend you download one of my [Gerber Viewer packages](http://piratery.net/grbv/downloads/). It contains Aperture Scripting, along with a full working set of compiled libraries, a Lua interpreter and Lua modules, including all the optional dependencies for Aperture Scripting. And as a bonus you get a 3D viewer for your generated PCBs files.
 
 # 4 - Manual
@@ -141,6 +143,8 @@ Merge the identical apertures within each image of the board. This can save sign
 Generate a `paths` field in each aperture used in the *board*.
 
 Most apertures are defined as ideal shapes (for example circles or rectangles). This function will generate a series of contours for each of these ideal shapes. These contours can be used for rasterization and rendering of the apertures. See the source code of [Gerber Viewer](http://piratery.net/grbv/) for more details on how to use these generated paths.
+
+Note that to generate paths for apertures using macros, you will need the [lgpc module from lhf](http://www.tecgraf.puc-rio.br/~lhf/ftp/lua/#lgpc).
 ## 4.3 - boards.extents module
 
 This module contain several functions to compute the extents of a board or its components. All extents are of type `region`, which is a table with fields `left`, `right`, `bottom` and `top`, virtual fields `width`, `height` `area` and `empty` and several operator overloads.

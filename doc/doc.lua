@@ -57,6 +57,8 @@ There are a few dependencies. The only mandatory dependency is [LuaFileSystem](h
 	luarocks install prtr-xml
 	luarocks install freetype
 
+There's one more optional dependency not available on LuaRocks, it's [lhf's lgpc](http://www.tecgraf.puc-rio.br/~lhf/ftp/lua/#lgpc). This is not required for panelization, only for an advanced function that most people will never use.
+
 If you're on Windows, and you don't have a working Lua installation, I recommend you download one of my [Gerber Viewer packages](http://piratery.net/grbv/downloads/). It contains Aperture Scripting, along with a full working set of compiled libraries, a Lua interpreter and Lua modules, including all the optional dependencies for Aperture Scripting. And as a bonus you get a 3D viewer for your generated PCBs files.
 ]])
 

@@ -549,6 +549,8 @@ end
 --- Generate a `paths` field in each aperture used in the *board*.
 --- 
 --- Most apertures are defined as ideal shapes (for example circles or rectangles). This function will generate a series of contours for each of these ideal shapes. These contours can be used for rasterization and rendering of the apertures. See the source code of [Gerber Viewer](http://piratery.net/grbv/) for more details on how to use these generated paths.
+--- 
+--- Note that to generate paths for apertures using macros, you will need the [lgpc module from lhf](http://www.tecgraf.puc-rio.br/~lhf/ftp/lua/#lgpc).
 function _M.generate_aperture_paths(board)
 	-- collect apertures
 	local apertures = {}
