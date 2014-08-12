@@ -276,11 +276,22 @@ local function save_expression(value)
 		tb = tb=='table' and b.type or tb
 		a = save_expression(a)
 		b = save_expression(b)
-		if value.type=='multiplication' or value.type=='division' then
+		if value.type=='multiplication' then
 			if ta=='addition' or ta=='subtraction' then
 				a = '('..a..')'
 			end
 			if tb=='addition' or tb=='subtraction' then
+				b = '('..b..')'
+			end
+		elseif value.type=='division' then
+			if ta=='addition' or ta=='subtraction' then
+				a = '('..a..')'
+			end
+			if tb~='number' and tb~='string' then
+				b = '('..b..')'
+			end
+		elseif value.type=='subtraction' then
+			if tb~='number' and tb~='string' then
 				b = '('..b..')'
 			end
 		end
@@ -289,6 +300,26 @@ local function save_expression(value)
 		error("unsupported expression type "..tostring(t))
 	end
 end
+
+if _NAME=='test' then
+	expect("1-2", save_expression({type='subtraction', 1e8, 2e8}))
+	expect("1-2+3", save_expression({type='addition', {type='subtraction', 1e8, 2e8}, 3e8}))
+	expect("1X(2+3)", save_expression({type='multiplication', 1e8, {type='addition', 2e8, 3e8}}))
+	expect("1-(2+3)", save_expression({type='subtraction', 1e8, {type='addition', 2e8, 3e8}}))
+	expect("1/(2X3)", save_expression({type='division', 1e8, {type='multiplication', 2e8, 3e8}}))
+	expect("1/(2/3)", save_expression({type='division', 1e8, {type='division', 2e8, 3e8}}))
+	expect("1-2-3", save_expression({type='subtraction', {type='subtraction', 1e8, 2e8}, 3e8}))
+	expect("1/2/3", save_expression({type='division', {type='division', 1e8, 2e8}, 3e8}))
+	expect("(1+2)/3", save_expression({type='division', {type='addition', 1e8, 2e8}, 3e8}))
+end
+
+local ops = {
+	['+'] = 'addition',
+	['-'] = 'subtraction',
+	['x'] = 'multiplication',
+	['X'] = 'multiplication',
+	['/'] = 'division',
+}
 
 local function tokenize(str)
 	local tokens = {}
@@ -300,6 +331,22 @@ local function tokenize(str)
 	end
 	assert(tokens[#tokens]=='\0')
 	tokens[#tokens] = nil
+	
+	-- special handling for (invalid) negative numbers
+	local i = 1
+	while i < #tokens do
+		local a,b = tokens[i-1],tokens[i]
+		if b=='-' and (i==1 or ops[a] or a=='(') then
+			assert(not ops[tokens[i+1]], "an operator directly follows a minus sign in a macro expression")
+			table.insert(tokens, i, '(')
+			table.insert(tokens, i+1, '0')
+			table.insert(tokens, i+4, ')')
+			i = i + 5
+		else
+			i = i + 1
+		end
+	end
+	
 	return tokens
 end
 
@@ -317,6 +364,13 @@ if _NAME=='test' then
 	expect({'1','+','2','+','3'}, tokenize("1+2+3"))
 	expect({'1','+','2','x','3'}, tokenize("1+2x3"))
 	expect({'2','x','3','x','$4'}, tokenize("2x3x$4"))
+	expect({'(','0','-','1',')'}, tokenize("-1"))
+	expect({'(','0','-','$1',')'}, tokenize("-$1"))
+	expect({'(','0','-','1',')','x','2'}, tokenize("-1x2"))
+	expect({'(','0','-','$1',')','x','2'}, tokenize("-$1x2"))
+	expect({'1','x','(','0','-','2',')'}, tokenize("1x-2"))
+	expect({'$1','x','(','0','-','2',')'}, tokenize("$1x-2"))
+	expect({'(','0','-','1',')','-','(','0','-','2',')','-','(','0','-','3',')','-','(','0','-','4',')'}, tokenize("-1--2--3--4"))
 end
 
 local function maketree(tokens)
@@ -393,14 +447,10 @@ if _NAME=='test' then
 	expect({{{'1','+',{'2','x','3'}},'x','4'},'+',{'5','x','6'}}, prioritize(maketree(tokenize("(1+2x3)x4+5x6"))))
 end
 
-local ops = {
-	['+'] = 'addition',
-	['-'] = 'subtraction',
-	['x'] = 'multiplication',
-	['X'] = 'multiplication',
-	['/'] = 'division',
-}
 local function chain(exp)
+	if not (#exp % 2 == 1) then
+		print(">", table.unpack(exp))
+	end
 	assert(#exp % 2 == 1)
 	local tree = exp[1]
 	for i=2,#exp,2 do
@@ -514,6 +564,9 @@ if _NAME=='test' then
 	expect("1+2+3", save_expression(load_expression("1+2+3")))
 	expect("1+2X3", save_expression(load_expression("1+2x3")))
 	expect("2X3X$4", save_expression(load_expression("2x3x$4")))
+	expect("1-(2-3)", save_expression(load_expression("1-(2-3)")))
+	expect("0-1-(0-2)-(0-3)-(0-4)", save_expression(load_expression("-1--2--3--4")))
+	expect("(0-1)X(0-2)X(0-3)X(0-4)", save_expression(load_expression("-1x-2x-3x-4")))
 end
 
 ------------------------------------------------------------------------------
