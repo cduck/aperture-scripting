@@ -170,58 +170,92 @@ local function rotate_xy_expressions(px, py, angle)
 	if angle==0 then
 		return px,py
 	elseif angle==90 then
-		return {type='subtraction', 0, py},px
+		local rx --= -py
+		if py.type=='constant' and py.value==0 then
+			rx = py
+		elseif py.type=='subtraction' and py[1].type=='constant' and py[1].value==0 then
+			rx = py[2]
+		else
+			rx = {type='subtraction', {type='constant', value=0, dimension={length=1}}, py}
+		end
+		local ry = px
+		return rx,ry
 	elseif angle==180 then
-		return {type='subtraction', 0, px},{type='subtraction', 0, py}
+		local rx,ry --= -px,-py
+		if px.type=='constant' and px.value==0 then
+			rx = px
+		elseif px.type=='subtraction' and px[1].type=='constant' and px[1].value==0 then
+			rx = px[2]
+		else
+			rx = {type='subtraction', {type='constant', value=0, dimension={length=1}}, px}
+		end
+		if py.type=='constant' and py.value==0 then
+			ry = py
+		elseif py.type=='subtraction' and py[1].type=='constant' and py[1].value==0 then
+			ry = py[2]
+		else
+			ry = {type='subtraction', {type='constant', value=0, dimension={length=1}}, py}
+		end
+		return rx,ry
 	elseif angle==270 then
-		return py,{type='subtraction', 0, px}
+		local rx = py
+		local ry --= -px
+		if px.type=='constant' and px.value==0 then
+			ry = px
+		elseif px.type=='subtraction' and px[1].type=='constant' and px[1].value==0 then
+			ry = px[2]
+		else
+			ry = {type='subtraction', {type='constant', value=0, dimension={length=1}}, px}
+		end
+		return rx,ry
 	else
-		local a = math.rad(angle)
-		local c,s = math.cos(a),math.sin(a)
-		local x = '('..px..')x'..c..'-('..py..')x'..s
-		local y = '('..px..')x'..s..'+('..py..')x'..c
-		return x,y
+		if px.type=='constant' then
+			px = px.value
+		elseif px.type=='subtraction' and px[1].type=='constant' and px[1].value==0 and px[2].type=='constant' then
+			px = -px[2].value
+		end
+		if py.type=='constant' then
+			py = py.value
+		elseif py.type=='subtraction' and py[1].type=='constant' and py[1].value==0 and py[2].type=='constant' then
+			py = -py[2].value
+		end
+		if px and py then
+			local a = math.rad(angle)
+			local c,s = math.cos(a),math.sin(a)
+			local x = px * c - py * s
+			local y = px * s + py * c
+			if x < 0 then
+				x = {type='subtraction', {type='constant', value=0, dimension={length=1}}, {type='constant', value=-x, dimension={length=1}}}
+			else
+				x = {type='constant', value=x, dimension={length=1}}
+			end
+			if y < 0 then
+				y = {type='subtraction', {type='constant', value=0, dimension={length=1}}, {type='constant', value=-y, dimension={length=1}}}
+			else
+				y = {type='constant', value=y, dimension={length=1}}
+			end
+			return x,y
+		else
+			error("arbitrary macro rotation not yet supported")
+		end
 	end
 end
 
 local function rotate_xy_parameters(x, y, angle)
-	if type(x)=='number' and type(y)=='number' then
-		return rotate_xy(x, y, angle)
-	else
-		-- :TODO: pass the macro down here to generate unique variable names
-		local ix,iy
-		if type(x)=='string' then
-			ix = {
-				type = 'variable',
-				name = 'TMPI',
-				value = x,
-			}
-			x = 'TMPI'
-		end
-		if type(y)=='string' then
-			iy = {
-				type = 'variable',
-				name = 'TMPJ',
-				value = y,
-			}
-			y = 'TMPJ'
-		end
-		x,y = rotate_xy_expressions(x, y, angle)
-		return x,y,ix,iy
-	end
+	return rotate_xy_expressions(x, y, angle)
 end
 
 local function rotate_angle_parameter(value, angle)
-	local t = type(value)
-	if t=='number' then
-		return (value + angle) % 360
-	elseif t=='string' then
+	local t = assert(type(value)=='table' and value.type)
+	if t=='constant' then
+		return {type='constant', value=(value.value + angle) % 360, dimension={angle=1}}
+	elseif t=='variable' then
 		if angle==0 then
 			return value
 		elseif angle < 0 then
-			return value..'-'..-angle
+			return {type='subtraction', value, {type='constant', value=-angle, dimension={angle=1}}}
 		else
-			return value..'+'..angle
+			return {type='addition', value, {type='constant', value=angle, dimension={angle=1}}}
 		end
 	else
 		error("unsupported parameter type "..t)
@@ -235,9 +269,8 @@ function macro_primitives.circle(parameters, angle)
 	for i,param in ipairs(parameters) do
 		copy[i] = param
 	end
-	local ix,iy
-	copy[3],copy[4],ix,iy = rotate_xy_parameters(parameters[3], parameters[4], angle)
-	return copy,ix,iy
+	copy[3],copy[4] = rotate_xy_parameters(parameters[3], parameters[4], angle)
+	return copy
 end
 
 function macro_primitives.line(parameters, angle)
@@ -282,16 +315,15 @@ function macro_primitives.polygon(parameters, angle)
 	for i,param in ipairs(parameters) do
 		copy[i] = param
 	end
-	local ix,iy
-	if parameters[3]==0 and parameters[4]==0 then
+	if parameters[3].type=='constant' and parameters[3].value==0 and parameters[4].type=='constant' and parameters[4].value==0 then
 		copy[6] = rotate_angle_parameter(parameters[6], angle)
-	elseif (angle * parameters[2]) % 360 == 0 then
-		copy[3],copy[4],ix,iy = rotate_xy_parameters(parameters[3], parameters[4], angle)
+	elseif parameters[2].type=='constant' and (angle * parameters[2].value) % 360 == 0 then
+		copy[3],copy[4] = rotate_xy_parameters(parameters[3], parameters[4], angle)
 	else
-		error("arbitrary rotation of non-centered polygon is not supported")
+		error("arbitrary rotation of an offset polygon primitive is not yet supported")
 		-- :TODO: convert to an outline
 	end
-	return copy,ix,iy
+	return copy
 end
 
 function macro_primitives.moire(parameters, angle)
@@ -299,16 +331,15 @@ function macro_primitives.moire(parameters, angle)
 	for i,param in ipairs(parameters) do
 		copy[i] = param
 	end
-	local ix,iy
-	if parameters[1]==0 and parameters[2]==0 then
+	if parameters[1].type=='constant' and parameters[1].value==0 and parameters[2].type=='constant' and parameters[2].value==0 then
 		copy[9] = rotate_angle_parameter(parameters[9], angle)
 	elseif angle % 90 == 0 then
-		copy[1],copy[2],ix,iy = rotate_xy_parameters(parameters[1], parameters[2], angle)
+		copy[1],copy[2] = rotate_xy_parameters(parameters[1], parameters[2], angle)
 	else
-		error("arbitrary rotation of non-centered moiré is not supported")
+		error("arbitrary rotation of an offset moiré primitive is not yet supported")
 		-- :TODO: find some way to rotate these
 	end
-	return copy,ix,iy
+	return copy
 end
 
 function macro_primitives.thermal(parameters, angle)
@@ -316,24 +347,37 @@ function macro_primitives.thermal(parameters, angle)
 	for i,param in ipairs(parameters) do
 		copy[i] = param
 	end
-	local ix,iy
-	if parameters[1]==0 and parameters[2]==0 then
+	if parameters[1].type=='constant' and parameters[1].value==0 and parameters[2].type=='constant' and parameters[2].value==0 then
 		copy[6] = rotate_angle_parameter(parameters[6], angle)
 	elseif angle % 90 == 0 then
-		copy[1],copy[2],ix,iy = rotate_xy_parameters(parameters[1], parameters[2], angle)
+		copy[1],copy[2] = rotate_xy_parameters(parameters[1], parameters[2], angle)
 	else
-		error("arbitrary rotation of non-centered thermal is not supported")
+		error("arbitrary rotation of an offset thermal primitive is not yet supported")
 		-- :TODO: find some way to rotate these
 	end
-	return copy,ix,iy
+	return copy
 end
 
 local function rotate_macro_primitive(instruction, angle)
 	local shape = instruction.shape
 	local parameters = instruction.parameters
-	if shape=='polygon' and parameters[3]~=0 and parameters[4]~=0 and (angle * parameters[2]) % 360 ~= 0 then
-		local exposure,vertices,x,y,d,rotation = table.unpack(parameters)
+	if shape=='polygon'
+		and parameters[1].type=='constant'
+		and parameters[2].type=='constant'
+		and parameters[3].type=='constant'
+		and parameters[4].type=='constant'
+		and parameters[5].type=='constant'
+		and parameters[6].type=='constant'
+		and (parameters[3].value~=0 or parameters[4].value~=0)
+		and (angle * parameters[2].value) % 360 ~= 0
+	then
 		-- convert polygon to outline
+		local exposure = parameters[1]
+		local vertices = parameters[2]
+		local x = parameters[3].value
+		local y = parameters[4].value
+		local d = parameters[5].value
+		local rotation = parameters[6].value
 		local outline = {
 			type = instruction.type,
 			shape = 'outline',
@@ -342,15 +386,16 @@ local function rotate_macro_primitive(instruction, angle)
 				vertices, -- outline has an extra point, but it's not counted here
 			},
 		}
+		vertices = vertices.value
 		local r = d / 2
 		for i=0,vertices do
 			-- :KLUDGE: we force last vertex on the first, since sin(x) is not always equal to sin(x+2*pi)
 			if i==vertices then i = 0 end
 			local a = math.pi * 2 * (i / vertices)
-			table.insert(outline.parameters, x + r * math.cos(a))
-			table.insert(outline.parameters, y + r * math.sin(a))
+			table.insert(outline.parameters, {type='constant', value=x + r * math.cos(a), dimension={length=1}})
+			table.insert(outline.parameters, {type='constant', value=y + r * math.sin(a), dimension={length=1}})
 		end
-		table.insert(outline.parameters, (rotation + angle) % 360)
+		table.insert(outline.parameters, {type='constant', value=(rotation + angle) % 360, dimension={angle=1}})
 		return outline
 	else
 		local copy = {
@@ -358,9 +403,8 @@ local function rotate_macro_primitive(instruction, angle)
 			shape = shape,
 		}
 		local rotate = assert(macro_primitives[shape], "unsupported aperture macro primitive shape "..tostring(shape))
-		local ix,iy
-		copy.parameters,ix,iy = rotate(parameters, angle)
-		return copy,ix,iy
+		copy.parameters = rotate(parameters, angle)
+		return copy
 	end
 end
 
@@ -383,14 +427,7 @@ function _M.rotate_macro(macro, angle)
 				value = instruction.value,
 			})
 		elseif instruction.type=='primitive' then
-			local primitive,ix,iy = rotate_macro_primitive(instruction, angle)
-			if ix then
-				table.insert(copy.script, ix)
-			end
-			if iy then
-				table.insert(copy.script, iy)
-			end
-			table.insert(copy.script, primitive)
+			table.insert(copy.script, rotate_macro_primitive(instruction, angle))
 		else
 			error("unsupported macro instruction type "..tostring(instruction.type))
 		end
@@ -448,22 +485,26 @@ function _M.rotate_aperture(aperture, angle, macros)
 			table.insert(copy.macro.script, {
 				type = 'primitive',
 				shape = 'circle',
-				parameters = { 1, aperture.diameter, 0, 0 },
+				parameters = {
+					{type='constant', value=1, dimension={boolean=1}},
+					{type='constant', value=aperture.diameter, dimension={length=1}},
+					{type='constant', value=0, dimension={length=1}},
+					{type='constant', value=0, dimension={length=1}},
+				},
 			})
-			if aperture.hole_height then
-				assert(aperture.hole_width)
-				table.insert(copy.macro.script, {
-					type = 'primitive',
-					shape = 'rectangle_center',
-					parameters = { 0, aperture.hole_width, aperture.hole_height, 0, 0, angle },
-				})
-			elseif aperture.hole_width then
-				table.insert(copy.macro.script, {
-					type = 'primitive',
-					shape = 'circle',
-					parameters = { 0, aperture.hole_width, 0, 0 },
-				})
-			end
+			assert(aperture.hole_width)
+			table.insert(copy.macro.script, {
+				type = 'primitive',
+				shape = 'rectangle_center',
+				parameters = {
+					{type='constant', value=0, dimension={boolean=1}},
+					{type='constant', value=aperture.hole_width, dimension={length=1}},
+					{type='constant', value=aperture.hole_height, dimension={length=1}},
+					{type='constant', value=0, dimension={length=1}},
+					{type='constant', value=0, dimension={length=1}},
+					{type='constant', value=angle, dimension={angle=1}},
+				},
+			})
 		else
 			copy.diameter = aperture.diameter
 			copy.hole_width,copy.hole_height = rotate_aperture_hole(aperture.hole_width, aperture.hole_height, angle)
@@ -479,20 +520,39 @@ function _M.rotate_aperture(aperture, angle, macros)
 			table.insert(copy.macro.script, {
 				type = 'primitive',
 				shape = 'rectangle_center',
-				parameters = { 1, aperture.width, aperture.height, 0, 0, angle },
+				parameters = {
+					{type='constant', value=1, dimension={boolean=1}},
+					{type='constant', value=aperture.width, dimension={length=1}},
+					{type='constant', value=aperture.height, dimension={length=1}},
+					{type='constant', value=0, dimension={length=1}},
+					{type='constant', value=0, dimension={length=1}},
+					{type='constant', value=angle, dimension={angle=1}},
+				},
 			})
 			if aperture.hole_height then
 				assert(aperture.hole_width)
 				table.insert(copy.macro.script, {
 					type = 'primitive',
 					shape = 'rectangle_center',
-					parameters = { 0, aperture.hole_width, aperture.hole_height, 0, 0, angle },
+					parameters = {
+						{type='constant', value=0, dimension={boolean=1}},
+						{type='constant', value=aperture.hole_width, dimension={length=1}},
+						{type='constant', value=aperture.hole_height, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+						{type='constant', value=angle, dimension={angle=1}},
+					},
 				})
 			elseif aperture.hole_width then
 				table.insert(copy.macro.script, {
 					type = 'primitive',
 					shape = 'circle',
-					parameters = { 0, aperture.hole_width, 0, 0 },
+					parameters = {
+						{type='constant', value=0, dimension={boolean=1}},
+						{type='constant', value=aperture.hole_width, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+					},
 				})
 			end
 		else
@@ -500,7 +560,12 @@ function _M.rotate_aperture(aperture, angle, macros)
 			copy.hole_width,copy.hole_height = rotate_aperture_hole(aperture.hole_width, aperture.hole_height, angle)
 		end
 	elseif aperture.shape=='obround' then
-		if angle % 90 ~= 0 and (aperture.width ~= aperture.height or aperture.hole_height) then
+		if angle % 90 ~= 0 and aperture.width == aperture.height and not aperture.hole_height then
+			-- special case, convert to circle
+			copy.shape = 'circle'
+			copy.diameter = aperture.width
+			copy.hole_width = aperture.hole_width
+		elseif angle % 90 ~= 0 then
 			copy.shape = nil
 			copy.macro = {
 				name = 'M'..aperture.name,
@@ -511,45 +576,108 @@ function _M.rotate_aperture(aperture, angle, macros)
 				table.insert(copy.macro.script, {
 					type = 'primitive',
 					shape = 'circle',
-					parameters = { 1, aperture.width, 0, 0 },
+					parameters = {
+						{type='constant', value=1, dimension={boolean=1}},
+						{type='constant', value=aperture.width, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+					},
 				})
 			elseif aperture.width < aperture.height then
 				local flat = aperture.height - aperture.width
 				table.insert(copy.macro.script, {
 					type = 'primitive',
 					shape = 'rectangle_center',
-					parameters = { 1, aperture.width, flat, 0, 0, angle },
+					parameters = {
+						{type='constant', value=1, dimension={boolean=1}},
+						{type='constant', value=aperture.width, dimension={length=1}},
+						{type='constant', value=flat, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+						{type='constant', value=angle, dimension={angle=1}},
+					},
 				})
 				local dx,dy = 0,flat / 2
 				dx,dy = rotate_xy(dx, dy, angle)
+				dx = {type='constant', value=-dx, dimension={length=1}}
+				dy = {type='constant', value=-dy, dimension={length=1}}
+				local mdx = {type='subtraction', {type='constant', value=0, dimension={length=1}}, dx}
+				local mdy = {type='subtraction', {type='constant', value=0, dimension={length=1}}, dy}
+				if dx.value < 0 then
+					dx.value = -dx.value
+					dx,mdx = mdx,dx
+				end
+				if dy.value < 0 then
+					dy.value = -dy.value
+					dy,mdy = mdy,dy
+				end
 				table.insert(copy.macro.script, {
 					type = 'primitive',
 					shape = 'circle',
-					parameters = { 1, aperture.width, -dx, -dy },
+					parameters = {
+						{type='constant', value=1, dimension={boolean=1}},
+						{type='constant', value=aperture.width, dimension={length=1}},
+						mdx,
+						mdy,
+					},
 				})
 				table.insert(copy.macro.script, {
 					type = 'primitive',
 					shape = 'circle',
-					parameters = { 1, aperture.width, dx, dy },
+					parameters = {
+						{type='constant', value=1, dimension={boolean=1}},
+						{type='constant', value=aperture.width, dimension={length=1}},
+						dx,
+						dy,
+					},
 				})
 			else
 				local flat = aperture.width - aperture.height
 				table.insert(copy.macro.script, {
 					type = 'primitive',
 					shape = 'rectangle_center',
-					parameters = { 1, flat, aperture.height, 0, 0, angle },
+					parameters = {
+						{type='constant', value=1, dimension={boolean=1}},
+						{type='constant', value=flat, dimension={length=1}},
+						{type='constant', value=aperture.height, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+						{type='constant', value=angle, dimension={angle=1}},
+					},
 				})
 				local dx,dy = flat / 2,0
 				dx,dy = rotate_xy(dx, dy, angle)
+				dx = {type='constant', value=-dx, dimension={length=1}}
+				dy = {type='constant', value=-dy, dimension={length=1}}
+				local mdx = {type='subtraction', {type='constant', value=0, dimension={length=1}}, dx}
+				local mdy = {type='subtraction', {type='constant', value=0, dimension={length=1}}, dy}
+				if dx.value < 0 then
+					dx.value = -dx.value
+					dx,mdx = mdx,dx
+				end
+				if dy.value < 0 then
+					dy.value = -dy.value
+					dy,mdy = mdy,dy
+				end
 				table.insert(copy.macro.script, {
 					type = 'primitive',
 					shape = 'circle',
-					parameters = { 1, aperture.height, -dx, -dy },
+					parameters = {
+						{type='constant', value=1, dimension={boolean=1}},
+						{type='constant', value=aperture.height, dimension={length=1}},
+						mdx,
+						mdy,
+					},
 				})
 				table.insert(copy.macro.script, {
 					type = 'primitive',
 					shape = 'circle',
-					parameters = { 1, aperture.height, dx, dy },
+					parameters = {
+						{type='constant', value=1, dimension={boolean=1}},
+						{type='constant', value=aperture.height, dimension={length=1}},
+						dx,
+						dy,
+					},
 				})
 			end
 			if aperture.hole_height then
@@ -557,13 +685,25 @@ function _M.rotate_aperture(aperture, angle, macros)
 				table.insert(copy.macro.script, {
 					type = 'primitive',
 					shape = 'rectangle_center',
-					parameters = { 0, aperture.hole_width, aperture.hole_height, 0, 0, angle },
+					parameters = {
+						{type='constant', value=0, dimension={boolean=1}},
+						{type='constant', value=aperture.hole_width, dimension={length=1}},
+						{type='constant', value=aperture.hole_height, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+						{type='constant', value=angle, dimension={angle=1}},
+					},
 				})
 			elseif aperture.hole_width then
 				table.insert(copy.macro.script, {
 					type = 'primitive',
 					shape = 'circle',
-					parameters = { 0, aperture.hole_width, 0, 0 },
+					parameters = {
+						{type='constant', value=0, dimension={boolean=1}},
+						{type='constant', value=aperture.hole_width, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+						{type='constant', value=0, dimension={length=1}},
+					},
 				})
 			end
 		else
@@ -581,22 +721,28 @@ function _M.rotate_aperture(aperture, angle, macros)
 			table.insert(copy.macro.script, {
 				type = 'primitive',
 				shape = 'polygon',
-				parameters = { 1, aperture.steps, 0, 0, aperture.diameter, angle },
+				parameters = {
+					{type='constant', value=1, dimension={boolean=1}},
+					{type='constant', value=aperture.steps, dimension={}},
+					{type='constant', value=0, dimension={length=1}},
+					{type='constant', value=0, dimension={length=1}},
+					{type='constant', value=aperture.diameter, dimension={length=1}},
+					{type='constant', value=(aperture.angle or 0) + angle, dimension={angle=1}},
+				},
 			})
-			if aperture.hole_height then
-				assert(aperture.hole_width)
-				table.insert(copy.macro.script, {
-					type = 'primitive',
-					shape = 'rectangle_center',
-					parameters = { 0, aperture.hole_width, aperture.hole_height, 0, 0, angle },
-				})
-			elseif aperture.hole_width then
-				table.insert(copy.macro.script, {
-					type = 'primitive',
-					shape = 'circle',
-					parameters = { 0, aperture.hole_width, 0, 0 },
-				})
-			end
+			assert(aperture.hole_width)
+			table.insert(copy.macro.script, {
+				type = 'primitive',
+				shape = 'rectangle_center',
+				parameters = {
+					{type='constant', value=0, dimension={boolean=1}},
+					{type='constant', value=aperture.hole_width, dimension={length=1}},
+					{type='constant', value=aperture.hole_height, dimension={length=1}},
+					{type='constant', value=0, dimension={length=1}},
+					{type='constant', value=0, dimension={length=1}},
+					{type='constant', value=angle, dimension={angle=1}},
+				},
+			})
 		else
 			copy.diameter = aperture.diameter
 			copy.steps = aperture.steps

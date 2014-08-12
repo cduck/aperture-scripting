@@ -130,6 +130,8 @@ function _M.generate_aperture_paths(aperture, board_unit, circle_steps)
 		local hole = generate_aperture_hole(hx, hy, scale, circle_steps)
 		paths = { path, hole }
 	elseif aperture.macro then
+		local scale_name = aperture.macro.unit..'_'..board_unit
+		local scale = assert(aperture_scales[scale_name], "unsupported aperture scale "..scale_name)
 		local chunk = macro.compile(aperture.macro, circle_steps)
 		local data = chunk(unpack(aperture.parameters or {}))
 		paths = {}

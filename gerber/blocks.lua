@@ -265,7 +265,7 @@ local ops = {
 local function save_expression(value)
 	local t = type(value)
 	if t=='number' then
-		return tostring(value)
+		return save_aperture_parameter(value)
 	elseif t=='string' then
 		return '$'..value
 	elseif t=='table' then
@@ -424,7 +424,7 @@ local function convert(node)
 	elseif ops[node] then
 		return node
 	else
-		return tonumber(node)
+		return load_aperture_parameter(node)
 	end
 end
 
@@ -435,18 +435,18 @@ local function load_expression(str)
 end
 
 if _NAME=='test' then
-	expect(1, load_expression("1"))
+	expect(100000000, load_expression("1"))
 	expect("1", load_expression("$1"))
 	expect("A", load_expression("$A"))
 	expect({
 		type = 'addition',
-		1,
-		2,
+		100000000,
+		200000000,
 	}, load_expression("1+2"))
 	expect({
 		type = 'subtraction',
 		"A",
-		1,
+		100000000,
 	}, load_expression("$A-1"))
 	expect({
 		type = 'multiplication',
@@ -455,48 +455,48 @@ if _NAME=='test' then
 	}, load_expression("$Ax$B"))
 	expect({
 		type = 'division',
-		1,
-		2,
+		100000000,
+		200000000,
 	}, load_expression("1/2"))
 	expect("A", load_expression("($A)"))
 	expect({
 		type = 'addition',
 		"A",
-		2,
+		200000000,
 	}, load_expression("($A+2)"))
 	expect({
 		type = 'multiplication',
 		{
 			type = 'addition',
-			1,
-			2,
+			100000000,
+			200000000,
 		},
-		3,
+		300000000,
 	}, load_expression("(1+2)x3"))
 	expect({
 		type = 'addition',
 		{
 			type = 'addition',
-			1,
-			2,
+			100000000,
+			200000000,
 		},
-		3,
+		300000000,
 	}, load_expression("1+2+3"))
 	expect({
 		type = 'addition',
-		1,
+		100000000,
 		{
 			type = 'multiplication',
-			2,
-			3,
+			200000000,
+			300000000,
 		},
 	}, load_expression("1+2x3"))
 	expect({
 		type = 'multiplication',
 		{
 			type = 'multiplication',
-			2,
-			3,
+			200000000,
+			300000000,
 		},
 		"4",
 	}, load_expression("2x3x$4"))

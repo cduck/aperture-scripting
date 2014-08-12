@@ -411,24 +411,24 @@ local ops = {
 	division = '/',
 }
 
-local function compile_expression(value)
-	local t = type(value)
-	if t=='number' then
-		return value
-	elseif t=='string' then
-		if not value:match('^%d+$') then
-			value = "'"..value.."'"
+local function compile_expression(expression)
+	local t = assert(type(expression)=='table' and expression.type)
+	if t=='constant' then
+		return expression.value
+	elseif t=='variable' then
+		local name = expression.name
+		if not name:match('^%d+$') then
+			name = "'"..name.."'"
 		end
-		return "_VARS["..value.."]"
-	elseif t=='table' then
-		assert(value.type)
-		local a,b = value[1],value[2]
+		return "_VARS["..name.."]"
+	else--if t=='table' then
+		local a,b = expression[1],expression[2]
 		local ta,tb = type(a),type(b)
 		ta = ta=='table' and a.type or ta
 		tb = tb=='table' and b.type or tb
 		a = compile_expression(a)
 		b = compile_expression(b)
-		if value.type=='multiplication' or value.type=='division' then
+		if t=='multiplication' or t=='division' then
 			if ta=='addition' or ta=='subtraction' then
 				a = '('..a..')'
 			end
@@ -436,7 +436,7 @@ local function compile_expression(value)
 				b = '('..b..')'
 			end
 		end
-		return a..assert(ops[value.type])..b
+		return a..assert(ops[t])..b
 	end
 end
 _M.compile_expression = compile_expression
@@ -444,13 +444,13 @@ _M.compile_expression = compile_expression
 if _NAME=='test' then
 	expect("1.08239*_VARS[1]", compile_expression({
 		type = 'multiplication',
-		1.08239,
-		"1",
+		{type='constant', value=1.08239},
+		{type='variable', name="1"},
 	}))
 	expect("_VARS['Y']*2", compile_expression({
 		type = 'multiplication',
-		"Y",
-		2,
+		{type='variable', name="Y"},
+		{type='constant', value=2},
 	}))
 end
 
@@ -555,5 +555,283 @@ function _M.compile(macro, circle_steps)
 	end
 	return chunk
 end
+
+------------------------------------------------------------------------------
+
+local function analyze_expression(expression, variables)
+	local t = type(expression)
+	if t=='number' then
+		return {type='constant', value=expression}
+	elseif t=='string' then
+		if expression:match('^%d+') then
+			local index = tonumber(expression)
+			local variable = variables[index]
+			if not variable then
+				variable = {type='variable', name=index}
+				variables[index] = variable
+			end
+			return variable
+		else
+			return assert(variables[expression], "variable "..tostring(expression).." is used before being defined")
+		end
+	elseif t=='table' then
+		local type = assert(expression.type)
+		assert(#expression==2, "expression of type "..tostring(type).." has "..#expression.." operands")
+		return {type=type, analyze_expression(expression[1], variables), analyze_expression(expression[2], variables)}
+	else
+		error("unexpected expression type "..t)
+	end
+end
+
+local function expand_script(script)
+	local script2 = {}
+	local variables = {}
+	for _,instruction in ipairs(script) do
+		if instruction.type=='comment' then
+			table.insert(script2, instruction)
+		elseif instruction.type=='variable' then
+			local name = instruction.name
+			if name:match('^%d+$') then
+				name = tonumber(name)
+			end
+			local variable = {
+				type = 'variable',
+				name = name,
+				value = analyze_expression(instruction.value, variables),
+			}
+			table.insert(script2, variable)
+			variables[name] = variable
+		elseif instruction.type=='primitive' then
+			local instruction2 = {
+				type = 'primitive',
+				shape = instruction.shape,
+				parameters = {},
+			}
+			for i,expression in ipairs(instruction.parameters) do
+				instruction2.parameters[i] = analyze_expression(expression, variables)
+			end
+			table.insert(script2, instruction2)
+		else
+			error("unsupported macro instruction type "..tostring(instruction.type))
+		end
+	end
+	return script2
+end
+
+local primitive_dimensions = {}
+
+primitive_dimensions.circle = {{boolean=1}, {length=1}, {length=1}, {length=1}}
+primitive_dimensions.line = {{boolean=1}, {length=1}, {length=1}, {length=1}, {length=1}, {length=1}, {angle=1}}
+primitive_dimensions.rectangle_ends = primitive_dimensions.line
+primitive_dimensions.rectangle_center = {{boolean=1}, {length=1}, {length=1}, {length=1}, {length=1}, {angle=1}}
+primitive_dimensions.rectangle_corner = {{boolean=1}, {length=1}, {length=1}, {length=1}, {length=1}, {angle=1}}
+primitive_dimensions.polygon = {{boolean=1}, {}, {length=1}, {length=1}, {length=1}, {angle=1}}
+primitive_dimensions.moire = {{length=1}, {length=1}, {length=1}, {length=1}, {length=1}, {length=1}, {length=1}, {length=1}, {angle=1}}
+primitive_dimensions.thermal = {{length=1}, {length=1}, {length=1}, {length=1}, {length=1}, {angle=1}}
+
+-- special case
+function primitive_dimensions.outline(exposure, npoints, x, y, ...)
+	local dimensions = {{boolean=1}, {}, {length=1}, {length=1}}
+	for i=1,select('#', ...)-1 do
+		table.insert(dimensions, {length=1})
+	end
+	table.insert(dimensions, {angle=1})
+	return dimensions
+end
+
+local function apply_constraint(expression, dimension)
+	local t = expression.type
+	if t=='constant' then
+		expression.dimension = dimension
+	elseif t=='variable' then
+		expression.dimension = dimension
+	elseif t=='addition' or t=='subtraction' then
+		-- to add things, both must be of the same dimension
+		apply_constraint(expression[1], dimension, open)
+		apply_constraint(expression[2], dimension, open)
+	elseif t=='multiplication' or t=='division' then
+		-- :TODO: use partial/relative dimensions
+	else
+		error("unsupported expression type "..tostring(t))
+	end
+end
+
+local function collect_values(expression, variables, constants)
+	local t = expression.type
+	if t=='constant' then
+		constants[expression] = true
+	elseif t=='variable' then
+		variables[expression] = true
+	elseif t=='addition' or t=='subtraction' or t=='multiplication' or t=='division' then
+		assert(#expression==2)
+		collect_values(expression[1], variables, constants)
+		collect_values(expression[2], variables, constants)
+	else
+		error("unsupported expression type "..tostring(t))
+	end
+end
+
+function _M.analyze_script(script)
+	script = expand_script(script)
+	-- apply known dimensions
+	for i=#script,1,-1 do
+		local instruction = script[i]
+		if instruction.type=='comment' then
+			-- ignore
+		elseif instruction.type=='variable' then
+			if instruction.dimension then
+				apply_constraint(instruction.value, instruction.dimension)
+			end
+		elseif instruction.type=='primitive' then
+			local instruction2 = {
+				type = 'primitive',
+				shape = instruction.shape,
+				parameters = {},
+			}
+			local dimensions = assert(primitive_dimensions[instruction.shape], "no dimension for primitive shape "..tostring(instruction.shape))
+			if type(dimensions)=='function' then
+				dimensions = dimensions(table.unpack(instruction.parameters))
+			end
+			for i,expression in ipairs(instruction.parameters) do
+				apply_constraint(expression, dimensions[i])
+			end
+		end
+	end
+	-- collect variables and constants
+	local variables = {}
+	local constants = {}
+	for _,instruction in ipairs(script) do
+		if instruction.type=='comment' then
+			-- ignore
+		elseif instruction.type=='variable' then
+			variables[instruction] = true
+			collect_values(instruction.value, variables, constants)
+		elseif instruction.type=='primitive' then
+			for _,expression in ipairs(instruction.parameters) do
+				collect_values(expression, variables, constants)
+			end
+		end
+	end
+	return script,variables,constants
+end
+
+local function copy_expression(expression, value_map)
+	local t = expression.type
+	if t=='constant' or t=='variable' then
+		local copy = value_map[expression]
+		if not copy then
+			copy = {
+				type = t,
+				name = expression.name,
+				value = expression.value,
+				dimension = expression.dimension,
+				unit = expression.unit,
+			}
+			value_map[expression] = copy
+		end
+		return copy
+	else
+		return {
+			type = t,
+			copy_expression(expression[1], value_map),
+			copy_expression(expression[2], value_map),
+		}
+	end
+end
+
+function _M.copy_script(script)
+	local value_map = {}
+	local copy = {}
+	local script2 = {}
+	local variables = {}
+	for _,instruction in ipairs(script) do
+		if instruction.type=='comment' then
+			table.insert(copy, {
+				type = 'comment',
+				text = instruction.text,
+			})
+		elseif instruction.type=='variable' then
+			local name = instruction.name
+			if name:match('^%d+$') then
+				name = tonumber(name)
+			end
+			local variable = {
+				type = 'variable',
+				name = instruction.name,
+				value = copy_expression(instruction.value, value_map),
+			}
+			table.insert(copy, variable)
+			value_map[instruction] = variable
+		elseif instruction.type=='primitive' then
+			local primitive = {
+				type = 'primitive',
+				shape = instruction.shape,
+				parameters = {},
+			}
+			for i,expression in ipairs(instruction.parameters) do
+				primitive.parameters[i] = copy_expression(expression, value_map)
+			end
+			table.insert(copy, primitive)
+		else
+			error("unsupported macro instruction type "..tostring(instruction.type))
+		end
+	end
+	local variables,constants = {},{}
+	for _,value in pairs(value_map) do
+		if value.type=='constant' then
+			constants[value] = true
+		elseif value.type=='variable' then
+			variables[value] = true
+		end
+	end
+	return copy,variables,constants
+end
+
+local function simplify_expression(expression, variables)
+	local t = assert(type(expression)=='table' and expression.type)
+	if t=='constant' then
+		return expression.value
+	elseif t=='variable' then
+		return tostring(expression.name)
+	else
+		assert(#expression==2, "expression of type "..tostring(t).." has "..#expression.." operands")
+		return {type=t, simplify_expression(expression[1]), simplify_expression(expression[2])}
+	end
+end
+
+function _M.simplify_script(script)
+	local script2 = {}
+	for _,instruction in ipairs(script) do
+		if instruction.type=='comment' then
+			table.insert(script2, instruction)
+		elseif instruction.type=='variable' then
+			local name = instruction.name
+			if name:match('^%d+$') then
+				name = tonumber(name)
+			end
+			local variable = {
+				type = 'variable',
+				name = name,
+				value = simplify_expression(instruction.value),
+			}
+			table.insert(script2, variable)
+		elseif instruction.type=='primitive' then
+			local instruction2 = {
+				type = 'primitive',
+				shape = instruction.shape,
+				parameters = {},
+			}
+			for i,expression in ipairs(instruction.parameters) do
+				instruction2.parameters[i] = simplify_expression(expression)
+			end
+			table.insert(script2, instruction2)
+		else
+			error("unsupported macro instruction type "..tostring(instruction.type))
+		end
+	end
+	return script2
+end
+
+------------------------------------------------------------------------------
 
 return _M

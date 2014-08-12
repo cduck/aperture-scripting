@@ -4,6 +4,7 @@ local math = require 'math'
 local table = require 'table'
 local dump = require 'dump'
 _M.blocks = require 'gerber.blocks'
+local macros = require 'boards.macro'
 local interpolationlib = require 'boards.interpolation'
 
 ------------------------------------------------------------------------------
@@ -19,19 +20,98 @@ end
 
 ------------------------------------------------------------------------------
 
+local scales2 = {
+	in_pm = 25400000000,
+	mm_pm =  1000000000,
+}
+
 local function load_macro(data, unit)
 	local name = data.name
-	local script = data.script
+	local parameters
+	
+	local script,variables,constants = macros.analyze_script(data.script)
+	local ambiguous = false
+	for variable in pairs(variables) do
+		if not variable.dimension then
+			ambiguous = true
+			break
+		end
+	end
+	if not ambiguous then
+		for constant in pairs(constants) do
+			if not constant.dimension then
+				ambiguous = true
+				break
+			end
+		end
+	end
+	if ambiguous then
+		for constant in pairs(constants) do
+			constant.value = constant.value / 10 ^ _M.blocks.decimal_shift
+		end
+		print("warning: typing of macro "..name.." is ambiguous")
+	else
+		local length_scale = assert(scales2[unit..'_pm'])
+		local scale = scales[unit]
+		for constant in pairs(constants) do
+			local dimension = constant.dimension
+			local scale = length_scale ^ (dimension.length or 0) / 10 ^ _M.blocks.decimal_shift
+			constant.value = constant.value * scale
+		end
+		unit = 'pm'
+		parameters = {}
+		for variable in pairs(variables) do
+			if type(variable.name)=='number' then
+				parameters[variable.name] = variable.dimension
+			end
+		end
+	end
+	
 	return {
 		name = name,
 		unit = unit,
 		script = script,
+		parameters = parameters,
 	}
 end
 
-local function save_macro(macro)
+local function save_macro(macro, unit)
 	local name = assert(macro.save_name)
-	local script = assert(macro.script)
+	
+	local script,variables,constants = macros.copy_script(macro.script)
+	local ambiguous = false
+	for variable in pairs(variables) do
+		if not variable.dimension then
+			ambiguous = true
+			break
+		end
+	end
+	if not ambiguous then
+		for constant in pairs(constants) do
+			if not constant.dimension then
+				ambiguous = true
+				break
+			end
+		end
+	end
+	if ambiguous then
+		assert(unit==macro.unit, "ambiguous macro cannot be converted from "..tostring(macro.unit).." to "..tostring(unit))
+		for constant in pairs(constants) do
+			constant.value = constant.value * 10 ^ _M.blocks.decimal_shift
+		end
+		print("warning: typing of macro "..name.." is ambiguous")
+	else
+		local length_scale = assert(scales2[unit..'_pm'])
+		local scale = scales[unit]
+		for constant in pairs(constants) do
+			local dimension = constant.dimension
+			local scale = 10 ^ _M.blocks.decimal_shift / length_scale ^ (dimension.length or 0)
+			constant.value = constant.value * scale
+		end
+	end
+	
+	script = macros.simplify_script(script)
+	
 	return _M.blocks.macro(name, script)
 end
 
@@ -85,21 +165,34 @@ local function load_aperture(data, macros, unit)
 		assert(d and steps, "polygon apertures require at least 2 parameter")
 		aperture.unit = 'pm'
 		aperture.diameter = d * scale
-		aperture.steps = steps / 1e8
-		aperture.angle = angle and angle / 1e8
+		aperture.steps = steps / 10 ^ _M.blocks.decimal_shift
+		aperture.angle = angle and angle / 10 ^ _M.blocks.decimal_shift
 		aperture.hole_width = hx and hx * scale
 		aperture.hole_height = hy and hy * scale
 	else
 		aperture.unit = unit
 		aperture.macro = assert(macros[gerber_shape], "no macro with name "..tostring(gerber_shape))
-		assert(aperture.macro.unit == unit, "aperture and macro units don't match")
-		local scale = 1 / 10 ^ _M.blocks.decimal_shift
-		if data.parameters then
-			local parameters = {}
-			for i,value in ipairs(data.parameters) do
-				parameters[i] = value * scale
+		if aperture.macro.unit == unit then
+			local scale = 1 / 10 ^ _M.blocks.decimal_shift
+			if data.parameters then
+				local parameters = {}
+				for i,value in ipairs(data.parameters) do
+					parameters[i] = value * scale
+				end
+				aperture.parameters = parameters
 			end
-			aperture.parameters = parameters
+		else
+			assert(aperture.macro.parameters)
+			if data.parameters then
+				local parameters = {}
+				local length_scale = assert(scales2[unit..'_pm'])
+				for i,value in ipairs(data.parameters) do
+					local dimension = aperture.macro.parameters
+					local scale = length_scale ^ (dimension.length or 0) / 10 ^ _M.blocks.decimal_shift
+					parameters[i] = value * scale
+				end
+				aperture.parameters = parameters
+			end
 		end
 	end
 	
@@ -111,9 +204,9 @@ local function save_aperture(aperture, unit)
 	local gerber_shape,parameters
 	assert(aperture.macro or aperture.shape, "aperture has no shape and no macro")
 	if aperture.macro then
-		assert(aperture.unit == unit, "can't convert aperture macro with unit '"..aperture.unit.."' to '"..unit.."'")
 		gerber_shape = aperture.macro.name
 		if aperture.parameters then
+			assert(aperture.unit == unit, "can't convert aperture macro with unit '"..aperture.unit.."' to '"..unit.."'")
 			local scale = 10 ^ _M.blocks.decimal_shift
 			parameters = {}
 			for i,value in ipairs(aperture.parameters) do
@@ -604,7 +697,7 @@ function _M.save(image, file_path, verbose)
 	table.insert(data, _M.blocks.parameter('MO', unit:upper()))
 	
 	for _,macro in ipairs(macro_order) do
-		table.insert(data, save_macro(macro))
+		table.insert(data, save_macro(macro, unit))
 	end
 	for _,aperture in ipairs(aperture_order) do
 		table.insert(data, save_aperture(aperture, unit))

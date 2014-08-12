@@ -151,15 +151,15 @@ manipulation.rotate_board(board, 0)
 manipulation.rotate_board(board, 90)
 manipulation.rotate_board(board, 180)
 manipulation.rotate_board(board, 270)
+manipulation.rotate_board(manipulation.rotate_board(board, 180), 180)
 local rotated = manipulation.rotate_board(board, 17)
 manipulation.rotate_board(board, 97)
 manipulation.rotate_board(board, 181)
 manipulation.rotate_board(board, 271)
+manipulation.rotate_board(manipulation.rotate_board(board, 180), 17)
 
---[[
 log 'save rotated rotatable apertures'
 assert(boards.save(rotated, "test/output/rotate-rotated"))
---]]
 
 ------------------------------------------------------------------------------
 
@@ -193,10 +193,8 @@ assert(boards.save(rotated, "test/output/pwrsppl-rotated90"))
 log 'rotate board with BOM (17°)'
 local rotated = manipulation.rotate_board(board, 17)
 
---[[
 log 'save rotated board with BOM (17°)'
 assert(boards.save(rotated, "test/output/pwrsppl-rotated17"))
---]]
 
 ------------------------------------------------------------------------------
 
