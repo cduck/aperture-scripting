@@ -417,7 +417,8 @@ local function compile_expression(expression)
 		return expression.value
 	elseif t=='variable' then
 		local name = expression.name
-		if not name:match('^%d+$') then
+		if type(name)=='string' then
+			assert(not name:match('^%d+$'))
 			name = "'"..name.."'"
 		end
 		return "_VARS["..name.."]"
@@ -445,7 +446,7 @@ if _NAME=='test' then
 	expect("1.08239*_VARS[1]", compile_expression({
 		type = 'multiplication',
 		{type='constant', value=1.08239},
-		{type='variable', name="1"},
+		{type='variable', name=1},
 	}))
 	expect("_VARS['Y']*2", compile_expression({
 		type = 'multiplication',
