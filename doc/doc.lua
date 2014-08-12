@@ -4,7 +4,7 @@
 readme('../README.md', 'https://bitbucket.org/doub/aperture-scripting/raw/tip/doc/')
 index {
 	title = 'Aperture Scripting',
-	header = [[A set of libraries and tools to manipulate PCB data files]],
+	header = [[Aperture Scripting<br/>A set of Lua libraries to manipulate PCB data files]],
 	logo = {
 		width = 128,
 		alt = 'Aperture Scripting',
