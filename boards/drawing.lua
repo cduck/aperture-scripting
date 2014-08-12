@@ -1,3 +1,4 @@
+--- This module contains several function that let you generate new image data dynamically. You can always manipulate images internal structures directly, but to maintain integrity (the format is rather complex) prefer using functions in this module.
 local _M = {}
 
 local io = require 'io'
@@ -9,14 +10,17 @@ local exterior = path.exterior
 
 ------------------------------------------------------------------------------
 
-function _M.circle_aperture(diameter, unit)
-	assert(unit==nil)
+--- Create a simple circular aperture. Note that all paths except regions require an aperture. Even zero-width paths require a zero-width aperture, which you can create by passing 0 as the *diameter*. This aperture unit is always `'pm'`, which is the unit of the *diameter*.
+function _M.circle_aperture(diameter)
 	local aperture = { shape = 'circle', unit = 'pm', diameter = diameter }
 	return aperture
 end
 
 ------------------------------------------------------------------------------
 
+--- Draw a path on the specified *image* using the specified *aperture*. Every two extra arguments are the X and Y positions of an extra point, specified in board units (usually picometers). If the path has a single point, it is a flash. Otherwise it is a stroke with linear interpolation between points.
+--- 
+--- If no aperture is provided, the path is a region, which means it must have at least 4 points and be closed (ie. last point must be the same as the first point). If you want to create a region you need to explicitly pass `nil` as second argument to `draw_path` before the points data.
 function _M.draw_path(image, aperture, ...)
 	local path = {
 		aperture = aperture,
@@ -137,7 +141,18 @@ local function get_kerning(fontname, leftchar, rightchar)
 	return kerning.x
 end
 
-local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, text)
+--- Draw some text on the *image* using the font file specified by *fontname*. *text* is the drawn text, as a string encoded in UTF-8.
+--- 
+--- Each glyph is converted to regions on the top image layer or new layers if necessary, with the outside contour having the specified *polarity* (either `'dark'` or `'clear'`), and the glyph cutouts having the opposite polarity.
+--- 
+--- *size* is the font size in image data units (most likely picometers) and correspond usually to the height of an uppercase letter (this depends on the font). The text is logically positionned at coordinates *x* and *y* (still in image data units), with *halign* specifying how text is horizontally aligned relative to this point. *halign* can be one of the following strings:
+--- 
+---   - `'left'`: the text logical position starts exactly on *x*
+---   - `'x0'`: the first glyph `left` attribute (which may or may not be meaningful depending on the font) is aligned on *x*
+---   - `'center'`: the text width is computed (including spacing and kerning) and the whole *text* string is centered on *x*
+--- 
+--- *mirror* is a boolean, indicating whether the text will read normally from left to right (if false) or be mirrored horizontally (if true). This is useful to draw text on bottom images. Note that is *mirror* is true and *halign* is `'left'`, it's the text right-most edge that will actually be on *x*.
+function _M.draw_text(image, polarity, fontname, size, mirror, halign, x, y, text)
 	if #text == 0 then return end
 	local scale = size / font_size
 	
@@ -206,8 +221,6 @@ local function draw_text(image, polarity, fontname, size, mirror, halign, x, y, 
 		x = x + glyph.width * scale
 	end
 end
-
-_M.draw_text = draw_text
 
 end
 

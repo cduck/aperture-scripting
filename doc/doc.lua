@@ -67,8 +67,85 @@ footer()
 header('manual')
 
 chapter('manual', "Manual", [[
-The Aperture Scripting API is still fluctuating, so please consult the source and the examples to get an idea.
+The Aperture Scripting API is still fluctuating. Below is a raw and sometimes incomplete reference, so please look at the examples and explore the source to get a better idea.
 ]])
+
+local modules = {
+	'boards',
+	'boards.extents',
+	'boards.manipulation',
+	'boards.panelization',
+	'boards.drawing',
+}
+
+local manual = {}
+
+for _,module in ipairs(modules) do
+	local lines = {}
+	for line in assert(io.lines('../'..module:gsub('%.', '/')..'.lua')) do
+		table.insert(lines, line)
+	end
+	local blocks = {}
+	local i = 1
+	while i <= #lines do
+		local line = lines[i]
+		if line:match('^%-%-%- ') then
+			local block = {line:match('^%-*%s(.*)$')}
+			i = i + 1
+			while i <= #lines do
+				local line = lines[i]
+				if line:match('^%-%-') then
+					table.insert(block, line:match('^%-*%s(.*)$'))
+				else
+					block.prototype = line
+					break
+				end
+				i = i + 1
+			end
+			table.insert(blocks, block)
+		end
+		i = i + 1
+	end
+	local mdoc = {}
+	mdoc.name = module
+	if #blocks >= 1 and blocks[1].prototype=="local _M = {}" then
+		mdoc.doc = table.concat(table.remove(blocks, 1), '\n')
+	end
+	for _,func in ipairs(blocks) do
+		local name,params = assert(func.prototype:match('^function _M%.([%a_]+)%(([^)]*)%)$'))
+		local fdoc = {
+			name = name,
+			params = params~="" and params or nil,
+			doc = table.concat(func, '\n'),
+		}
+		table.insert(mdoc, fdoc)
+	end
+	table.insert(manual, mdoc)
+end
+
+local index = ''
+
+for _,module in ipairs(manual) do
+	index = index..'  - ['..module.name:gsub('_', '\\_')..'](#'..module.name..')\n'
+	for _,func in ipairs(module) do
+		index = index..'    - ['..func.name:gsub('_', '\\_')..'](#'..module.name..'.'..func.name..')\n'
+	end
+end
+
+section('index', "Index", index)
+
+for _,module in ipairs(manual) do
+	section(module.name, module.name.." module", module.doc or "")
+	for _,func in ipairs(module) do
+		local name = module.name..'.'..func.name
+		local title = name..' ('
+		if func.params then
+			title = title..' '..func.params..' '
+		end
+		title = title..')'
+		entry(name, title, func.doc or "")
+	end
+end
 
 footer()
 

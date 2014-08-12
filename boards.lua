@@ -1,3 +1,4 @@
+--- This module is the main entry point for Aperture Scripting. It contains several high level functions to load and save boards.
 local _M = {}
 
 local io = require 'io'
@@ -82,6 +83,9 @@ local function load_image(filepath, format, unit, template)
 	return image
 end
 
+--- Load the image in file *filepath*. *format* is one of the supported image formats as a string, or `nil` to trigger auto-detection. *options* is an optional table.
+--- 
+--- The *options* table can contain a field named `unit` that specifies the output length unit. Its value must be one of the supported length units as a string. The default is `'pm'`.
 function _M.load_image(filepath, format, options)
 	if not options then options = {} end
 	
@@ -122,6 +126,11 @@ local function save_image(image, filepath, format, unit, template)
 	end
 end
 
+--- Save the *image* in the file *filepath*. *format* must be one of the supported image formats as a string. *options* is an optional table.
+--- 
+--- The *options* table can contain a field named `unit` that specifies the length unit of the input data. Its value must be one of the supported length units as a string, the default is `'pm'`. Note that at the moment only images in `'pm'` can be saved.
+--- 
+--- The unit used within the file is specified in the `unit` field of the *image* itself. Some formats also expect some more such fields, for example to specify the number of significant digits or whether to remove trailing zeroes (see the source, examples and individual format documentation for more details).
 function _M.save_image(image, filepath, format, options)
 	if not options then options = {} end
 	
@@ -153,6 +162,7 @@ local function path_to_region(path)
 	return region
 end
 
+--- Detect the format of the file *path*. Possible return values are `'gerber'`, `'excellon'`, `'dxf'`, `'svg'`, `'bom'` or `nil`.
 function _M.detect_format(path)
 	local file,msg = io.open(path, 'rb')
 	if not file then return nil,msg end
@@ -173,6 +183,22 @@ function _M.detect_format(path)
 	end
 end
 
+--- Load the board specified by *path*, which can be either a string specifying a base path, or an array listing individual image file paths. *options* is an optional table.
+--- 
+--- The correspondance between the base path or paths table and individual images is based on a template, which can be specified in several ways:
+--- 
+---   - If *path* is a string and ends with `'.conf'`, it is used as the template.
+---   - If *path* is a string and a file named *<path>.conf* exists, it is used as the template.
+---   - If *path* is an array and contains a string ending with `'.conf'`, this file is used as a template.
+---   - If the *options* table contain a field named `template` which string value corresponds to an existing file path, this file is used as a template.
+---   - If the *options* table contain a field named `template` which string value corresponds to a known template (see the `boards.templates` module), this template is used.
+---   - Otherwise the `default` template is used.
+--- 
+--- The template `patterns` field specifies a correspondance between filename patterns and image roles. If *path* is a string corresponding to an existing file, or an array of strings, these paths are matched against the template patterns and matching files are loaded as the corresponding images. If *path* is a string not corresponding to an existing file, it is used as a base path and matched against the template patterns to find files, which are loaded as the corresponding images if they exist.
+--- 
+--- All files format are automatically detected depending on content. The *options* table can contain a field named `unit` that specifies the output length unit. Its value must be one of the supported length units as a string. The default is `'pm'`.
+--- 
+--- Finally once all the files have been loaded a board outline is extracted from the various images. To avoid that last step and leave the outline paths in the images themselves (if you want to render them for example), you can set the *options* field `keep_outlines_in_images` to a true value.
 function _M.load(path, options)
 	if not options then options = {} end
 	
@@ -312,6 +338,9 @@ function _M.load(path, options)
 	return board
 end
 
+--- Save the board *board* with the base name *filepath*. The board should contain fields `extensions` and `formats` that specify the individual file name pattern and file format (resp.) to use for each individual image. The input data unit should be specified in the board `unit` field (at the moment it must be `'pm'`).
+--- 
+--- Further format details and options on how to save each individual file should be specified in the images (as documented in [boards.save\_image](#boards.save_image)).
 function _M.save(board, filepath)
 	if pathlib.type(filepath) ~= 'path' then
 		filepath = pathlib.split(filepath)
@@ -510,12 +539,16 @@ local function merge_board_apertures(board)
 	end
 end
 
+--- Merge the identical apertures within each image of the board. This can save significant duplication when panelizing several identical or similar boards.
 function _M.merge_apertures(board)
 	merge_board_apertures(board)
 end
 
 ------------------------------------------------------------------------------
 
+--- Generate a `paths` field in each aperture used in the *board*.
+--- 
+--- Most apertures are defined as ideal shapes (for example circles or rectangles). This function will generate a series of contours for each of these ideal shapes. These contours can be used for rasterization and rendering of the apertures. See the source code of [Gerber Viewer](http://piratery.net/grbv/) for more details on how to use these generated paths.
 function _M.generate_aperture_paths(board)
 	-- collect apertures
 	local apertures = {}

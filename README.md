@@ -38,8 +38,255 @@ If you're on Windows, and you don't have a working Lua installation, I recommend
 
 # 4 - Manual
 
-The Aperture Scripting API is still fluctuating, so please consult the source and the examples to get an idea.
+The Aperture Scripting API is still fluctuating. Below is a raw and sometimes incomplete reference, so please look at the examples and explore the source to get a better idea.
 
+## 4.1 - Index
+
+  - [boards](#boards)
+    - [load\_image](#boards.load_image)
+    - [save\_image](#boards.save_image)
+    - [detect\_format](#boards.detect_format)
+    - [load](#boards.load)
+    - [save](#boards.save)
+    - [merge\_apertures](#boards.merge_apertures)
+    - [generate\_aperture\_paths](#boards.generate_aperture_paths)
+  - [boards.extents](#boards.extents)
+    - [compute\_aperture\_extents](#boards.extents.compute_aperture_extents)
+    - [compute\_image\_extents](#boards.extents.compute_image_extents)
+    - [compute\_board\_extents](#boards.extents.compute_board_extents)
+  - [boards.manipulation](#boards.manipulation)
+    - [offset\_point](#boards.manipulation.offset_point)
+    - [offset\_path](#boards.manipulation.offset_path)
+    - [offset\_layer](#boards.manipulation.offset_layer)
+    - [offset\_image](#boards.manipulation.offset_image)
+    - [offset\_outline](#boards.manipulation.offset_outline)
+    - [offset\_board](#boards.manipulation.offset_board)
+    - [rotate\_aperture](#boards.manipulation.rotate_aperture)
+    - [rotate\_point](#boards.manipulation.rotate_point)
+    - [rotate\_path](#boards.manipulation.rotate_path)
+    - [rotate\_layer](#boards.manipulation.rotate_layer)
+    - [rotate\_image](#boards.manipulation.rotate_image)
+    - [rotate\_outline](#boards.manipulation.rotate_outline)
+    - [rotate\_board](#boards.manipulation.rotate_board)
+    - [scale\_aperture](#boards.manipulation.scale_aperture)
+    - [scale\_point](#boards.manipulation.scale_point)
+    - [scale\_path](#boards.manipulation.scale_path)
+    - [scale\_layer](#boards.manipulation.scale_layer)
+    - [scale\_image](#boards.manipulation.scale_image)
+    - [scale\_outline](#boards.manipulation.scale_outline)
+    - [scale\_board](#boards.manipulation.scale_board)
+    - [copy\_point](#boards.manipulation.copy_point)
+    - [copy\_path](#boards.manipulation.copy_path)
+    - [copy\_layer](#boards.manipulation.copy_layer)
+    - [copy\_image](#boards.manipulation.copy_image)
+    - [copy\_board](#boards.manipulation.copy_board)
+    - [merge\_layers](#boards.manipulation.merge_layers)
+    - [merge\_images](#boards.manipulation.merge_images)
+    - [merge\_boards](#boards.manipulation.merge_boards)
+  - [boards.panelization](#boards.panelization)
+    - [empty\_image](#boards.panelization.empty_image)
+    - [empty\_board](#boards.panelization.empty_board)
+    - [panelize](#boards.panelization.panelize)
+  - [boards.drawing](#boards.drawing)
+    - [circle\_aperture](#boards.drawing.circle_aperture)
+    - [draw\_path](#boards.drawing.draw_path)
+    - [draw\_text](#boards.drawing.draw_text)
+
+## 4.2 - boards module
+
+This module is the main entry point for Aperture Scripting. It contains several high level functions to load and save boards.
+### boards.load_image ( filepath, format, options )
+
+Load the image in file *filepath*. *format* is one of the supported image formats as a string, or `nil` to trigger auto-detection. *options* is an optional table.
+
+The *options* table can contain a field named `unit` that specifies the output length unit. Its value must be one of the supported length units as a string. The default is `'pm'`.
+### boards.save_image ( image, filepath, format, options )
+
+Save the *image* in the file *filepath*. *format* must be one of the supported image formats as a string. *options* is an optional table.
+
+The *options* table can contain a field named `unit` that specifies the length unit of the input data. Its value must be one of the supported length units as a string, the default is `'pm'`. Note that at the moment only images in `'pm'` can be saved.
+
+The unit used within the file is specified in the `unit` field of the *image* itself. Some formats also expect some more such fields, for example to specify the number of significant digits or whether to remove trailing zeroes (see the source, examples and individual format documentation for more details).
+### boards.detect_format ( path )
+
+Detect the format of the file *path*. Possible return values are `'gerber'`, `'excellon'`, `'dxf'`, `'svg'`, `'bom'` or `nil`.
+### boards.load ( path, options )
+
+Load the board specified by *path*, which can be either a string specifying a base path, or an array listing individual image file paths. *options* is an optional table.
+
+The correspondance between the base path or paths table and individual images is based on a template, which can be specified in several ways:
+
+  - If *path* is a string and ends with `'.conf'`, it is used as the template.
+  - If *path* is a string and a file named *<path>.conf* exists, it is used as the template.
+  - If *path* is an array and contains a string ending with `'.conf'`, this file is used as a template.
+  - If the *options* table contain a field named `template` which string value corresponds to an existing file path, this file is used as a template.
+  - If the *options* table contain a field named `template` which string value corresponds to a known template (see the `boards.templates` module), this template is used.
+  - Otherwise the `default` template is used.
+
+The template `patterns` field specifies a correspondance between filename patterns and image roles. If *path* is a string corresponding to an existing file, or an array of strings, these paths are matched against the template patterns and matching files are loaded as the corresponding images. If *path* is a string not corresponding to an existing file, it is used as a base path and matched against the template patterns to find files, which are loaded as the corresponding images if they exist.
+
+All files format are automatically detected depending on content. The *options* table can contain a field named `unit` that specifies the output length unit. Its value must be one of the supported length units as a string. The default is `'pm'`.
+
+Finally once all the files have been loaded a board outline is extracted from the various images. To avoid that last step and leave the outline paths in the images themselves (if you want to render them for example), you can set the *options* field `keep_outlines_in_images` to a true value.
+### boards.save ( board, filepath )
+
+Save the board *board* with the base name *filepath*. The board should contain fields `extensions` and `formats` that specify the individual file name pattern and file format (resp.) to use for each individual image. The input data unit should be specified in the board `unit` field (at the moment it must be `'pm'`).
+
+Further format details and options on how to save each individual file should be specified in the images (as documented in [boards.save\_image](#boards.save_image)).
+### boards.merge_apertures ( board )
+
+Merge the identical apertures within each image of the board. This can save significant duplication when panelizing several identical or similar boards.
+### boards.generate_aperture_paths ( board )
+
+Generate a `paths` field in each aperture used in the *board*.
+
+Most apertures are defined as ideal shapes (for example circles or rectangles). This function will generate a series of contours for each of these ideal shapes. These contours can be used for rasterization and rendering of the apertures. See the source code of [Gerber Viewer](http://piratery.net/grbv/) for more details on how to use these generated paths.
+## 4.3 - boards.extents module
+
+This module contain several functions to compute the extents of a board or its components. All extents are of type `region`, which is a table with fields `left`, `right`, `bottom` and `top`, virtual fields `width`, `height` `area` and `empty` and several operator overloads.
+### boards.extents.compute_aperture_extents ( aperture )
+
+Compute the extents of an aperture. This requires that the aperture paths have been previously generated (see [boards.generate\_aperture\_paths](#boards.generate_aperture_paths)).
+### boards.extents.compute_image_extents ( image )
+
+Compute the extents of an image. This does not include the aperture extents, if any.
+### boards.extents.compute_board_extents ( board )
+
+Compute the extents of a board. This does not include the aperture extents, if any.
+## 4.4 - boards.manipulation module
+
+This module contains many function to manipulate image data and whole boards. Most are self-explanatory. All these function create copies of the input data and won't reference it in the output, so the input can be later modified without the output to be affected.
+
+The *apertures* and *macros* arguments of some of these functions are mapping tables used to preserve sharing of apertures and macros respectively. You can initialize these as empty tables and then pass them to all subsequent calls of the same category of manipulation function (ie. offset, rotate, scale, copy or merge).
+### boards.manipulation.offset_point ( point, dx, dy )
+
+
+### boards.manipulation.offset_path ( path, dx, dy )
+
+
+### boards.manipulation.offset_layer ( layer, dx, dy )
+
+
+### boards.manipulation.offset_image ( image, dx, dy )
+
+
+### boards.manipulation.offset_outline ( outline, dx, dy )
+
+
+### boards.manipulation.offset_board ( board, dx, dy )
+
+
+### boards.manipulation.rotate_aperture ( aperture, angle, macros )
+
+
+### boards.manipulation.rotate_point ( point, angle )
+
+
+### boards.manipulation.rotate_path ( path, angle, apertures, macros )
+
+
+### boards.manipulation.rotate_layer ( layer, angle, apertures, macros )
+
+
+### boards.manipulation.rotate_image ( image, angle, apertures, macros )
+
+
+### boards.manipulation.rotate_outline ( outline, angle, apertures, macros )
+
+
+### boards.manipulation.rotate_board ( board, angle )
+
+
+### boards.manipulation.scale_aperture ( aperture, scale, macros )
+
+
+### boards.manipulation.scale_point ( point, scale )
+
+
+### boards.manipulation.scale_path ( path, scale, apertures, macros )
+
+
+### boards.manipulation.scale_layer ( layer, scale, apertures, macros )
+
+
+### boards.manipulation.scale_image ( image, scale, apertures, macros )
+
+
+### boards.manipulation.scale_outline ( outline, scale, apertures, macros )
+
+
+### boards.manipulation.scale_board ( board, scale )
+
+
+### boards.manipulation.copy_point ( point )
+
+
+### boards.manipulation.copy_path ( path, apertures, macros )
+
+
+### boards.manipulation.copy_layer ( layer, apertures, macros )
+
+
+### boards.manipulation.copy_image ( image, apertures, macros )
+
+
+### boards.manipulation.copy_board ( board )
+
+
+### boards.manipulation.merge_layers ( layer_a, layer_b, apertures, macros )
+
+
+### boards.manipulation.merge_images ( image_a, image_b, apertures, macros )
+
+
+### boards.manipulation.merge_boards ( board_a, board_b )
+
+
+## 4.5 - boards.panelization module
+
+This module contains several functions that will let you create panels, ie. assemblies of several small boards in larger 2D structures.
+### boards.panelization.empty_image ()
+
+Create an empty image, with a single empty dark layer, a default saved unit of `'in'`, and a number format specifying 2 integer digits, 4 decimal digits and missing leading zeroes.
+### boards.panelization.empty_board ( width, height )
+
+Create an empty board, without any image. If *width* and *height* are specified, a simple rectangle outline of that size is created, with the bottom-left corner aligned on the origin.
+### boards.panelization.panelize ( layout, options, vertical )
+
+Panelize the board specified in *layout*. The *layout* can have several levels, alternating horizontal (from left to right) and vertical (from bottom to top) directions. The direction of the root layer is vertical if *vertical* is true, horizontal otherwise.
+
+*options* is a table which can be empty, or have any or all of the following options:
+
+  - `spacing` determines the gap between boards (default is 2 mm)
+  - `break_hole_diameter` is the diameter of breaking holes (mouse bites, default is 0.5 mm)
+  - `break_tab_width` is the width of the breaking tabs (default is 5 mm)
+  - `tab_interval` is the minimum interval between two breaking tabs on long edges (default is 77 mm)
+
+Note that default values are internally specied in picometers. If your board use a different unit you'll need to override all options.
+## 4.6 - boards.drawing module
+
+This module contains several function that let you generate new image data dynamically. You can always manipulate images internal structures directly, but to maintain integrity (the format is rather complex) prefer using functions in this module.
+### boards.drawing.circle_aperture ( diameter )
+
+Create a simple circular aperture. Note that all paths except regions require an aperture. Even zero-width paths require a zero-width aperture, which you can create by passing 0 as the *diameter*. This aperture unit is always `'pm'`, which is the unit of the *diameter*.
+### boards.drawing.draw_path ( image, aperture, ... )
+
+Draw a path on the specified *image* using the specified *aperture*. Every two extra arguments are the X and Y positions of an extra point, specified in board units (usually picometers). If the path has a single point, it is a flash. Otherwise it is a stroke with linear interpolation between points.
+
+If no aperture is provided, the path is a region, which means it must have at least 4 points and be closed (ie. last point must be the same as the first point). If you want to create a region you need to explicitly pass `nil` as second argument to `draw_path` before the points data.
+### boards.drawing.draw_text ( image, polarity, fontname, size, mirror, halign, x, y, text )
+
+Draw some text on the *image* using the font file specified by *fontname*. *text* is the drawn text, as a string encoded in UTF-8.
+
+Each glyph is converted to regions on the top image layer or new layers if necessary, with the outside contour having the specified *polarity* (either `'dark'` or `'clear'`), and the glyph cutouts having the opposite polarity.
+
+*size* is the font size in image data units (most likely picometers) and correspond usually to the height of an uppercase letter (this depends on the font). The text is logically positionned at coordinates *x* and *y* (still in image data units), with *halign* specifying how text is horizontally aligned relative to this point. *halign* can be one of the following strings:
+
+  - `'left'`: the text logical position starts exactly on *x*
+  - `'x0'`: the first glyph `left` attribute (which may or may not be meaningful depending on the font) is aligned on *x*
+  - `'center'`: the text width is computed (including spacing and kerning) and the whole *text* string is centered on *x*
+
+*mirror* is a boolean, indicating whether the text will read normally from left to right (if false) or be mirrored horizontally (if true). This is useful to draw text on bottom images. Note that is *mirror* is true and *halign* is `'left'`, it's the text right-most edge that will actually be on *x*.
 # 5 - Examples
 
 Here are some progressively more complex example scripts showing how you can use Aperture Scripting.

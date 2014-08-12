@@ -25,12 +25,427 @@ lang="en">
 <div class="chapter">
 <a id="manual"/><h1>4 - Manual</h1>
 
-<p>The Aperture Scripting API is still fluctuating, so please consult the source and the examples to get an idea.</p>
+<p>The Aperture Scripting API is still fluctuating. Below is a raw and sometimes incomplete reference, so please look at the examples and explore the source to get a better idea.</p>
 
 </div>
 
+<div class="section">
+<a id="index"/><h2>4.1 - Index</h2>
+
+<ul>
+    <li><a href="#boards">boards</a>
+    <ul>
+        <li><a href="#boards.load_image">load_image</a></li>
+        <li><a href="#boards.save_image">save_image</a></li>
+        <li><a href="#boards.detect_format">detect_format</a></li>
+        <li><a href="#boards.load">load</a></li>
+        <li><a href="#boards.save">save</a></li>
+        <li><a href="#boards.merge_apertures">merge_apertures</a></li>
+        <li><a href="#boards.generate_aperture_paths">generate_aperture_paths</a></li>
+    </ul></li>
+    <li><a href="#boards.extents">boards.extents</a>
+    <ul>
+        <li><a href="#boards.extents.compute_aperture_extents">compute_aperture_extents</a></li>
+        <li><a href="#boards.extents.compute_image_extents">compute_image_extents</a></li>
+        <li><a href="#boards.extents.compute_board_extents">compute_board_extents</a></li>
+    </ul></li>
+    <li><a href="#boards.manipulation">boards.manipulation</a>
+    <ul>
+        <li><a href="#boards.manipulation.offset_point">offset_point</a></li>
+        <li><a href="#boards.manipulation.offset_path">offset_path</a></li>
+        <li><a href="#boards.manipulation.offset_layer">offset_layer</a></li>
+        <li><a href="#boards.manipulation.offset_image">offset_image</a></li>
+        <li><a href="#boards.manipulation.offset_outline">offset_outline</a></li>
+        <li><a href="#boards.manipulation.offset_board">offset_board</a></li>
+        <li><a href="#boards.manipulation.rotate_aperture">rotate_aperture</a></li>
+        <li><a href="#boards.manipulation.rotate_point">rotate_point</a></li>
+        <li><a href="#boards.manipulation.rotate_path">rotate_path</a></li>
+        <li><a href="#boards.manipulation.rotate_layer">rotate_layer</a></li>
+        <li><a href="#boards.manipulation.rotate_image">rotate_image</a></li>
+        <li><a href="#boards.manipulation.rotate_outline">rotate_outline</a></li>
+        <li><a href="#boards.manipulation.rotate_board">rotate_board</a></li>
+        <li><a href="#boards.manipulation.scale_aperture">scale_aperture</a></li>
+        <li><a href="#boards.manipulation.scale_point">scale_point</a></li>
+        <li><a href="#boards.manipulation.scale_path">scale_path</a></li>
+        <li><a href="#boards.manipulation.scale_layer">scale_layer</a></li>
+        <li><a href="#boards.manipulation.scale_image">scale_image</a></li>
+        <li><a href="#boards.manipulation.scale_outline">scale_outline</a></li>
+        <li><a href="#boards.manipulation.scale_board">scale_board</a></li>
+        <li><a href="#boards.manipulation.copy_point">copy_point</a></li>
+        <li><a href="#boards.manipulation.copy_path">copy_path</a></li>
+        <li><a href="#boards.manipulation.copy_layer">copy_layer</a></li>
+        <li><a href="#boards.manipulation.copy_image">copy_image</a></li>
+        <li><a href="#boards.manipulation.copy_board">copy_board</a></li>
+        <li><a href="#boards.manipulation.merge_layers">merge_layers</a></li>
+        <li><a href="#boards.manipulation.merge_images">merge_images</a></li>
+        <li><a href="#boards.manipulation.merge_boards">merge_boards</a></li>
+    </ul></li>
+    <li><a href="#boards.panelization">boards.panelization</a>
+    <ul>
+        <li><a href="#boards.panelization.empty_image">empty_image</a></li>
+        <li><a href="#boards.panelization.empty_board">empty_board</a></li>
+        <li><a href="#boards.panelization.panelize">panelize</a></li>
+    </ul></li>
+    <li><a href="#boards.drawing">boards.drawing</a>
+    <ul>
+        <li><a href="#boards.drawing.circle_aperture">circle_aperture</a></li>
+        <li><a href="#boards.drawing.draw_path">draw_path</a></li>
+        <li><a href="#boards.drawing.draw_text">draw_text</a></li>
+    </ul></li>
+</ul>
+
+</div>
+
+<div class="section">
+<a id="boards"/><h2>4.2 - boards module</h2>
+
+<p>This module is the main entry point for Aperture Scripting. It contains several high level functions to load and save boards.</p>
+</div>
+
+<div class="entry">
+<a id="boards.load_image"/><h3>boards.load_image ( filepath, format, options )</h3>
+
+<p>Load the image in file <em>filepath</em>. <em>format</em> is one of the supported image formats as a string, or <code>nil</code> to trigger auto-detection. <em>options</em> is an optional table.</p>
+
+<p>The <em>options</em> table can contain a field named <code>unit</code> that specifies the output length unit. Its value must be one of the supported length units as a string. The default is <code>'pm'</code>.</p>
+</div>
+
+<div class="entry">
+<a id="boards.save_image"/><h3>boards.save_image ( image, filepath, format, options )</h3>
+
+<p>Save the <em>image</em> in the file <em>filepath</em>. <em>format</em> must be one of the supported image formats as a string. <em>options</em> is an optional table.</p>
+
+<p>The <em>options</em> table can contain a field named <code>unit</code> that specifies the length unit of the input data. Its value must be one of the supported length units as a string, the default is <code>'pm'</code>. Note that at the moment only images in <code>'pm'</code> can be saved.</p>
+
+<p>The unit used within the file is specified in the <code>unit</code> field of the <em>image</em> itself. Some formats also expect some more such fields, for example to specify the number of significant digits or whether to remove trailing zeroes (see the source, examples and individual format documentation for more details).</p>
+</div>
+
+<div class="entry">
+<a id="boards.detect_format"/><h3>boards.detect_format ( path )</h3>
+
+<p>Detect the format of the file <em>path</em>. Possible return values are <code>'gerber'</code>, <code>'excellon'</code>, <code>'dxf'</code>, <code>'svg'</code>, <code>'bom'</code> or <code>nil</code>.</p>
+</div>
+
+<div class="entry">
+<a id="boards.load"/><h3>boards.load ( path, options )</h3>
+
+<p>Load the board specified by <em>path</em>, which can be either a string specifying a base path, or an array listing individual image file paths. <em>options</em> is an optional table.</p>
+
+<p>The correspondance between the base path or paths table and individual images is based on a template, which can be specified in several ways:</p>
+
+<ul>
+    <li>If <em>path</em> is a string and ends with <code>'.conf'</code>, it is used as the template.</li>
+    <li>If <em>path</em> is a string and a file named *<path>.conf* exists, it is used as the template.</li>
+    <li>If <em>path</em> is an array and contains a string ending with <code>'.conf'</code>, this file is used as a template.</li>
+    <li>If the <em>options</em> table contain a field named <code>template</code> which string value corresponds to an existing file path, this file is used as a template.</li>
+    <li>If the <em>options</em> table contain a field named <code>template</code> which string value corresponds to a known template (see the <code>boards.templates</code> module), this template is used.</li>
+    <li>Otherwise the <code>default</code> template is used.</li>
+</ul>
+
+<p>The template <code>patterns</code> field specifies a correspondance between filename patterns and image roles. If <em>path</em> is a string corresponding to an existing file, or an array of strings, these paths are matched against the template patterns and matching files are loaded as the corresponding images. If <em>path</em> is a string not corresponding to an existing file, it is used as a base path and matched against the template patterns to find files, which are loaded as the corresponding images if they exist.</p>
+
+<p>All files format are automatically detected depending on content. The <em>options</em> table can contain a field named <code>unit</code> that specifies the output length unit. Its value must be one of the supported length units as a string. The default is <code>'pm'</code>.</p>
+
+<p>Finally once all the files have been loaded a board outline is extracted from the various images. To avoid that last step and leave the outline paths in the images themselves (if you want to render them for example), you can set the <em>options</em> field <code>keep_outlines_in_images</code> to a true value.</p>
+</div>
+
+<div class="entry">
+<a id="boards.save"/><h3>boards.save ( board, filepath )</h3>
+
+<p>Save the board <em>board</em> with the base name <em>filepath</em>. The board should contain fields <code>extensions</code> and <code>formats</code> that specify the individual file name pattern and file format (resp.) to use for each individual image. The input data unit should be specified in the board <code>unit</code> field (at the moment it must be <code>'pm'</code>).</p>
+
+<p>Further format details and options on how to save each individual file should be specified in the images (as documented in <a href="#boards.save_image">boards.save_image</a>).</p>
+</div>
+
+<div class="entry">
+<a id="boards.merge_apertures"/><h3>boards.merge_apertures ( board )</h3>
+
+<p>Merge the identical apertures within each image of the board. This can save significant duplication when panelizing several identical or similar boards.</p>
+</div>
+
+<div class="entry">
+<a id="boards.generate_aperture_paths"/><h3>boards.generate_aperture_paths ( board )</h3>
+
+<p>Generate a <code>paths</code> field in each aperture used in the <em>board</em>.</p>
+
+<p>Most apertures are defined as ideal shapes (for example circles or rectangles). This function will generate a series of contours for each of these ideal shapes. These contours can be used for rasterization and rendering of the apertures. See the source code of <a href="http://piratery.net/grbv/">Gerber Viewer</a> for more details on how to use these generated paths.</p>
+</div>
+
+<div class="section">
+<a id="boards.extents"/><h2>4.3 - boards.extents module</h2>
+
+<p>This module contain several functions to compute the extents of a board or its components. All extents are of type <code>region</code>, which is a table with fields <code>left</code>, <code>right</code>, <code>bottom</code> and <code>top</code>, virtual fields <code>width</code>, <code>height</code> <code>area</code> and <code>empty</code> and several operator overloads.</p>
+</div>
+
+<div class="entry">
+<a id="boards.extents.compute_aperture_extents"/><h3>boards.extents.compute_aperture_extents ( aperture )</h3>
+
+<p>Compute the extents of an aperture. This requires that the aperture paths have been previously generated (see <a href="#boards.generate_aperture_paths">boards.generate_aperture_paths</a>).</p>
+</div>
+
+<div class="entry">
+<a id="boards.extents.compute_image_extents"/><h3>boards.extents.compute_image_extents ( image )</h3>
+
+<p>Compute the extents of an image. This does not include the aperture extents, if any.</p>
+</div>
+
+<div class="entry">
+<a id="boards.extents.compute_board_extents"/><h3>boards.extents.compute_board_extents ( board )</h3>
+
+<p>Compute the extents of a board. This does not include the aperture extents, if any.</p>
+</div>
+
+<div class="section">
+<a id="boards.manipulation"/><h2>4.4 - boards.manipulation module</h2>
+
+<p>This module contains many function to manipulate image data and whole boards. Most are self-explanatory. All these function create copies of the input data and won't reference it in the output, so the input can be later modified without the output to be affected.</p>
+
+<p>The <em>apertures</em> and <em>macros</em> arguments of some of these functions are mapping tables used to preserve sharing of apertures and macros respectively. You can initialize these as empty tables and then pass them to all subsequent calls of the same category of manipulation function (ie. offset, rotate, scale, copy or merge).</p>
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.offset_point"/><h3>boards.manipulation.offset_point ( point, dx, dy )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.offset_path"/><h3>boards.manipulation.offset_path ( path, dx, dy )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.offset_layer"/><h3>boards.manipulation.offset_layer ( layer, dx, dy )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.offset_image"/><h3>boards.manipulation.offset_image ( image, dx, dy )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.offset_outline"/><h3>boards.manipulation.offset_outline ( outline, dx, dy )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.offset_board"/><h3>boards.manipulation.offset_board ( board, dx, dy )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.rotate_aperture"/><h3>boards.manipulation.rotate_aperture ( aperture, angle, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.rotate_point"/><h3>boards.manipulation.rotate_point ( point, angle )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.rotate_path"/><h3>boards.manipulation.rotate_path ( path, angle, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.rotate_layer"/><h3>boards.manipulation.rotate_layer ( layer, angle, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.rotate_image"/><h3>boards.manipulation.rotate_image ( image, angle, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.rotate_outline"/><h3>boards.manipulation.rotate_outline ( outline, angle, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.rotate_board"/><h3>boards.manipulation.rotate_board ( board, angle )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.scale_aperture"/><h3>boards.manipulation.scale_aperture ( aperture, scale, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.scale_point"/><h3>boards.manipulation.scale_point ( point, scale )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.scale_path"/><h3>boards.manipulation.scale_path ( path, scale, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.scale_layer"/><h3>boards.manipulation.scale_layer ( layer, scale, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.scale_image"/><h3>boards.manipulation.scale_image ( image, scale, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.scale_outline"/><h3>boards.manipulation.scale_outline ( outline, scale, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.scale_board"/><h3>boards.manipulation.scale_board ( board, scale )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.copy_point"/><h3>boards.manipulation.copy_point ( point )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.copy_path"/><h3>boards.manipulation.copy_path ( path, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.copy_layer"/><h3>boards.manipulation.copy_layer ( layer, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.copy_image"/><h3>boards.manipulation.copy_image ( image, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.copy_board"/><h3>boards.manipulation.copy_board ( board )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.merge_layers"/><h3>boards.manipulation.merge_layers ( layer_a, layer_b, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.merge_images"/><h3>boards.manipulation.merge_images ( image_a, image_b, apertures, macros )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.merge_boards"/><h3>boards.manipulation.merge_boards ( board_a, board_b )</h3>
+
+
+</div>
+
+<div class="section">
+<a id="boards.panelization"/><h2>4.5 - boards.panelization module</h2>
+
+<p>This module contains several functions that will let you create panels, ie. assemblies of several small boards in larger 2D structures.</p>
+</div>
+
+<div class="entry">
+<a id="boards.panelization.empty_image"/><h3>boards.panelization.empty_image ()</h3>
+
+<p>Create an empty image, with a single empty dark layer, a default saved unit of <code>'in'</code>, and a number format specifying 2 integer digits, 4 decimal digits and missing leading zeroes.</p>
+</div>
+
+<div class="entry">
+<a id="boards.panelization.empty_board"/><h3>boards.panelization.empty_board ( width, height )</h3>
+
+<p>Create an empty board, without any image. If <em>width</em> and <em>height</em> are specified, a simple rectangle outline of that size is created, with the bottom-left corner aligned on the origin.</p>
+</div>
+
+<div class="entry">
+<a id="boards.panelization.panelize"/><h3>boards.panelization.panelize ( layout, options, vertical )</h3>
+
+<p>Panelize the board specified in <em>layout</em>. The <em>layout</em> can have several levels, alternating horizontal (from left to right) and vertical (from bottom to top) directions. The direction of the root layer is vertical if <em>vertical</em> is true, horizontal otherwise.</p>
+
+<p><em>options</em> is a table which can be empty, or have any or all of the following options:</p>
+
+<ul>
+    <li><code>spacing</code> determines the gap between boards (default is 2 mm)</li>
+    <li><code>break_hole_diameter</code> is the diameter of breaking holes (mouse bites, default is 0.5 mm)</li>
+    <li><code>break_tab_width</code> is the width of the breaking tabs (default is 5 mm)</li>
+    <li><code>tab_interval</code> is the minimum interval between two breaking tabs on long edges (default is 77 mm)</li>
+</ul>
+
+<p>Note that default values are internally specied in picometers. If your board use a different unit you'll need to override all options.</p>
+</div>
+
+<div class="section">
+<a id="boards.drawing"/><h2>4.6 - boards.drawing module</h2>
+
+<p>This module contains several function that let you generate new image data dynamically. You can always manipulate images internal structures directly, but to maintain integrity (the format is rather complex) prefer using functions in this module.</p>
+</div>
+
+<div class="entry">
+<a id="boards.drawing.circle_aperture"/><h3>boards.drawing.circle_aperture ( diameter )</h3>
+
+<p>Create a simple circular aperture. Note that all paths except regions require an aperture. Even zero-width paths require a zero-width aperture, which you can create by passing 0 as the <em>diameter</em>. This aperture unit is always <code>'pm'</code>, which is the unit of the <em>diameter</em>.</p>
+</div>
+
+<div class="entry">
+<a id="boards.drawing.draw_path"/><h3>boards.drawing.draw_path ( image, aperture, ... )</h3>
+
+<p>Draw a path on the specified <em>image</em> using the specified <em>aperture</em>. Every two extra arguments are the X and Y positions of an extra point, specified in board units (usually picometers). If the path has a single point, it is a flash. Otherwise it is a stroke with linear interpolation between points.</p>
+
+<p>If no aperture is provided, the path is a region, which means it must have at least 4 points and be closed (ie. last point must be the same as the first point). If you want to create a region you need to explicitly pass <code>nil</code> as second argument to <code>draw_path</code> before the points data.</p>
+</div>
+
+<div class="entry">
+<a id="boards.drawing.draw_text"/><h3>boards.drawing.draw_text ( image, polarity, fontname, size, mirror, halign, x, y, text )</h3>
+
+<p>Draw some text on the <em>image</em> using the font file specified by <em>fontname</em>. <em>text</em> is the drawn text, as a string encoded in UTF-8.</p>
+
+<p>Each glyph is converted to regions on the top image layer or new layers if necessary, with the outside contour having the specified <em>polarity</em> (either <code>'dark'</code> or <code>'clear'</code>), and the glyph cutouts having the opposite polarity.</p>
+
+<p><em>size</em> is the font size in image data units (most likely picometers) and correspond usually to the height of an uppercase letter (this depends on the font). The text is logically positionned at coordinates <em>x</em> and <em>y</em> (still in image data units), with <em>halign</em> specifying how text is horizontally aligned relative to this point. <em>halign</em> can be one of the following strings:</p>
+
+<ul>
+    <li><code>'left'</code>: the text logical position starts exactly on <em>x</em></li>
+    <li><code>'x0'</code>: the first glyph <code>left</code> attribute (which may or may not be meaningful depending on the font) is aligned on <em>x</em></li>
+    <li><code>'center'</code>: the text width is computed (including spacing and kerning) and the whole <em>text</em> string is centered on <em>x</em></li>
+</ul>
+
+<p><em>mirror</em> is a boolean, indicating whether the text will read normally from left to right (if false) or be mirrored horizontally (if true). This is useful to draw text on bottom images. Note that is <em>mirror</em> is true and <em>halign</em> is <code>'left'</code>, it's the text right-most edge that will actually be on <em>x</em>.</p>
+</div>
+
 <div class="chapter" id="footer">
-<small>Last update: 2014-08-03 02:10:19 BST</small>
+<small>Last update: 2014-08-12 16:58:28 BST</small>
 </div>
 
 </body>

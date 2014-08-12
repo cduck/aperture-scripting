@@ -1,3 +1,6 @@
+--- This module contains many function to manipulate image data and whole boards. Most are self-explanatory. All these function create copies of the input data and won't reference it in the output, so the input can be later modified without the output to be affected.
+--- 
+--- The *apertures* and *macros* arguments of some of these functions are mapping tables used to preserve sharing of apertures and macros respectively. You can initialize these as empty tables and then pass them to all subsequent calls of the same category of manipulation function (ie. offset, rotate, scale, copy or merge).
 local _M = {}
 local _NAME = ... or 'test'
 
@@ -7,6 +10,7 @@ local region = require 'boards.region'
 
 ------------------------------------------------------------------------------
 
+--- 
 function _M.offset_point(point, dx, dy)
 	assert(point.x and point.y, "only points with x and y can be offset")
 	local copy = {}
@@ -32,6 +36,7 @@ function _M.offset_point(point, dx, dy)
 	return copy
 end
 
+--- 
 function _M.offset_path(path, dx, dy)
 	local copy = {
 		unit = path.unit,
@@ -43,6 +48,7 @@ function _M.offset_path(path, dx, dy)
 	return copy
 end
 
+--- 
 function _M.offset_layer(layer, dx, dy)
 	local copy = {
 		polarity = layer.polarity,
@@ -53,6 +59,7 @@ function _M.offset_layer(layer, dx, dy)
 	return copy
 end
 
+--- 
 function _M.offset_image(image, dx, dy)
 	local copy = {
 		file_path = image.file_path,
@@ -75,6 +82,7 @@ function _M.offset_image(image, dx, dy)
 	return copy
 end
 
+--- 
 function _M.offset_outline(outline, dx, dy)
 	local copy = {
 		apertures = {},
@@ -91,6 +99,7 @@ function _M.offset_outline(outline, dx, dy)
 	return copy
 end
 
+--- 
 function _M.offset_board(board, dx, dy)
 	local copy = {
 		unit = board.unit,
@@ -450,6 +459,7 @@ local function rotate_aperture_hole(a, b, angle)
 	return a,b
 end
 
+--- 
 function _M.rotate_aperture(aperture, angle, macros)
 	angle = angle % 360
 	local copy = {
@@ -763,6 +773,7 @@ function _M.rotate_aperture(aperture, angle, macros)
 	return copy
 end
 
+--- 
 function _M.rotate_point(point, angle)
 	assert(point.x and point.y, "only points with x and y can be rotated")
 	angle = angle % 360
@@ -787,6 +798,7 @@ function _M.rotate_point(point, angle)
 	return copy
 end
 
+--- 
 function _M.rotate_path(path, angle, apertures, macros)
 	if not apertures then apertures = {} end
 	if not macros then macros = {} end
@@ -806,6 +818,7 @@ function _M.rotate_path(path, angle, apertures, macros)
 	return copy
 end
 
+--- 
 function _M.rotate_layer(layer, angle, apertures, macros)
 	if not apertures then apertures = {} end
 	if not macros then macros = {} end
@@ -818,6 +831,7 @@ function _M.rotate_layer(layer, angle, apertures, macros)
 	return copy
 end
 
+--- 
 function _M.rotate_image(image, angle, apertures, macros)
 	if not apertures then apertures = {} end
 	if not macros then macros = {} end
@@ -876,6 +890,7 @@ function _M.rotate_outline_path(path, angle)
 	return copy
 end
 
+--- 
 function _M.rotate_outline(outline, angle, apertures, macros)
 	if not apertures then apertures = {} end
 	if not macros then macros = {} end
@@ -899,6 +914,7 @@ function _M.rotate_outline(outline, angle, apertures, macros)
 	return copy
 end
 
+--- 
 function _M.rotate_board(board, angle)
 	local copy = {
 		unit = board.unit,
@@ -956,6 +972,7 @@ local function scale_aperture_hole(a, b, scale)
 	return a,b
 end
 
+--- 
 function _M.scale_aperture(aperture, scale, macros)
 	local copy = {
 		name = aperture.name,
@@ -998,6 +1015,7 @@ function _M.scale_aperture(aperture, scale, macros)
 	return copy
 end
 
+--- 
 function _M.scale_point(point, scale)
 	assert(point.x and point.y, "only points with x and y can be scaled")
 	local copy = {}
@@ -1023,6 +1041,7 @@ function _M.scale_point(point, scale)
 	return copy
 end
 
+--- 
 function _M.scale_path(path, scale, apertures, macros)
 	if not apertures then apertures = {} end
 	if not macros then macros = {} end
@@ -1042,6 +1061,7 @@ function _M.scale_path(path, scale, apertures, macros)
 	return copy
 end
 
+--- 
 function _M.scale_layer(layer, scale, apertures, macros)
 	if not apertures then apertures = {} end
 	if not macros then macros = {} end
@@ -1054,6 +1074,7 @@ function _M.scale_layer(layer, scale, apertures, macros)
 	return copy
 end
 
+--- 
 function _M.scale_image(image, scale, apertures, macros)
 	if not apertures then apertures = {} end
 	if not macros then macros = {} end
@@ -1078,6 +1099,7 @@ function _M.scale_image(image, scale, apertures, macros)
 	return copy
 end
 
+--- 
 function _M.scale_outline(outline, scale, apertures, macros)
 	if not apertures then apertures = {} end
 	if not macros then macros = {} end
@@ -1101,6 +1123,7 @@ function _M.scale_outline(outline, scale, apertures, macros)
 	return copy
 end
 
+--- 
 function _M.scale_board(board, scale)
 	local copy = {
 		unit = board.unit,
@@ -1140,28 +1163,34 @@ end
 
 ------------------------------------------------------------------------------
 
+--- 
 function _M.copy_point(point)
 	return _M.rotate_point(point, 0)
 end
 
+--- 
 function _M.copy_path(path, apertures, macros)
 	return _M.rotate_path(path, 0, apertures, macros)
 end
 
+--- 
 function _M.copy_layer(layer, apertures, macros)
 	return _M.rotate_layer(layer, 0, apertures, macros)
 end
 
+--- 
 function _M.copy_image(image, apertures, macros)
 	return _M.rotate_image(image, 0, apertures, macros)
 end
 
+--- 
 function _M.copy_board(board)
 	return _M.rotate_board(board, 0)
 end
 
 ------------------------------------------------------------------------------
 
+--- 
 function _M.merge_layers(layer_a, layer_b, apertures, macros)
 	assert(layer_a.polarity == layer_b.polarity, "layer polarity mismatch ("..tostring(layer_a.polarity).." vs. "..tostring(layer_b.polarity)..")")
 	if not apertures then apertures = {} end
@@ -1178,6 +1207,7 @@ function _M.merge_layers(layer_a, layer_b, apertures, macros)
 	return merged
 end
 
+--- 
 function _M.merge_images(image_a, image_b, apertures, macros)
 	assert(image_a.unit == image_b.unit, "image unit mismatch ("..tostring(image_a.unit).." vs. "..tostring(image_b.unit)..")")
 	if not apertures then apertures = {} end
@@ -1221,6 +1251,7 @@ function _M.merge_images(image_a, image_b, apertures, macros)
 	return merged
 end
 
+--- 
 function _M.merge_boards(board_a, board_b)
 	assert(board_a.unit == board_b.unit, "board unit mismatch")
 	assert(board_a.template == board_b.template, "board template mismatch ("..tostring(board_a.template).." vs. "..tostring(board_b.template)..")")

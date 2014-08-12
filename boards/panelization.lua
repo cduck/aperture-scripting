@@ -1,3 +1,4 @@
+--- This module contains several functions that will let you create panels, ie. assemblies of several small boards in larger 2D structures.
 local _M = {}
 
 local math = require 'math'
@@ -18,8 +19,13 @@ local function empty_image()
 		layers = { { polarity = 'dark' } },
 	}
 end
-_M.empty_image = empty_image
 
+--- Create an empty image, with a single empty dark layer, a default saved unit of `'in'`, and a number format specifying 2 integer digits, 4 decimal digits and missing leading zeroes.
+function _M.empty_image()
+	return empty_image()
+end
+
+--- Create an empty board, without any image. If *width* and *height* are specified, a simple rectangle outline of that size is created, with the bottom-left corner aligned on the origin.
 function _M.empty_board(width, height)
 	return {
 		unit = 'pm',
@@ -355,6 +361,16 @@ local function merge_panels(panel_a, panel_b, options, vertical)
 	return merged
 end
 
+--- Panelize the board specified in *layout*. The *layout* can have several levels, alternating horizontal (from left to right) and vertical (from bottom to top) directions. The direction of the root layer is vertical if *vertical* is true, horizontal otherwise.
+--- 
+--- *options* is a table which can be empty, or have any or all of the following options:
+--- 
+---   - `spacing` determines the gap between boards (default is 2 mm)
+---   - `break_hole_diameter` is the diameter of breaking holes (mouse bites, default is 0.5 mm)
+---   - `break_tab_width` is the width of the breaking tabs (default is 5 mm)
+---   - `tab_interval` is the minimum interval between two breaking tabs on long edges (default is 77 mm)
+--- 
+--- Note that default values are internally specied in picometers. If your board use a different unit you'll need to override all options.
 function _M.panelize(layout, options, vertical)
 	local mm = 1e9
 	if not options.spacing then
