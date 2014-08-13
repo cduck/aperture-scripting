@@ -198,6 +198,17 @@ assert(boards.save(rotated, "test/output/pwrsppl-rotated17"))
 
 ------------------------------------------------------------------------------
 
+log 'change board unit'
+local board = assert(boards.load("test/units"))
+for _,image in pairs(board.images) do
+	image.unit = 'mm'
+	image.format = {integer=3, decimal=4, zeroes='L'}
+end
+assert(boards.save(board, "test/output/units"))
+assert(diff("test/output/units.gts", "test/output/units.gtl"))
+
+------------------------------------------------------------------------------
+
 log 'run example panels'
 fs.chdir('doc/examples')
 
