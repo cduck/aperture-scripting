@@ -2,7 +2,6 @@ local _M = {}
 
 local math = require 'math'
 local table = require 'table'
-local dump = require 'dump'
 _M.blocks = require 'excellon.blocks'
 
 ------------------------------------------------------------------------------

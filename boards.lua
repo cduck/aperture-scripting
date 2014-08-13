@@ -6,7 +6,6 @@ local math = require 'math'
 local table = require 'table'
 local lfs = require 'lfs'
 local pathlib = require 'path'
-local dump = require 'dump'
 
 local paths = require 'boards.path'
 local macros = require 'boards.macro'
