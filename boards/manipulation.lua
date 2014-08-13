@@ -401,8 +401,24 @@ local function rotate_macro_primitive(instruction, angle)
 			-- :KLUDGE: we force last vertex on the first, since sin(x) is not always equal to sin(x+2*pi)
 			if i==vertices then i = 0 end
 			local a = math.pi * 2 * (i / vertices)
-			table.insert(outline.parameters, {type='constant', value=x + r * math.cos(a), dimension={length=1}})
-			table.insert(outline.parameters, {type='constant', value=y + r * math.sin(a), dimension={length=1}})
+			local px = x + r * math.cos(a)
+			local py = y + r * math.sin(a)
+			if px < 0 then
+				table.insert(outline.parameters, {type='subtraction',
+					{type='constant', value=0, dimension={length=1}},
+					{type='constant', value=-px, dimension={length=1}},
+				})
+			else
+				table.insert(outline.parameters, {type='constant', value=px, dimension={length=1}})
+			end
+			if py < 0 then
+				table.insert(outline.parameters, {type='subtraction',
+					{type='constant', value=0, dimension={length=1}},
+					{type='constant', value=-py, dimension={length=1}},
+				})
+			else
+				table.insert(outline.parameters, {type='constant', value=py, dimension={length=1}})
+			end
 		end
 		table.insert(outline.parameters, {type='constant', value=(rotation + angle) % 360, dimension={angle=1}})
 		return outline

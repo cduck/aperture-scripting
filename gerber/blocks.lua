@@ -265,6 +265,7 @@ local ops = {
 local function save_expression(value)
 	local t = type(value)
 	if t=='number' then
+		assert(value >= 0, "negative number in macro expression")
 		return save_aperture_parameter(value)
 	elseif t=='string' then
 		return '$'..value
