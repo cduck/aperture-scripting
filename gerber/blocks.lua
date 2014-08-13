@@ -258,7 +258,7 @@ end
 local ops = {
 	addition = '+',
 	subtraction = '-',
-	multiplication = 'X',
+	multiplication = 'x',
 	division = '/',
 }
 
@@ -304,9 +304,9 @@ end
 if _NAME=='test' then
 	expect("1-2", save_expression({type='subtraction', 1e8, 2e8}))
 	expect("1-2+3", save_expression({type='addition', {type='subtraction', 1e8, 2e8}, 3e8}))
-	expect("1X(2+3)", save_expression({type='multiplication', 1e8, {type='addition', 2e8, 3e8}}))
+	expect("1x(2+3)", save_expression({type='multiplication', 1e8, {type='addition', 2e8, 3e8}}))
 	expect("1-(2+3)", save_expression({type='subtraction', 1e8, {type='addition', 2e8, 3e8}}))
-	expect("1/(2X3)", save_expression({type='division', 1e8, {type='multiplication', 2e8, 3e8}}))
+	expect("1/(2x3)", save_expression({type='division', 1e8, {type='multiplication', 2e8, 3e8}}))
 	expect("1/(2/3)", save_expression({type='division', 1e8, {type='division', 2e8, 3e8}}))
 	expect("1-2-3", save_expression({type='subtraction', {type='subtraction', 1e8, 2e8}, 3e8}))
 	expect("1/2/3", save_expression({type='division', {type='division', 1e8, 2e8}, 3e8}))
@@ -556,17 +556,17 @@ if _NAME=='test' then
 	expect("$A", save_expression(load_expression("$A")))
 	expect("1+2", save_expression(load_expression("1+2")))
 	expect("$A-1", save_expression(load_expression("$A-1")))
-	expect("$AX$B", save_expression(load_expression("$Ax$B")))
+	expect("$Ax$B", save_expression(load_expression("$Ax$B")))
 	expect("1/2", save_expression(load_expression("1/2")))
 	expect("$A", save_expression(load_expression("($A)")))
 	expect("$A+2", save_expression(load_expression("($A+2)")))
-	expect("(1+2)X3", save_expression(load_expression("(1+2)x3")))
+	expect("(1+2)x3", save_expression(load_expression("(1+2)x3")))
 	expect("1+2+3", save_expression(load_expression("1+2+3")))
-	expect("1+2X3", save_expression(load_expression("1+2x3")))
-	expect("2X3X$4", save_expression(load_expression("2x3x$4")))
+	expect("1+2x3", save_expression(load_expression("1+2x3")))
+	expect("2x3x$4", save_expression(load_expression("2x3x$4")))
 	expect("1-(2-3)", save_expression(load_expression("1-(2-3)")))
 	expect("0-1-(0-2)-(0-3)-(0-4)", save_expression(load_expression("-1--2--3--4")))
-	expect("(0-1)X(0-2)X(0-3)X(0-4)", save_expression(load_expression("-1x-2x-3x-4")))
+	expect("(0-1)x(0-2)x(0-3)x(0-4)", save_expression(load_expression("-1x-2x-3x-4")))
 end
 
 ------------------------------------------------------------------------------
