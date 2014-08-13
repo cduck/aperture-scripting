@@ -82,6 +82,11 @@ function region_mt.__mul(a, b)
 	end
 end
 
+function region_methods:contains(point)
+	return self.left <= point.x and point.x <= self.right
+		and self.bottom <= point.y and point.y <= self.top
+end
+
 _M.new = ctor
 
 function _MT:__call(...)

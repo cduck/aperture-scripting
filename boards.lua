@@ -10,6 +10,7 @@ local dump = require 'dump'
 
 local paths = require 'boards.path'
 local macros = require 'boards.macro'
+local region = require 'boards.region'
 local drawing = require 'boards.drawing'
 local extents = require 'boards.extents'
 local aperture = require 'boards.aperture'
@@ -314,6 +315,30 @@ function _M.load(path, options)
 	end
 	board.images = images
 	board.formats = formats
+	
+	-- crop
+	if template.crop then
+		local scale = path_merge_scales[board.unit]
+		local crop = region{
+			left = (template.crop.left or 0) * scale,
+			right = (template.crop.right or 0) * scale,
+			bottom = (template.crop.bottom or 0) * scale,
+			top = (template.crop.top or 0) * scale,
+		}
+		for _,image in pairs(board.images) do
+			for _,layer in ipairs(image.layers) do
+				for i=#layer,1,-1 do
+					local path = layer[i]
+					for _,point in ipairs(path) do
+						if not crop:contains(point) then
+							table.remove(layer, i)
+							break
+						end
+					end
+				end
+			end
+		end
+	end
 	
 	-- extract outline
 	local outlines = _M.find_board_outlines(board)
