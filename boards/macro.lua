@@ -627,7 +627,7 @@ primitive_dimensions.rectangle_ends = primitive_dimensions.line
 primitive_dimensions.rectangle_center = {{boolean=1}, {length=1}, {length=1}, {length=1}, {length=1}, {angle=1}}
 primitive_dimensions.rectangle_corner = {{boolean=1}, {length=1}, {length=1}, {length=1}, {length=1}, {angle=1}}
 primitive_dimensions.polygon = {{boolean=1}, {}, {length=1}, {length=1}, {length=1}, {angle=1}}
-primitive_dimensions.moire = {{length=1}, {length=1}, {length=1}, {length=1}, {length=1}, {length=1}, {length=1}, {length=1}, {angle=1}}
+primitive_dimensions.moire = {{length=1}, {length=1}, {length=1}, {length=1}, {length=1}, {}, {length=1}, {length=1}, {angle=1}}
 primitive_dimensions.thermal = {{length=1}, {length=1}, {length=1}, {length=1}, {length=1}, {angle=1}}
 
 -- special case
