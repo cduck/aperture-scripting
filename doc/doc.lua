@@ -51,15 +51,22 @@ Tarballs of the latest code can be downloaded directly from there: as [gz](http:
 chapter('installation', "Installation", [[
 Aperture Scripting is not (at the moment) designed to be installed. Rather you should simply unzip one of the packages above or clone the source repository. Then make sure your Lua scripts can find its modules. It is written in pure Lua, so you don't need to compile anything.
 
-There are a few dependencies. The only mandatory dependency is [LuaFileSystem](http://keplerproject.github.io/luafilesystem/). If you want to load SVG files you will need my [prtr-xml module](https://bitbucket.org/doub/xml). For font loading and text drawing you will need my [LuaFreeType module](https://bitbucket.org/doub/luafreetype). All of these can be installed with [LuaRocks](http://luarocks.org/):
+There are however several dependencies. The mandatory dependencies are as follow:
 
-	luarocks install luafilesystem
-	luarocks install prtr-xml
-	luarocks install freetype
+  - [LuaFileSystem](http://keplerproject.github.io/luafilesystem/): `luarocks install luafilesystem`
+  - my [prtr-path](https://bitbucket.org/doub/path) module: `luarocks install prtr-path`
 
-There's one more optional dependency not available on LuaRocks, it's [lhf's lgpc](http://www.tecgraf.puc-rio.br/~lhf/ftp/lua/#lgpc). This is not required for panelization, only for an advanced function that most people will never use.
+The following dependencies are optional:
 
-If you're on Windows, and you don't have a working Lua installation, I recommend you download one of my [Gerber Viewer packages](http://piratery.net/grbv/downloads/). It contains Aperture Scripting, along with a full working set of compiled libraries, a Lua interpreter and Lua modules, including all the optional dependencies for Aperture Scripting. And as a bonus you get a 3D viewer for your generated PCBs files.
+  - for font loading and text drawing:
+    - my [LuaFreeType](https://bitbucket.org/doub/luafreetype) module: `luarocks install freetype`
+    - my [geometry](https://bitbucket.org/doub/geometry/) library: this needs to be installed manually
+  - to load SVG files:
+    - my [prtr-xml](https://bitbucket.org/doub/xml) module: `luarocks install prtr-xml`
+  - for aperture path generation (not required for panelization or general board manipulation):
+    - lhf's [lgpc](http://www.tecgraf.puc-rio.br/~lhf/ftp/lua/#lgpc) module: this needs to be installed manually
+
+If you're on Windows, and you don't have a working Lua installation, I recommend you download one of my [Gerber Viewer packages](http://piratery.net/grbv/downloads/). It contains Aperture Scripting, along with a full working set of compiled libraries, a Lua interpreter and Lua modules, including all the mandatory and optional dependencies for Aperture Scripting. And as a bonus you get a 3D viewer for your generated PCBs files.
 ]])
 
 footer()
