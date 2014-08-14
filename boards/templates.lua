@@ -20,7 +20,7 @@ _M.default = {
 	path_merge_radius = 0.1, -- mm
 	bom = {
 		scale = {
-			dimension = 1e9,
+			length = 1e9,
 			angle = 1,
 		},
 		fields = {

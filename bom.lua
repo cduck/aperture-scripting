@@ -58,8 +58,8 @@ function _M.load(file_path, template)
 		offset = rotate(offset, angle)
 		local x = set[template.fields.x] + offset.x
 		local y = set[template.fields.y] + offset.y
-		part.x = x * template.scale.dimension
-		part.y = y * template.scale.dimension
+		part.x = x * template.scale.length
+		part.y = y * template.scale.length
 		local side = set[template.fields.side]
 		for _,field in pairs(template.fields) do
 			set[field] = nil
@@ -111,8 +111,8 @@ function _M.save(image, file_path, template)
 			end
 			set[template.fields.package] = device.package
 			set[template.fields.name] = part.name
-			set[template.fields.x] = part.x / template.scale.dimension
-			set[template.fields.y] = part.y / template.scale.dimension
+			set[template.fields.x] = part.x / template.scale.length
+			set[template.fields.y] = part.y / template.scale.length
 			set[template.fields.angle] = part.angle / template.scale.angle
 			set[template.fields.side] = layer.polarity
 			local array = {}
