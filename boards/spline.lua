@@ -2,8 +2,6 @@ local _M = {}
 local _NAME = ... or 'test'
 
 local table = require 'table'
-local geometry = require 'geometry'
-local vector = geometry.vector
 
 if _NAME=='test' then
 	require 'test'
@@ -260,6 +258,9 @@ local function intersect(p0, v0, p1, v1)
 end
 
 local function biarc(spline)
+	local geometry = require 'geometry'
+	local vector = geometry.vector
+	
 	local A,B,tA,tB
 	if spline.mode=='quadratic' then
 		A = vector(spline.x0, spline.y0)
