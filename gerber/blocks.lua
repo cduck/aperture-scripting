@@ -61,50 +61,149 @@ end
 
 ------------------------------------------------------------------------------
 
+-- see http://www.artwork.com/gerber/274x/rs274x.htm
+-- 
+-- FS[LTD][AI](Nn)(Gn)(Xa)(Yb)(Zc)(Dn)(Mn)
+-- 
+-- where:
+-- 
+-- L  = leading zeros omitted
+-- T  = trailing zeros omitted
+-- D  = explicit decimal point (i.e. no zeros omitted)
+-- 
+-- A  = absolute coordinate mode
+-- I  = incremental coordinate mode
+-- 
+-- Nn = sequence number, where n is number of digits (rarely used)
+-- Gn = prepartory function code (rarely used)
+-- 
+-- Xa = format of input data (5.5 is max)
+-- Yb = format of input data
+-- Zb = format of input data (Z is rarely if ever seen)
+-- 
+-- Dn = draft code (rarely used)
+-- Mn = misc code (rarely used)
+
 local format_mt = {}
 
 function format_mt:__tostring()
-	return 'FS'..self.zeroes..'AX'..self.integer..self.decimal..'Y'..self.integer..self.decimal
+	local format = { 'FS', self.zeroes or 'D', 'A' }
+	local function append(...) for _,s in ipairs{...} do table.insert(format, s) end end
+	if self.sequence_number then
+		append('N', self.sequence_number)
+	end
+	if self.preparatory_function_code then
+		append('G', self.preparatory_function_code)
+	end
+	append('X', self.integer, self.decimal)
+	append('Y', self.integer, self.decimal)
+	if self.has_z then
+		append('Z', self.integer, self.decimal)
+	end
+	if self.draft_code then
+		append('D', self.draft_code)
+	end
+	if self.misc_code then
+		append('M', self.misc_code)
+	end
+	return table.concat(format)
 end
 
-function _M.format(zeroes, integer, decimal)
+function _M.format(zeroes, integer, decimal, seq, prep, draft, misc, has_z)
 	local format = setmetatable({type='format'}, format_mt)
 	format.zeroes = zeroes
 	format.integer = integer
 	format.decimal = decimal
+	format.sequence_number = seq
+	format.preparatory_function_code = prep
+	format.draft_code = draft
+	format.misc_code = misc
+	format.has_z = has_z
 	return format
 end
 
 local function load_format(block)
-	local zeroes,mode,xi,xd,yi,yd = block:match('^FS([LT])([AI])X(%d)(%d)Y(%d)(%d)$')
+	local zeroes,mode,xi,xd,yi,yd = block:match('^FS([LTD])([AI])X(%d)(%d)Y(%d)(%d)$')
+	local seq,prep,draft,misc,zi,zd
 	local warn
 	if not zeroes then
 		warn = true
 		local data = block:match('^FS(.*)$')
 		-- try to extract some information
 		for param in data:gmatch('%a%d*') do
-			if param=='L' or param=='T' then
+			if param=='L' or param=='T' or param=='D' then
 				zeroes = param
 			elseif param=='A' or param=='I' then
 				mode = param
+			elseif param:match('^N%d+$') then
+				seq = param:match('^N(%d+)$')
+			elseif param:match('^G%d+$') then
+				prep = param:match('^G(%d+)$')
 			elseif param:match('^X%d%d$') then
 				xi,xd = param:match('^X(%d)(%d)$')
 			elseif param:match('^Y%d%d$') then
 				yi,yd = param:match('^Y(%d)(%d)$')
+			elseif param:match('^Z%d%d$') then
+				zi,zd = param:match('^Z(%d)(%d)$')
+			elseif param:match('^D%d+$') then
+				draft = param:match('^D(%d+)$')
+			elseif param:match('^M%d+$') then
+				misc = param:match('^M(%d+)$')
 			else
 				error("unrecognized format '"..block.."'")
 			end
 		end
 	end
+	-- if unspecified default to missing leading zeroes
 	if not zeroes then zeroes = 'L' end
---	assert(zeroes=='L' or zeroes=='T', "unsupported zeroes mode "..zeroes.." in format '"..block.."'")
+--	assert(zeroes=='L' or zeroes=='T' or zeroes=='D', "unsupported zeroes mode "..zeroes.." in format '"..block.."'")
+	-- if no missing zeroes, set field to nil
+	if zeroes=='D' then zeroes = nil end
 	assert(mode=='A', "only files with absolute coordinates are supported")
 	assert(xi==yi and xd==yd, "files with different precisions on X and Y axis are not yet supported")
-	local format = _M.format(zeroes, tonumber(xi), tonumber(xd))
+	if zi then
+		assert(zi==yi and zd==yd, "files with different precisions on Y and Z axis are not yet supported")
+	end
+	local format = _M.format(
+		zeroes,
+		tonumber(xi),
+		tonumber(xd),
+		seq and tonumber(seq),
+		prep and tonumber(prep),
+		draft and tonumber(draft),
+		misc and tonumber(misc),
+		zi and true or nil)
 	if warn then
-		print("warning: invalid Gerber format "..block..", treating as "..tostring(format))
+		local str = tostring(format)
+		if str~=block then
+			print("warning: invalid Gerber format "..block..", treating as "..str)
+		else
+			print("warning: obsolete Gerber format "..block)
+		end
 	end
 	return format
+end
+
+if _NAME=='test' then
+	local _print = print
+	local msg
+	function print(str) msg = str end
+	expect({type='format', zeroes='L', integer=2, decimal=4}, load_format("FSLAX24Y24"))
+	expect({type='format', zeroes='L', integer=4, decimal=4}, load_format("FSAX44Y44"))
+	expect("warning: invalid Gerber format FSAX44Y44, treating as FSLAX44Y44", msg)
+	expect({
+		type = 'format',
+		zeroes = nil,
+		integer = 2,
+		decimal = 4,
+		has_z = true,
+		sequence_number = 2,
+		preparatory_function_code = 3,
+		draft_code = 7,
+		misc_code = 8,
+	}, load_format("FSDAN2G3X24Y24Z24D7M8"))
+	expect("warning: obsolete Gerber format FSDAN2G3X24Y24Z24D7M8", msg)
+	print = _print
 end
 
 ------------------------------------------------------------------------------
