@@ -470,7 +470,7 @@ function _M.load(file_path)
 					elseif block.G==55 then
 						assert(block.D==3, "G55 precedes a D-code different than D03")
 					else
-						error("unsupported block with both G and D codes")
+						error("unsupported block with both G"..block.G.." and D"..block.D.." codes")
 					end
 				end
 				if block.D then
