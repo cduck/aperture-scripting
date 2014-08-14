@@ -25,7 +25,15 @@ lang="en">
 <div class="chapter">
 <a id="examples"/><h1>5 - Examples</h1>
 
-<p>Here are some progressively more complex example scripts showing how you can use Aperture Scripting.</p>
+<p>Here are some progressively more complex example scripts showing how you can use Aperture Scripting. To run them, copy the code in a text file and save that file, for example under the name <code>"panel.cfg"</code>. Then run that file through a Lua interpreter from your shell:</p>
+
+<pre><code>lua panel.cfg
+</code></pre>
+
+<p>You might need to configure your <code>LUA_PATH</code> environment variable to let Lua find the Aperture Scripting modules. If you downloaded a Gerber Viewer package on Windows, you can simply run the lua.exe program from a command line:</p>
+
+<pre><code>"D:\path\to\Gerber Viewer\lua.exe" panel.cfg
+</code></pre>
 
 </div>
 
@@ -317,7 +325,7 @@ boards.save(board, './empty-save')
 </div>
 
 <div class="chapter" id="footer">
-<small>Last update: 2014-08-12 17:22:45 BST</small>
+<small>Last update: 2014-08-14 02:14:28 BST</small>
 </div>
 
 </body>

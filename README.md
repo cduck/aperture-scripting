@@ -24,6 +24,8 @@ Aperture Scripting sources are available in its [Mercurial repository](http://hg
 
 Tarballs of the latest code can be downloaded directly from there: as [gz](http://hg.piratery.net/aperture-scripting/get/tip.tar.gz), [bz2](http://hg.piratery.net/aperture-scripting/get/tip.tar.bz2) or [zip](http://hg.piratery.net/aperture-scripting/get/tip.zip).
 
+If you're on Windows, and you don't have a working Lua installation, I recommend you download one of my [Gerber Viewer packages](http://piratery.net/grbv/downloads/). It contains Aperture Scripting, along with a full working set of compiled libraries, a Lua interpreter and Lua modules, including all the mandatory and optional dependencies listed below. And as a bonus you get a 3D viewer for your generated PCBs files.
+
 # 3 - Installation
 
 Aperture Scripting is not (at the moment) designed to be installed. Rather you should simply unzip one of the packages above or clone the source repository. Then make sure your Lua scripts can find its modules. It is written in pure Lua, so you don't need to compile anything.
@@ -43,7 +45,7 @@ The following dependencies are optional:
   - for aperture path generation (not required for panelization or general board manipulation):
     - lhf's [lgpc](http://www.tecgraf.puc-rio.br/~lhf/ftp/lua/#lgpc) module: this needs to be installed manually
 
-If you're on Windows, and you don't have a working Lua installation, I recommend you download one of my [Gerber Viewer packages](http://piratery.net/grbv/downloads/). It contains Aperture Scripting, along with a full working set of compiled libraries, a Lua interpreter and Lua modules, including all the mandatory and optional dependencies for Aperture Scripting. And as a bonus you get a 3D viewer for your generated PCBs files.
+Again if you're on Windows, I recommend using a [Gerber Viewer package](http://piratery.net/grbv/downloads/).
 
 # 4 - Manual
 
@@ -300,7 +302,13 @@ Each glyph is converted to regions on the top image layer or new layers if neces
 *mirror* is a boolean, indicating whether the text will read normally from left to right (if false) or be mirrored horizontally (if true). This is useful to draw text on bottom images. Note that is *mirror* is true and *halign* is `'left'`, it's the text right-most edge that will actually be on *x*.
 # 5 - Examples
 
-Here are some progressively more complex example scripts showing how you can use Aperture Scripting.
+Here are some progressively more complex example scripts showing how you can use Aperture Scripting. To run them, copy the code in a text file and save that file, for example under the name `"panel.cfg"`. Then run that file through a Lua interpreter from your shell:
+
+    lua panel.cfg
+
+You might need to configure your `LUA_PATH` environment variable to let Lua find the Aperture Scripting modules. If you downloaded a Gerber Viewer package on Windows, you can simply run the lua.exe program from a command line:
+
+    "D:\path\to\Gerber Viewer\lua.exe" panel.cfg
 
 ## 5.1 - Loading a board
 
