@@ -247,37 +247,44 @@ function _M.load(path, options)
 	-- locate files
 	local paths = {}
 	local extensions = {}
+	local formats = {}
 	if type(path)~='table' and lfs.attributes(path, 'mode') then
 		path = { path }
 	end
 	if type(path)=='table' then
 		for _,path in ipairs(path) do
 			path = pathlib.split(path)
-			local found = false
-			for image,patterns in pairs(template.patterns) do
-				if type(patterns)=='string' then patterns = { patterns } end
-				for _,pattern in ipairs(patterns) do
-					local lpattern = '^'..pattern:gsub('[-%.()%%]', {
-						['-'] = '%-',
-						['.'] = '%.',
-						['('] = '%(',
-						[')'] = '%)',
-						['%'] = '(.*)',
-					})..'$'
-					local basename = path.file:match(lpattern) or path.file:lower():match(lpattern:lower())
-					if basename then
-						paths[image] = path
-						extensions[image] = pattern
-						found = true
+			local format = _M.detect_format(path)
+			if format then
+				local found = false
+				for image,patterns in pairs(template.patterns) do
+					if type(patterns)=='string' then patterns = { patterns } end
+					for _,pattern in ipairs(patterns) do
+						local lpattern = '^'..pattern:gsub('[-%.()%%]', {
+							['-'] = '%-',
+							['.'] = '%.',
+							['('] = '%(',
+							[')'] = '%)',
+							['%'] = '(.*)',
+						})..'$'
+						local basename = path.file:match(lpattern) or path.file:lower():match(lpattern:lower())
+						if basename then
+							paths[image] = path
+							extensions[image] = pattern
+							formats[image] = format
+							found = true
+							break
+						end
+					end
+					if found then
 						break
 					end
 				end
-				if found then
-					break
+				if not found then
+					print("cannot guess type of file "..tostring(path))
 				end
-			end
-			if not found then
-				print("cannot guess type of file "..tostring(path))
+			else
+				print("cannot detect format of file "..tostring(path))
 			end
 		end
 	else
@@ -291,9 +298,16 @@ function _M.load(path, options)
 			for _,pattern in ipairs(patterns) do
 				local file = files[pattern:gsub('%%', path.file):lower()]
 				if file then
-					paths[image] = path.dir / file
-					extensions[image] = pattern
-					break
+					local path = path.dir / file
+					local format = _M.detect_format(path)
+					if format then
+						paths[image] = path
+						extensions[image] = pattern
+						formats[image] = format
+						break
+					else
+						print("cannot detect format of file "..tostring(path))
+					end
 				end
 			end
 		end
@@ -302,18 +316,16 @@ function _M.load(path, options)
 		return nil,"no image found"
 	end
 	board.extensions = extensions
+	board.formats = formats
 	
 	-- load images
 	local images = {}
-	local formats = {}
 	for type,path in pairs(paths) do
-		local format = assert(_M.detect_format(path), "could not detect format of file "..tostring(path))
+		local format = formats[type]
 		local image = load_image(path, format, board.unit, template)
 		images[type] = image
-		formats[type] = format
 	end
 	board.images = images
-	board.formats = formats
 	
 	-- crop
 	if template.crop then
