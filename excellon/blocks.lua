@@ -220,6 +220,8 @@ function _M.load(filename)
 					data.format.integer,data.format.decimal = 2,4
 				end
 				table.insert(data, load_directive(block, data.format))
+			elseif block:match('^;') then
+				table.insert(data, load_comment(block))
 			else
 				table.insert(data, block)
 			end

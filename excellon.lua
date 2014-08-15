@@ -184,6 +184,8 @@ function _M.load(file_path)
 			else
 				error("unsupported directive ("..tostring(block)..")")
 			end
+		elseif tb=='comment' then
+			-- ignore
 		elseif type(block)=='string' then
 			error("unsupported block '"..block.."'")
 		else
