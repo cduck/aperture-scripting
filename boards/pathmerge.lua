@@ -143,6 +143,20 @@ local function merge_layer_paths(layer, epsilon)
 	local merged = {}
 	local indices = {}
 	local closed = {}
+	-- clean paths (remove zero-length linear segments)
+	for ipath,path in ipairs(layer) do
+		local i = #path
+		while i > 1 do
+			if path[i].interpolation=='linear'
+				and path[i].x==path[i-1].x
+				and path[i].y==path[i-1].y
+			then
+				table.remove(path, i)
+			end
+			i = i - 1
+		end
+	end
+	-- merge paths
 	for ipath,path in ipairs(layer) do
 		if #path >= 2 and path.aperture then
 			indices[path] = ipath
@@ -496,6 +510,22 @@ if _NAME=='test' then
 	}
 	merge_layer_paths(layer, 0.1)
 	expect(1, #layer)
+	local layer = mklayer{
+		{ {x=0, y=0}, {x=1.01, y=0}, {x=1.01, y=0} },
+		{ {x=1, y=0}, {x=1, y=0}, {x=1, y=1} },
+	}
+	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=1, y=1} },
+	}, layer)
+	local layer = mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=1, y=0} },
+		{ {x=1.01, y=0}, {x=1.01, y=0}, {x=1, y=1} },
+	}
+	merge_layer_paths(layer, 0.1)
+	expect(mklayer{
+		{ {x=0, y=0}, {x=1, y=0}, {x=1, y=1} },
+	}, layer)
 	
 	local aperture = {}
 	local layer = {
