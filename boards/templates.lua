@@ -14,7 +14,7 @@ _M.default = {
 		bottom_paste = '%.gbp',
 		milling = {'%.gml', '%.gm1', '%.dxf'},
 		outline = {'%.gko', '%.oln', '%.out'},
-		drill = {'%.drd', '%.txt'},
+		drill = {'%.drd', '%.xln', '%.txt'},
 		bom = '%-bom.txt',
 	},
 	path_merge_radius = 0.1, -- mm
