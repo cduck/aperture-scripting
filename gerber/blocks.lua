@@ -260,7 +260,7 @@ _M.save_number = save_number
 ------------------------------------------------------------------------------
 
 local function load_aperture_parameter(s)
-	local sign,base = s:match('^([+-]?)([%d.]+)$')
+	local sign,base = s:match('^%s*([+-]?)([%d.]+)%s*$')
 	assert(sign and base, "invalid aperture parameter '"..tostring(s).."'")
 	local integer,decimal
 	if base:match('%.') then
