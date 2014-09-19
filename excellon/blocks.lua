@@ -196,6 +196,10 @@ function _M.load(filename)
 								data.format.integer,data.format.decimal = 3,3
 							end
 							table.insert(data.headers, load_header(word))
+						elseif word:match('^0+%.0+$') then
+							local integer,decimal = word:match('^(0+)%.(0+)$')
+							data.format.integer = #integer
+							data.format.decimal = #decimal
 						else
 							error("unsupported keyword '"..word.."' in format header")
 						end
