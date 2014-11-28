@@ -152,7 +152,7 @@ function _M.load(filename)
 
 	local data = { headers = {}, tools = {} }
 	-- :FIXME: find out how excellon files declare their format
-	data.format = { integer = nil, decimal = nil, zeroes = 'L' }
+	data.format = { integer = nil, decimal = nil, zeroes = 'T' } -- default is leading zeroes present (LZ), so 'T' missing
 	local header = nil
 	for block in content:gmatch('[^\n]+') do
 		if header then
