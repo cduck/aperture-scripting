@@ -145,6 +145,23 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 		mill(panel.images.milling, spacer, w, from, side[1])
 	end
 	
+	-- determine the distance between the routing line center and the mouse bites
+	local break_line_distance = options.spacing / 2 -- default aligns on board edge
+	do
+		local break_line_offset = options.break_line_offset
+		if break_line_offset==nil or break_line_offset=='none' or break_line_offset=='edge' then
+			-- keep on board edge
+		elseif break_line_offset=='inside' then
+			break_line_distance = break_line_distance + options.break_hole_diameter / 2
+		elseif break_line_offset=='outside' then
+			break_line_distance = break_line_distance - options.break_hole_diameter / 2
+		elseif type(break_line_offset)=='number' then
+			break_line_distance = break_line_distance - break_line_offset
+		else
+			error("unsuppoerted break hole offset option with value "..tostring(break_line_offset).." (a "..type(break_line_offset)..")")
+		end
+	end
+	
 	-- iterate over merged side
 	for i=1,#side-1 do
 		-- ends of this segment
@@ -169,20 +186,26 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 				mill(panel.images.milling, spacer, w, z1, z2)
 				mill(panel.images.milling, spacer, w, z3, z4)
 				-- small lines on the edge of the tab to ease breaking
-				if panel.images.top_soldermask then
-					mill(panel.images.top_soldermask, breaker, w - options.spacing / 2, z2, z3)
-					mill(panel.images.top_soldermask, breaker, w + options.spacing / 2, z2, z3)
+				if options.break_lines_on_soldermask and panel.images.top_soldermask then
+					mill(panel.images.top_soldermask, breaker, w - break_line_distance, z2, z3)
+					if break_line_distance ~= 0 then
+						mill(panel.images.top_soldermask, breaker, w + break_line_distance, z2, z3)
+					end
 				end
-				if panel.images.bottom_soldermask then
-					mill(panel.images.bottom_soldermask, breaker, w - options.spacing / 2, z2, z3)
-					mill(panel.images.bottom_soldermask, breaker, w + options.spacing / 2, z2, z3)
+				if options.break_lines_on_soldermask and panel.images.bottom_soldermask then
+					mill(panel.images.bottom_soldermask, breaker, w - break_line_distance, z2, z3)
+					if break_line_distance ~= 0 then
+						mill(panel.images.bottom_soldermask, breaker, w + break_line_distance, z2, z3)
+					end
 				end
 				-- drill holes to make the tabs easy to break
 				local drill_count = math.floor(options.break_tab_width / options.break_hole_diameter / 2)
 				for i=0,drill_count-1 do
 					local z = (i - (drill_count-1) / 2) * options.break_hole_diameter * 2
-					drill(panel.images.milling, breaker, w - options.spacing / 2, c + z)
-					drill(panel.images.milling, breaker, w + options.spacing / 2, c + z)
+					drill(panel.images.milling, breaker, w - break_line_distance, c + z)
+					if break_line_distance ~= 0 then
+						drill(panel.images.milling, breaker, w + break_line_distance, c + z)
+					end
 				end
 			end
 		else
@@ -369,6 +392,12 @@ end
 ---   - `break_hole_diameter` is the diameter of breaking holes (mouse bites, default is 0.5 mm)
 ---   - `break_tab_width` is the width of the breaking tabs (default is 5 mm)
 ---   - `tab_interval` is the minimum interval between two breaking tabs on long edges (default is 77 mm)
+---   - `break_lines_on_soldermask` determines whether to draw a break line on the soldermasks to ease panel breaking (default is true)
+---   - `break_line_offset` is the position of the breaking holes relative to the board edges; it can have the following values:
+---     - nil, `'none'` or `'edge'` will put the hole centers on the board edge (this is the default)
+---     - `'inside'` will move the holes completely inside the board outline (offset by one hole radius); this is recommended if you want a clean board outline without the need to file the edge after depanelization
+---     - `'outside'` will move the holes completely outside the board (offset by one hole radius); this is recommended if you want to file the board edge to have it look like it wasn't panelized
+---     - a number value can specify any other offset; positive values extend outside the board, negative values inside the board
 --- 
 --- Note that default values are internally specied in picometers. If your board use a different unit you'll need to override all options.
 function _M.panelize(layout, options, vertical)
@@ -384,6 +413,9 @@ function _M.panelize(layout, options, vertical)
 	end
 	if not options.tab_interval then
 		options.tab_interval = 77*mm
+	end
+	if options.break_lines_on_soldermask==nil then
+		options.break_lines_on_soldermask = true
 	end
 	if #layout == 0 then
 		-- this is not a layout but a board

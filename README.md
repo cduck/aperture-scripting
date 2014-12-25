@@ -274,6 +274,12 @@ Panelize the board specified in *layout*. The *layout* can have several levels, 
   - `break_hole_diameter` is the diameter of breaking holes (mouse bites, default is 0.5 mm)
   - `break_tab_width` is the width of the breaking tabs (default is 5 mm)
   - `tab_interval` is the minimum interval between two breaking tabs on long edges (default is 77 mm)
+  - `break_lines_on_soldermask` determines whether to draw a break line on the soldermasks to ease panel breaking (default is true)
+  - `break_line_offset` is the position of the breaking holes relative to the board edges; it can have the following values:
+    - nil, `'none'` or `'edge'` will put the hole centers on the board edge (this is the default)
+    - `'inside'` will move the holes completely inside the board outline (offset by one hole radius); this is recommended if you want a clean board outline without the need to file the edge after depanelization
+    - `'outside'` will move the holes completely outside the board (offset by one hole radius); this is recommended if you want to file the board edge to have it look like it wasn't panelized
+    - a number value can specify any other offset; positive values extend outside the board, negative values inside the board
 
 Note that default values are internally specied in picometers. If your board use a different unit you'll need to override all options.
 ## 4.6 - boards.drawing module

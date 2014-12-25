@@ -403,6 +403,14 @@ lang="en">
     <li><code>break_hole_diameter</code> is the diameter of breaking holes (mouse bites, default is 0.5 mm)</li>
     <li><code>break_tab_width</code> is the width of the breaking tabs (default is 5 mm)</li>
     <li><code>tab_interval</code> is the minimum interval between two breaking tabs on long edges (default is 77 mm)</li>
+    <li><code>break_lines_on_soldermask</code> determines whether to draw a break line on the soldermasks to ease panel breaking (default is true)</li>
+    <li><code>break_line_offset</code> is the position of the breaking holes relative to the board edges; it can have the following values:
+    <ul>
+        <li>nil, <code>'none'</code> or <code>'edge'</code> will put the hole centers on the board edge (this is the default)</li>
+        <li><code>'inside'</code> will move the holes completely inside the board outline (offset by one hole radius); this is recommended if you want a clean board outline without the need to file the edge after depanelization</li>
+        <li><code>'outside'</code> will move the holes completely outside the board (offset by one hole radius); this is recommended if you want to file the board edge to have it look like it wasn't panelized</li>
+        <li>a number value can specify any other offset; positive values extend outside the board, negative values inside the board</li>
+    </ul></li>
 </ul>
 
 <p>Note that default values are internally specied in picometers. If your board use a different unit you'll need to override all options.</p>
@@ -447,7 +455,7 @@ lang="en">
 </div>
 
 <div class="chapter" id="footer">
-<small>Last update: 2014-08-12 17:30:59 BST</small>
+<small>Last update: 2014-12-25 23:14:25 GMT</small>
 </div>
 
 </body>
