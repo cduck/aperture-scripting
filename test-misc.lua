@@ -37,6 +37,11 @@ log 'copy excellon'
 os.remove('test/copy.drl')
 assert(excellon.save(assert(excellon.load("test/example.drl")), "test/copy.drl"))
 assert(diff('test/copy.drl.expected', 'test/copy.drl'))
+for _,test in ipairs{'a', 'b', 'c'} do
+	os.remove('test/excellon/'..test..'.drl')
+	assert(excellon.save(assert(excellon.load("test/excellon/"..test..".drl.in")), "test/excellon/"..test..".drl"))
+	assert(diff('test/excellon/'..test..'.drl.out', 'test/excellon/'..test..'.drl'))
+end
 
 log 'copy board'
 assert(rmdir('test/simple.copy'))

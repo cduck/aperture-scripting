@@ -253,12 +253,32 @@ function _M.save(image, file_path)
 	local unit = image.unit
 	assert(scales[unit])
 	
-	if unit == 'in' then
-		table.insert(data.headers, 'M72')
-	elseif unit == 'mm' then
-		table.insert(data.headers, 'M71')
+	if image.format and image.format.zeroes~='T' then
+		local header = {}
+		if unit == 'in' then
+			table.insert(header, 'INCH')
+		elseif unit == 'mm' then
+			table.insert(header, 'METRIC')
+		else
+			error("unsupported unit")
+		end
+		if image.format.zeroes=='T' then
+			table.insert(header, 'LZ')
+		elseif image.format.zeroes=='L' then
+			table.insert(header, 'TZ')
+		else
+			error("unsupported zero format "..tostring(image.format.zeroes).." for excellon file")
+		end
+		assert(#header >= 1)
+		table.insert(data.headers, table.concat(header, ','))
 	else
-		error("unsupported unit")
+		if unit == 'in' then
+			table.insert(data.headers, 'M72')
+		elseif unit == 'mm' then
+			table.insert(data.headers, 'M71')
+		else
+			error("unsupported unit")
+		end
 	end
 	
 	for _,aperture in ipairs(aperture_order) do

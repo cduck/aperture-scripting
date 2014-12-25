@@ -1,6 +1,7 @@
 syntax: glob
 test/copy.drl
 test/copy.grb
+test/excellon/*.drl
 test/simple.copy
 test/simple.copy2
 test/simple.offset-0-0
