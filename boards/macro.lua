@@ -517,11 +517,13 @@ function _M.compile(macro, circle_steps)
 		end,
 	})
 	local rawchunk
-	if _VERSION == 'Lua 5.2' then
+	if _VERSION == 'Lua 5.2' or _VERSION == 'Lua 5.3' then
 		rawchunk = assert(load(source, nil, 't', env))
 	elseif _VERSION == 'Lua 5.1' then
 		rawchunk = assert(loadstring(source))
 		setfenv(rawchunk, env)
+	else
+		error("unsupported Lua version")
 	end
 	local chunk = function(...)
 		local gpc = require 'gpc'

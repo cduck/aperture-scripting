@@ -9,6 +9,8 @@ if _NAME=='test' then
 	require 'test'
 end
 
+local atan2 = math.atan2 or math.atan
+
 ------------------------------------------------------------------------------
 
 local curve_steps = 16
@@ -27,9 +29,9 @@ local function interpolate_point(path, point, epsilon, allowed)
 		local dxb,dyb = point.x - cx, point.y - cy
 		local ra = math.sqrt(dxa*dxa + dya*dya)
 		local rb = math.sqrt(dxb*dxb + dyb*dyb)
-		local ta = math.deg(math.atan2(dya, dxa))
+		local ta = math.deg(atan2(dya, dxa))
 		while ta < 0 do ta = ta + 360 end
-		local tb = math.deg(math.atan2(dyb, dxb))
+		local tb = math.deg(atan2(dyb, dxb))
 		while tb < 0 do tb = tb + 360 end
 		
 		-- error is r * (1 - cos(step / 2))

@@ -6,6 +6,8 @@ _M.blocks = require 'gerber.blocks'
 local macros = require 'boards.macro'
 local interpolationlib = require 'boards.interpolation'
 
+local atan2 = math.atan2 or math.atan
+
 ------------------------------------------------------------------------------
 
 -- all positions in picometers (1e-12 meters)
@@ -323,8 +325,8 @@ local function circle_center(x0, y0, i, j, x1, y1, direction, quadrant)
 			local dxb,dyb = x1 - c.x, y1 - c.y
 			local ra = math.sqrt(dxa*dxa + dya*dya)
 			local rb = math.sqrt(dxb*dxb + dyb*dyb)
-			local ta = math.deg(math.atan2(dya, dxa))
-			local tb = math.deg(math.atan2(dyb, dxb))
+			local ta = math.deg(atan2(dya, dxa))
+			local tb = math.deg(atan2(dyb, dxb))
 			local dt
 			if direction == 'clockwise' then
 				while ta < tb do ta = ta + 360 end

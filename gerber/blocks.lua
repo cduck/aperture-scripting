@@ -10,6 +10,8 @@ if _NAME=='test' then
 	require 'test'
 end
 
+local tointeger = math.tointeger or function(i) return i end
+
 ------------------------------------------------------------------------------
 
 local zero_omissions = {
@@ -284,7 +286,7 @@ local function save_aperture_parameter(n)
 		sign = ''
 	end
 	local d = n % 10 ^ decimal_shift
-	local i = (n - d) / 10 ^ decimal_shift
+	local i = tointeger((n - d) / 10 ^ decimal_shift)
 	n = tostring(i)
 	if d~=0 then
 		d = string.format('%f', d)
