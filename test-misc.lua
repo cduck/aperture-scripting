@@ -5,6 +5,7 @@ local excellon = require 'excellon'
 local boards = require 'boards'
 local extents = require 'boards.extents'
 local manipulation = require 'boards.manipulation'
+local panelization = require 'boards.panelization'
 local interpolation = require 'boards.interpolation'
 
 local function log(s, ...)
@@ -211,6 +212,25 @@ for _,image in pairs(board.images) do
 end
 assert(boards.save(board, "test/output/units"))
 assert(diff("test/output/units.gts", "test/output/units.gtl"))
+
+------------------------------------------------------------------------------
+
+log 'panelize rounded corners'
+local rounded = assert(boards.load('test/rounded/rounded'))
+rounded.extensions.milling = '%.gml'
+rounded.formats.milling = 'gerber'
+
+local panel = panelization.panelize({ rounded, rounded }, {}, false)
+boards.merge_apertures(panel)
+assert(boards.save(panel, 'test/rounded/panelh'))
+assert(diff('test/rounded/panelh-expected.oln', 'test/rounded/panelh.oln'))
+assert(diff('test/rounded/panelh-expected.gml', 'test/rounded/panelh.gml'))
+
+local panel = panelization.panelize({ rounded, rounded }, {}, true)
+boards.merge_apertures(panel)
+assert(boards.save(panel, 'test/rounded/panelv'))
+assert(diff('test/rounded/panelv-expected.oln', 'test/rounded/panelv.oln'))
+assert(diff('test/rounded/panelv-expected.gml', 'test/rounded/panelv.gml'))
 
 ------------------------------------------------------------------------------
 

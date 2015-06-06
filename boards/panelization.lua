@@ -362,10 +362,10 @@ local function merge_panels(panel_a, panel_b, options, vertical)
 		for i=1,sides_a.right_bottom do
 			table.insert(merged.outline.path, outline_a.path[i])
 		end
-		for i=sides_b.left_bottom,#outline_b.path-1 do
+		for i=sides_b.left_bottom,#outline_b.path do
 			table.insert(merged.outline.path, outline_b.path[i])
 		end
-		for i=1,sides_b.left_top do
+		for i=2,sides_b.left_top do
 			table.insert(merged.outline.path, outline_b.path[i])
 		end
 		for i=sides_a.right_top,#outline_a.path do
