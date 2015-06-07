@@ -224,57 +224,65 @@ end
 
 local function find_sides(outline)
 	local path = outline.path
-	local sides = {}
+	local sides = {
+		bottom = {},
+		right = {},
+		top = {},
+		left = {},
+	}
 	
-	-- first point should be left-most of the bottom-most
-	sides.bottom_left = 1
+	-- find extents
+	local extents = extents.compute_outline_extents(outline)
+	local bottom,right,top,left = extents.bottom,extents.right,extents.top,extents.left
 	
-	-- follow bottom
-	sides.bottom_right = sides.bottom_left
-	while sides.bottom_right < #path and path[sides.bottom_right+1].y == path[sides.bottom_right].y do
-		sides.bottom_right = sides.bottom_right + 1
-	end
-	
-	-- skip bottom-right rounded corner
-	sides.right_bottom = sides.bottom_right
-	while sides.right_bottom < #path and path[sides.right_bottom+1].x ~= path[sides.right_bottom].x do
-		assert(path[sides.right_bottom+1].x > path[sides.right_bottom].x)
-		sides.right_bottom = sides.right_bottom + 1
-	end
-	
-	-- follow right
-	sides.right_top = sides.right_bottom
-	while sides.right_top < #path and path[sides.right_top+1].x == path[sides.right_top].x do
-		sides.right_top = sides.right_top + 1
-	end
-	
-	-- skip top-right rounded corner
-	sides.top_right = sides.right_top
-	while sides.top_right < #path and path[sides.top_right+1].y ~= path[sides.top_right].y do
-		assert(path[sides.top_right+1].y > path[sides.top_right].y)
-		sides.top_right = sides.top_right + 1
-	end
-	
-	-- follow top
-	sides.top_left = sides.top_right
-	while sides.top_left < #path and path[sides.top_left+1].y == path[sides.top_left].y do
-		sides.top_left = sides.top_left + 1
-	end
-	
-	-- skip top-left rounded corner
-	sides.left_top = sides.top_left
-	while sides.left_top < #path and path[sides.left_top+1].x ~= path[sides.left_top].x do
-		assert(path[sides.top_right+1].x < path[sides.top_right].x)
-		sides.left_top = sides.left_top + 1
-	end
-	
-	-- follow left
-	sides.left_bottom = sides.left_top
-	while sides.left_bottom < #path and path[sides.left_bottom+1].x == path[sides.left_bottom].x do
-		sides.left_bottom = sides.left_bottom + 1
+	-- find all segments on the extents
+	for i=2,#path do
+		local a,b = i-1,i
+		if a==1 then a = #path end
+		if path[b].interpolation=='linear' then
+			local x0,y0,x1,y1 = path[a].x,path[a].y,path[b].x,path[b].y
+			if y0==bottom and y1==bottom then
+				table.insert(sides.bottom, {a, b})
+			elseif x0==right and x1==right then
+				table.insert(sides.right, {a, b})
+			elseif y0==top and y1==top then
+				table.insert(sides.top, {a, b})
+			elseif x0==left and x1==left then
+				table.insert(sides.left, {a, b})
+			end
+		end
 	end
 	
 	return sides
+end
+
+local function build_edge(side)
+	local edge = {}
+	table.insert(edge, side[1][1])
+	local size = 1
+	for i=2,#side do
+		if side[i][1] == side[i-1][2] then
+			size = size + 1
+			table.insert(edge, side[i][1])
+		else
+			-- bridge the gap
+			table.insert(edge, side[i-1][2])
+			table.insert(edge, side[i][1])
+			-- each side side should have an odd size
+			assert(size / 2 % 1 ~= 0)
+			size = 1
+		end
+	end
+	table.insert(edge, side[#side][2])
+	return edge
+end
+
+local function reverse_table(t)
+	local r = {}
+	for i=#t,1,-1 do
+		table.insert(r, t[i])
+	end
+	return r
 end
 
 local function merge_panels(panel_a, panel_b, options, vertical)
@@ -314,61 +322,101 @@ local function merge_panels(panel_a, panel_b, options, vertical)
 		--	assert(outline_a.apertures[type] == aperture)
 		end
 	end
+	-- outline for edge cuts
+	local cutout = drawing.circle_aperture(0)
 	
 	local sides_a = find_sides(outline_a)
 	local sides_b = find_sides(outline_b)
 	if vertical then
 		-- cut tabs
 		local side_a = {}
-		for i=sides_a.top_left,sides_a.top_right,-1 do
+		local edge_a = build_edge(sides_a.top)
+		for _,i in ipairs(edge_a) do
 			table.insert(side_a, outline_a.path[i].x)
 		end
-		local y_a = outline_a.path[sides_a.top_left].y
+		side_a = reverse_table(side_a)
+		local y_a = outline_a.path[edge_a[1]].y
 		local side_b = {}
-		for i=sides_b.bottom_left,sides_b.bottom_right do
+		local edge_b = build_edge(sides_b.bottom)
+		for _,i in ipairs(edge_b) do
 			table.insert(side_b, outline_b.path[i].x)
 		end
-		local y_b = outline_b.path[sides_b.bottom_left].y
+		local y_b = outline_b.path[edge_b[1]].y
 		assert(y_a + options.spacing == y_b)
 		cut_tabs(merged, side_a, side_b, (y_a + y_b) / 2, options, vertical)
 		
+		-- edge cuts
+		local side = sides_a.top
+		for i=2,#side do
+			if side[i][1] ~= side[i-1][2] then
+				local p0 = outline_a.path[side[i-1][2]]
+				local p1 = outline_a.path[side[i][1]]
+				local cut = {{x=p0.x, y=p0.y}, aperture=cutout}
+				for j=side[i-1][2]+1,side[i][1] do
+					table.insert(cut, outline_a.path[j])
+				end
+				table.insert(cut, {interpolation='linear', x=p1.x, y=p1.y + options.spacing/2})
+				table.insert(cut, {interpolation='linear', x=p0.x, y=p0.y + options.spacing/2})
+				table.insert(cut, {interpolation='linear', x=p0.x, y=p0.y})
+				table.insert(merged.images.milling.layers[#merged.images.milling.layers], cut)
+			end
+		end
+		local side = sides_b.bottom
+		for i=2,#side do
+			if side[i][1] ~= side[i-1][2] then
+				local p0 = outline_b.path[side[i-1][2]]
+				local p1 = outline_b.path[side[i][1]]
+				local cut = {{x=p0.x, y=p0.y}, aperture=cutout}
+				for j=side[i-1][2]+1,side[i][1] do
+					table.insert(cut, outline_b.path[j])
+				end
+				table.insert(cut, {interpolation='linear', x=p1.x, y=p1.y - options.spacing/2})
+				table.insert(cut, {interpolation='linear', x=p0.x, y=p0.y - options.spacing/2})
+				table.insert(cut, {interpolation='linear', x=p0.x, y=p0.y})
+				table.insert(merged.images.milling.layers[#merged.images.milling.layers], cut)
+			end
+		end
+		
 		-- merge outlines
-		for i=1,sides_a.top_right do
+		for i=1,edge_a[1] do
 			table.insert(merged.outline.path, outline_a.path[i])
 		end
-		for i=sides_b.bottom_right,#outline_b.path do
+		for i=edge_b[#edge_b],edge_b[1] do
 			table.insert(merged.outline.path, outline_b.path[i])
 		end
-		for i=sides_a.top_left,#outline_a.path do
+		for i=edge_a[#edge_a],#outline_a.path do
 			table.insert(merged.outline.path, outline_a.path[i])
 		end
 	else
 		-- cut tabs
 		local side_a = {}
-		for i=sides_a.right_bottom,sides_a.right_top do
+		local edge_a = build_edge(sides_a.right)
+		for _,i in ipairs(edge_a) do
 			table.insert(side_a, outline_a.path[i].y)
 		end
-		local x_a = outline_a.path[sides_a.right_bottom].x
+		local x_a = outline_a.path[edge_a[1]].x
 		local side_b = {}
-		for i=sides_b.left_bottom,sides_b.left_top,-1 do
+		local edge_b = build_edge(sides_b.left)
+		for _,i in ipairs(edge_b) do
 			table.insert(side_b, outline_b.path[i].y)
 		end
-		local x_b = outline_b.path[sides_b.left_bottom].x
+		side_b = reverse_table(side_b)
+		local x_b = outline_b.path[edge_b[1]].x
 		assert(x_a + options.spacing == x_b)
 		cut_tabs(merged, side_a, side_b, (x_a + x_b) / 2, options, vertical)
 		
 		-- merge outlines
 		assert(#merged.outline.path == 0)
-		for i=1,sides_a.right_bottom do
+		for i=1,edge_a[1] do
 			table.insert(merged.outline.path, outline_a.path[i])
 		end
-		for i=sides_b.left_bottom,#outline_b.path do
+		for i=edge_b[#edge_b],#outline_b.path do
 			table.insert(merged.outline.path, outline_b.path[i])
 		end
-		for i=2,sides_b.left_top do
+		for i=2,edge_b[1] do
 			table.insert(merged.outline.path, outline_b.path[i])
 		end
-		for i=sides_a.right_top,#outline_a.path do
+		for i=edge_a[#edge_a],#outline_a.path do
 			table.insert(merged.outline.path, outline_a.path[i])
 		end
 	end

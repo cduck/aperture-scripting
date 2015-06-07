@@ -14,4 +14,6 @@ test/rounded/panelh.gml
 test/rounded/panelh.oln
 test/rounded/panelv.gml
 test/rounded/panelv.oln
+test/rounded/panel2.gml
+test/rounded/panel2.oln
 coverage.txt

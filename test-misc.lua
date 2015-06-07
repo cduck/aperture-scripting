@@ -219,6 +219,9 @@ log 'panelize rounded corners'
 local rounded = assert(boards.load('test/rounded/rounded'))
 rounded.extensions.milling = '%.gml'
 rounded.formats.milling = 'gerber'
+local roundedh = assert(boards.load('test/rounded/roundedh'))
+roundedh.extensions.milling = '%.gml'
+roundedh.formats.milling = 'gerber'
 
 local panel = panelization.panelize({ rounded, rounded }, {}, false)
 boards.merge_apertures(panel)
@@ -231,6 +234,12 @@ boards.merge_apertures(panel)
 assert(boards.save(panel, 'test/rounded/panelv'))
 assert(diff('test/rounded/panelv-expected.oln', 'test/rounded/panelv.oln'))
 assert(diff('test/rounded/panelv-expected.gml', 'test/rounded/panelv.gml'))
+
+local panel = panelization.panelize({ { rounded, rounded }, { rounded, rounded } }, {}, true)
+boards.merge_apertures(panel)
+assert(boards.save(panel, 'test/rounded/panel2'))
+assert(diff('test/rounded/panel2-expected.oln', 'test/rounded/panel2.oln'))
+assert(diff('test/rounded/panel2-expected.gml', 'test/rounded/panel2.gml'))
 
 ------------------------------------------------------------------------------
 
