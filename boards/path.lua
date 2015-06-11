@@ -26,6 +26,13 @@ function _M.exterior(path)
 		if l1 * l2 ~= 0 then
 			local n = min(max((dx1*dy2-dy1*dx2)/(l1*l2), -1), 1) -- should only be marginally outside the range
 			local angle = asin(n)
+			if dx1*dx2+dy1*dy2 < 0 then
+				if angle < 0 then
+					angle = -math.pi + angle
+				else
+					angle = math.pi - angle
+				end
+			end
 			total = total + angle
 		end
 	end
