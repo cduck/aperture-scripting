@@ -447,7 +447,7 @@ end
 ---     - `'outside'` will move the holes completely outside the board (offset by one hole radius); this is recommended if you want to file the board edge to have it look like it wasn't panelized
 ---     - a number value can specify any other offset; positive values extend outside the board, negative values inside the board
 --- 
---- Note that default values are internally specied in picometers. If your board use a different unit you'll need to override all options.
+--- Note that default values are internally specified in picometers. If your board use a different unit you'll need to override all options.
 function _M.panelize(layout, options, vertical)
 	local mm = 1e9
 	if not options.spacing then
