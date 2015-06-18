@@ -7,6 +7,22 @@ local _NAME = ... or 'test'
 local math = require 'math'
 local table = require 'table'
 local region = require 'boards.region'
+if _NAME=='test' then
+	require 'test'
+end
+
+local atan2 = math.atan2 or math.atan
+
+------------------------------------------------------------------------------
+
+--- 
+function _M.copy_point(point, angle)
+	local copy = {}
+	for k,v in pairs(point) do
+		copy[k] = v
+	end
+	return copy
+end
 
 ------------------------------------------------------------------------------
 
@@ -134,6 +150,397 @@ end
 
 ------------------------------------------------------------------------------
 
+local function add(v0, v1)
+	return {x=v0.x+v1.x, y=v0.y+v1.y}
+end
+
+local function diff(v0, v1)
+	return {x=v0.x-v1.x, y=v0.y-v1.y}
+end
+
+local function mul(n, v)
+	return {x=n*v.x, y=n*v.y}
+end
+
+local function dot(v0, v1)
+	return v0.x*v1.x+v0.y*v1.y
+end
+
+local function cross(v0, v1)
+	return v0.x*v1.y-v0.y*v1.x
+end
+
+local function intersect_line_line(a0, a1, b0, b1)
+	-- from http://stackoverflow.com/a/565282
+	local p = a0
+	local r = diff(a1, a0)
+	local q = b0
+	local s = diff(b1, b0)
+	local rxs = cross(r, s)
+	local qmpxr = cross(diff(q, p), r)
+	if rxs == 0 and qmpxr == 0 then
+		local rr = dot(r, r)
+		local t0 = dot(diff(q, p), r) / rr
+		local t1 = dot(diff(add(q, s), p), r) / rr
+		if t0 > t1 then t0,t1 = t1,t0 end
+		if t1 >= 0 and t0 <= 1 then
+			-- colinear and overlapping
+			local t = math.max(0, t0) -- pick overlapping point with smallest t
+			return add(p, mul(t, r))
+		else
+			-- colinear and disjoint
+			return nil
+		end
+	elseif rxs == 0 then
+		-- parallel
+		return nil
+	else
+		local u = qmpxr / rxs
+		local t = cross(diff(q, p), s) / rxs
+		if 0 <= u and u <= 1 and 0 <= t and t <= 1 then
+			-- intersecting
+			return add(p, mul(t, r))
+		else
+			-- non-parallel and non-intersecting
+			return nil
+		end
+	end
+end
+
+local function intersect_line_arc(a0, a1, b0, b1)
+	-- see http://stackoverflow.com/a/1084899
+	local c = {x=b1.cx, y=b1.cy}
+	local rx1 = b1.x - b1.cx
+	local ry1 = b1.y - b1.cy
+	local rr = rx1*rx1+ry1*ry1
+	local r = math.sqrt(rr)
+	local d = diff(a1, a0)
+	local f = diff(c, a0)
+	local A = dot(d, d)
+	local B = 2*dot(f, d)
+	local C = dot(f, f) - rr
+	local discriminant = B*B-4*A*C
+	if discriminant < 0 then
+		-- no intersection
+		return nil
+	else
+		local P1,P2
+		if discriminant == 0 then
+			-- line is tangent to the circle
+			local t = B / (2*A)
+			if 0 <= t and t <= 1 then
+				P1 = add(a0, mul(t, d))
+			end
+--			print(">", discriminant, t)
+		else
+			discriminant = math.sqrt(discriminant)
+			local t1 = (B - discriminant) / (2*A)
+			local t2 = (B + discriminant) / (2*A)
+			if 0 <= t1 and t1 <= 1 then
+				P1 = add(a0, mul(t1, d))
+			end
+			if 0 <= t2 and t2 <= 1 then
+				P2 = add(a0, mul(t2, d))
+			end
+--			print(">>", discriminant, A, B, "t1:", t1, "t2:", t2)
+		end
+		
+		local rx0 = b0.x - b1.cx
+		local ry0 = b0.y - b1.cy
+		local th0 = atan2(ry0, rx0)
+		local th1 = atan2(ry1, rx1)
+		if b1.orientation=='clockwise' then
+			th0,th1 = th1,th0
+		end
+		if th1 < th0 then th1 = th1 + 2*math.pi end
+		if th1==th0 and b1.quadrant=='multi' then th1 = th1 + 2*math.pi end
+		assert(th1~=th0 or b1.quadrant=='single', "invalid arc quadrant")
+		
+		if P1 then
+			local th = atan2(P1.y - b1.cy, P1.x - b1.cx)
+			while th < th0 do th = th + 2*math.pi end
+--			print(">1", th0, th, th1)
+			if th <= th1 then
+				return P1
+			end
+		end
+		
+		if P2 then
+			local th = atan2(P2.y - b1.cy, P2.x - b1.cx)
+			while th < th0 do th = th + 2*math.pi end
+--			print(">2", th0, th, th1)
+			if th <= th1 then
+				return P2
+			end
+		end
+		
+		return nil
+	end
+end
+
+if _NAME=='test' then
+	expect(nil, intersect_line_arc(
+		{x=0, y=0}, {x=10, y=0},
+		nil, {x=5, y=1, cx=5, cy=2}))
+	expect({x=5, y=1}, intersect_line_arc(
+		{x=0, y=1}, {x=10, y=1},
+		{x=4, y=2}, {x=6, y=2, cx=5, cy=2}))
+	expect({x=4, y=1}, intersect_line_arc(
+		{x=0, y=1}, {x=10, y=1},
+		{x=3, y=2}, {x=5, y=2, cx=4, cy=2}))
+	expect({x=5, y=0}, intersect_line_arc(
+		{x=0, y=0}, {x=10, y=0},
+		{x=5, y=4}, {x=5, y=4, cx=5, cy=2, quadrant='multi'}))
+	expect({x=3, y=2}, intersect_line_arc(
+		{x=0, y=2}, {x=10, y=2},
+		{x=5, y=4}, {x=5, y=4, cx=5, cy=2, quadrant='multi'}))
+	expect({x=7, y=2}, intersect_line_arc(
+		{x=0, y=2}, {x=10, y=2},
+		{x=5, y=0}, {x=5, y=4, cx=5, cy=2, quadrant='multi'}))
+	expect({x=5, y=5}, intersect_line_arc(
+		{x=0, y=0}, {x=10, y=10},
+		{x=-5, y=5}, {x=5, y=15, cx=0, cy=10, quadrant='multi'}))
+	expect({x=5, y=5}, intersect_line_arc(
+		{x=0, y=0}, {x=10, y=10},
+		{x=-5, y=15}, {x=-5, y=15, cx=0, cy=10, quadrant='multi'}))
+	expect({x=5, y=5}, intersect_line_arc(
+		{x=0, y=0}, {x=10, y=10},
+		{x=5, y=15}, {x=5, y=15, cx=10, cy=10, quadrant='multi'}))
+	expect(nil, intersect_line_arc(
+		{x=0, y=0}, {x=10, y=10},
+		{x=15, y=5}, {x=5, y=15, cx=10, cy=10, quadrant='multi'}))
+	expect({x=15, y=15}, intersect_line_arc(
+		{x=0, y=0}, {x=20, y=20},
+		{x=15, y=5}, {x=5, y=15, cx=10, cy=10, quadrant='multi'}))
+end
+
+local function intersect_segments(a0, a1, b0, b1)
+	if b1.interpolation=='linear' and a1.interpolation~='linear' then
+		a0,a1,b0,b1 = b0,b1,a0,a1
+	end
+	local ia,ib = a1.interpolation,b1.interpolation
+	if ia=='linear' and ib=='linear' then
+		return intersect_line_line(a0, a1, b0, b1)
+	elseif ia=='linear' and ib=='circular' then
+		return intersect_line_arc(a0, a1, b0, b1)
+	elseif ia=='circular' and ib=='circular' then
+		error("unsupported interpolation")
+		-- :TODO: add support for arcs
+	else
+		error("unsupported interpolation")
+		-- :TODO: add support for quadratics and cubics
+	end
+end
+
+if _NAME=='test' then
+	expect({x=1, y=1}, intersect_segments(
+		{x=0, y=0}, {x=2, y=2, interpolation='linear'},
+		{x=2, y=0}, {x=0, y=2, interpolation='linear'}))
+	expect({x=1, y=1}, intersect_segments(
+		{x=0, y=0}, {x=2, y=2, interpolation='linear'},
+		{x=2, y=0}, {x=1, y=1, interpolation='linear'}))
+	expect({x=1, y=1}, intersect_segments(
+		{x=0, y=0}, {x=1, y=1, interpolation='linear'},
+		{x=2, y=0}, {x=1, y=1, interpolation='linear'}))
+	expect(nil, intersect_segments(
+		{x=0, y=0}, {x=4, y=4, interpolation='linear'},
+		{x=4, y=0}, {x=3, y=1, interpolation='linear'}))
+	expect({x=2, y=2}, intersect_segments(
+		{x=0, y=0}, {x=2, y=2, interpolation='linear'},
+		{x=2, y=2}, {x=4, y=4, interpolation='linear'}))
+	expect(nil, intersect_segments(
+		{x=0, y=0}, {x=2, y=2, interpolation='linear'},
+		{x=3, y=3}, {x=4, y=4, interpolation='linear'}))
+	expect(nil, intersect_segments(
+		{x=0, y=0}, {x=3, y=3, interpolation='linear'},
+		{x=1, y=0}, {x=4, y=3, interpolation='linear'}))
+	expect({x=2, y=2}, intersect_segments(
+		{x=0, y=0}, {x=0, y=4, cx=0, cy=2, interpolation='circular', direction='counterclockwise', quadrant='multi'},
+		{x=0, y=2}, {x=4, y=2, interpolation='linear'}))
+end
+
+------------------------------------------------------------------------------
+
+---
+function _M.offset_path_normal(path, dn)
+	assert(#path >= 2, "flash paths have no normal")
+	-- positive dn to the left, negative to the right
+	if dn == 0 then
+		return _M.copy_path(path)
+	end
+	
+	-- determine whether the path is closed
+	local closed = path[1].x == path[#path].x and path[1].y == path[#path].y
+	
+	-- determine start and end normal for each segment
+	local normals = {}
+	for i=1,#path-1 do
+		local p0 = path[i]
+		local p1 = path[i+1]
+		if p1.interpolation=='linear' then
+			local dx = p1.x - p0.x
+			local dy = p1.y - p0.y
+			local n = math.sqrt(dx*dx+dy*dy)
+			local left = {x=-dy/n, y=dx/n}
+			normals[i] = {left, left}
+		elseif p1.interpolation=='circular' then
+			local dx0,dy0,dx1,dy1
+			if p1.direction=='counterclockwise' then
+				local dx0 = p0.x - p1.cx
+				local dy0 = p0.y - p1.cy
+				local r0 = math.sqrt(dx0*dx0+dy0*dy0)
+				local left0 = {x=-dx0/r0, y=-dy0/r0}
+				local dx1 = p1.x - p1.cx
+				local dy1 = p1.y - p1.cy
+				local r1 = math.sqrt(dx1*dx1+dy1*dy1)
+				local left1 = {x=-dx1/r1, y=-dy1/r1}
+				assert(dn < 0 or dn < r0 and dn < r1, "path curvature radius is too small for offset")
+				normals[i] = {left0, left1}
+			else
+				-- right is smaller radius
+				assert(p1.direction=='clockwise')
+				local dx0 = p0.x - p1.cx
+				local dy0 = p0.y - p1.cy
+				local r0 = math.sqrt(dx0*dx0+dy0*dy0)
+				local left0 = {x=dx0/r0, y=dy0/r0}
+				local dx1 = p1.x - p1.cx
+				local dy1 = p1.y - p1.cy
+				local r1 = math.sqrt(dx1*dx1+dy1*dy1)
+				local left1 = {x=dx1/r1, y=dy1/r1}
+				normals[i] = {left0, left1}
+				assert(dn > 0 or -dn < r0 and -dn < r1, "path curvature radius is too small for offset")
+			end
+		else
+			error("unsupported interpolation")
+			-- :TODO: add support for quadratics and cubics
+		end
+	end
+	
+	-- project each segment individually
+	local projections = {}
+	for i=1,#path-1 do
+		local p0 = path[i]
+		local p1 = path[i+1]
+		local n0 = normals[i][1]
+		local n1 = normals[i][2]
+		if p1.interpolation=='linear' then
+			projections[i] = {
+				{ x = p0.x + n0.x * dn, y = p0.y + n0.y * dn },
+				{ x = p1.x + n1.x * dn, y = p1.y + n1.y * dn, interpolation = 'linear' },
+			}
+		elseif p1.interpolation=='circular' then
+			projections[i] = {
+				{ x = p0.x + n0.x * dn, y = p0.y + n0.y * dn },
+				{ x = p1.x + n1.x * dn, y = p1.y + n1.y * dn, interpolation = 'circular', direction = p1.direction, quadrant = p1.quadrant, cx = p1.cx, cy = p1.cy },
+			}
+		else
+			error("unsupported interpolation")
+			-- :TODO: add support for quadratics and cubics
+		end
+	end
+	
+	-- determine intersecting segments
+	for i=1,#path do
+		if not closed and (i==1 or i==#path) then
+			-- extremity
+		else
+			local P0,P1
+			if i==1 then
+				P0 = projections[#path-1]
+			else
+				P0 = projections[i-1]
+			end
+			if i==#path then
+				P1 = projections[1]
+			else
+				P1 = projections[i]
+			end
+			
+			if P0[2].x == P1[1].x and P0[2].y == P1[1].y then
+				-- colinear segments, no need for any junction
+			else
+				local intersection = intersect_segments(P0[1], P0[2], P1[1], P1[2])
+				if not intersection then
+					-- convex corner, need an additional joining arc
+				else
+					-- concave corner, shorten both segments
+					if P0[2].interpolation=='linear' or P0[2].interpolation=='circular' then
+						P0[2].x,P0[2].y = intersection.x,intersection.y
+					else
+						error("unsupported interpolation")
+						-- :TODO: add support for quadratics and cubics
+					end
+					if P1[2].interpolation=='linear' or P1[2].interpolation=='circular' then
+						P1[1].x,P1[1].y = intersection.x,intersection.y
+					else
+						error("unsupported interpolation")
+						-- :TODO: add support for quadratics and cubics
+					end
+				end
+			end
+		end
+	end
+	
+	-- route along segments and around convex corners
+	local copy = {
+		unit = path.unit,
+		aperture = path.aperture,
+	}
+	table.insert(copy, projections[1][1])
+	for i=1,#path-1 do
+	--	local p0 = projections[i][1]
+		local p1 = projections[i][2]
+		local p2
+		if i == #path - 1 then
+			if closed then
+				p2 = projections[1][1]
+			else
+				p2 = nil
+			end
+		else
+			p2 = projections[i+1][1]
+		end
+		-- route along segment
+		table.insert(copy, p1)
+		-- route around end point
+		if p2 and (p2.x ~= p1.x or p2.y ~= p1.y) then
+			local c = path[i+1]
+			table.insert(copy, { x = p2.x, y = p2.y, interpolation = 'circular', direction = dn >= 0 and 'clockwise' or 'counterclockwise', quadrant = 'multi', cx = c.x, cy = c.y })
+		end
+	end
+	return copy
+end
+
+if _NAME=='test' then
+	local path = {
+		{x=100, y=0},
+		{x=100, y=20, interpolation='linear'},
+		{x= 80, y=20, interpolation='linear'},
+	}
+	expect({
+		{x=110, y= 0},
+		{x=110, y=20, interpolation='linear'},
+		{x=100, y=30, interpolation='circular', cx=100, cy=20, direction='counterclockwise', quadrant='multi'},
+		{x= 80, y=30, interpolation='linear'},
+	}, _M.offset_path_normal(path, -10))
+	local path = {
+		{x=100, y=0},
+		{x=100, y=20, interpolation='linear'},
+		{x= 80, y=40, interpolation='linear'},
+		{x= 60, y=40, interpolation='linear'},
+		{x= 40, y=20, cx=60, cy=20, interpolation='circular', direction='counterclockwise', quadrant='multi'},
+	}
+	expect({
+		{x= 90, y=0},
+		{x= 90, y=20-10*math.tan(math.rad(45/2)), interpolation='linear'},
+		{x= 80-10*math.tan(math.rad(45/2)), y=30, interpolation='linear'},
+		{x= 60, y=30, interpolation='linear'},
+		{x= 50, y=20, cx=60, cy=20, interpolation='circular', direction='counterclockwise', quadrant='multi'},
+	}, _M.offset_path_normal(path, 10))
+end
+
+------------------------------------------------------------------------------
+
 local function rotate_xy(px, py, angle)
 	if angle==0 then
 		return px,py
@@ -153,7 +560,6 @@ local function rotate_xy(px, py, angle)
 end
 
 if _NAME=='test' then
-	require 'test'
 	local function round(x, digits) return math.floor(x * 10^digits + 0.5) / 10^digits end
 	expect( 1, select(1, rotate_xy(1, 0, 0)))
 	expect( 0, select(2, rotate_xy(1, 0, 0)))
@@ -1172,11 +1578,6 @@ function _M.scale_board(board, scale)
 end
 
 ------------------------------------------------------------------------------
-
---- 
-function _M.copy_point(point)
-	return _M.rotate_point(point, 0)
-end
 
 --- 
 function _M.copy_path(path, apertures, macros)
