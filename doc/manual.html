@@ -51,12 +51,14 @@ lang="en">
     </ul></li>
     <li><a href="#boards.manipulation">boards.manipulation</a>
     <ul>
+        <li><a href="#boards.manipulation.copy_point">copy_point</a></li>
         <li><a href="#boards.manipulation.offset_point">offset_point</a></li>
         <li><a href="#boards.manipulation.offset_path">offset_path</a></li>
         <li><a href="#boards.manipulation.offset_layer">offset_layer</a></li>
         <li><a href="#boards.manipulation.offset_image">offset_image</a></li>
         <li><a href="#boards.manipulation.offset_outline">offset_outline</a></li>
         <li><a href="#boards.manipulation.offset_board">offset_board</a></li>
+        <li><a href="#boards.manipulation.offset_path_normal">offset_path_normal</a></li>
         <li><a href="#boards.manipulation.rotate_aperture">rotate_aperture</a></li>
         <li><a href="#boards.manipulation.rotate_point">rotate_point</a></li>
         <li><a href="#boards.manipulation.rotate_path">rotate_path</a></li>
@@ -71,7 +73,6 @@ lang="en">
         <li><a href="#boards.manipulation.scale_image">scale_image</a></li>
         <li><a href="#boards.manipulation.scale_outline">scale_outline</a></li>
         <li><a href="#boards.manipulation.scale_board">scale_board</a></li>
-        <li><a href="#boards.manipulation.copy_point">copy_point</a></li>
         <li><a href="#boards.manipulation.copy_path">copy_path</a></li>
         <li><a href="#boards.manipulation.copy_layer">copy_layer</a></li>
         <li><a href="#boards.manipulation.copy_image">copy_image</a></li>
@@ -206,6 +207,12 @@ lang="en">
 </div>
 
 <div class="entry">
+<a id="boards.manipulation.copy_point"/><h3>boards.manipulation.copy_point ( point, angle )</h3>
+
+
+</div>
+
+<div class="entry">
 <a id="boards.manipulation.offset_point"/><h3>boards.manipulation.offset_point ( point, dx, dy )</h3>
 
 
@@ -237,6 +244,12 @@ lang="en">
 
 <div class="entry">
 <a id="boards.manipulation.offset_board"/><h3>boards.manipulation.offset_board ( board, dx, dy )</h3>
+
+
+</div>
+
+<div class="entry">
+<a id="boards.manipulation.offset_path_normal"/><h3>boards.manipulation.offset_path_normal ( path, dn )</h3>
 
 
 </div>
@@ -326,12 +339,6 @@ lang="en">
 </div>
 
 <div class="entry">
-<a id="boards.manipulation.copy_point"/><h3>boards.manipulation.copy_point ( point )</h3>
-
-
-</div>
-
-<div class="entry">
 <a id="boards.manipulation.copy_path"/><h3>boards.manipulation.copy_path ( path, apertures, macros )</h3>
 
 
@@ -400,6 +407,7 @@ lang="en">
 
 <ul>
     <li><code>spacing</code> determines the gap between boards (default is 2 mm)</li>
+    <li><code>routing_tool_diameter</code> is the minimum diameter of the routing tool (default is <code>spacing</code>)</li>
     <li><code>break_hole_diameter</code> is the diameter of breaking holes (mouse bites, default is 0.5 mm)</li>
     <li><code>break_tab_width</code> is the width of the breaking tabs (default is 5 mm)</li>
     <li><code>tab_interval</code> is the minimum interval between two breaking tabs on long edges (default is 77 mm)</li>
@@ -411,9 +419,14 @@ lang="en">
         <li><code>'outside'</code> will move the holes completely outside the board (offset by one hole radius); this is recommended if you want to file the board edge to have it look like it wasn't panelized</li>
         <li>a number value can specify any other offset; positive values extend outside the board, negative values inside the board</li>
     </ul></li>
+    <li><code>routing_mode</code> specifies how slots between boards are drawn; it can have the following values:
+    <ul>
+        <li><code>'stroke'</code> will use strokes and flashes on the milling layer, with the routing tool or drill diameter as aperture (this is the default)</li>
+        <li><code>'outline'</code> will draw zero-width outlines on the milling layer; this supports more complex outlines</li>
+    </ul></li>
 </ul>
 
-<p>Note that default values are internally specied in picometers. If your board use a different unit you'll need to override all options.</p>
+<p>Note that default values are internally specified in picometers. If your board use a different unit you'll need to override all options.</p>
 </div>
 
 <div class="section">
@@ -455,7 +468,7 @@ lang="en">
 </div>
 
 <div class="chapter" id="footer">
-<small>Last update: 2014-12-25 23:14:25 GMT</small>
+<small>Last update: 2015-06-19 00:13:54 BST</small>
 </div>
 
 </body>

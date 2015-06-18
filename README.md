@@ -66,12 +66,14 @@ The Aperture Scripting API is still fluctuating. Below is a raw and sometimes in
     - [compute\_image\_extents](#boards.extents.compute_image_extents)
     - [compute\_board\_extents](#boards.extents.compute_board_extents)
   - [boards.manipulation](#boards.manipulation)
+    - [copy\_point](#boards.manipulation.copy_point)
     - [offset\_point](#boards.manipulation.offset_point)
     - [offset\_path](#boards.manipulation.offset_path)
     - [offset\_layer](#boards.manipulation.offset_layer)
     - [offset\_image](#boards.manipulation.offset_image)
     - [offset\_outline](#boards.manipulation.offset_outline)
     - [offset\_board](#boards.manipulation.offset_board)
+    - [offset\_path\_normal](#boards.manipulation.offset_path_normal)
     - [rotate\_aperture](#boards.manipulation.rotate_aperture)
     - [rotate\_point](#boards.manipulation.rotate_point)
     - [rotate\_path](#boards.manipulation.rotate_path)
@@ -86,7 +88,6 @@ The Aperture Scripting API is still fluctuating. Below is a raw and sometimes in
     - [scale\_image](#boards.manipulation.scale_image)
     - [scale\_outline](#boards.manipulation.scale_outline)
     - [scale\_board](#boards.manipulation.scale_board)
-    - [copy\_point](#boards.manipulation.copy_point)
     - [copy\_path](#boards.manipulation.copy_path)
     - [copy\_layer](#boards.manipulation.copy_layer)
     - [copy\_image](#boards.manipulation.copy_image)
@@ -171,6 +172,9 @@ Compute the extents of a board. This does not include the aperture extents, if a
 This module contains many function to manipulate image data and whole boards. Most are self-explanatory. All these function create copies of the input data and won't reference it in the output, so the input can be later modified without the output to be affected.
 
 The *apertures* and *macros* arguments of some of these functions are mapping tables used to preserve sharing of apertures and macros respectively. You can initialize these as empty tables and then pass them to all subsequent calls of the same category of manipulation function (ie. offset, rotate, scale, copy or merge).
+### boards.manipulation.copy_point ( point, angle )
+
+
 ### boards.manipulation.offset_point ( point, dx, dy )
 
 
@@ -187,6 +191,9 @@ The *apertures* and *macros* arguments of some of these functions are mapping ta
 
 
 ### boards.manipulation.offset_board ( board, dx, dy )
+
+
+### boards.manipulation.offset_path_normal ( path, dn )
 
 
 ### boards.manipulation.rotate_aperture ( aperture, angle, macros )
@@ -231,9 +238,6 @@ The *apertures* and *macros* arguments of some of these functions are mapping ta
 ### boards.manipulation.scale_board ( board, scale )
 
 
-### boards.manipulation.copy_point ( point )
-
-
 ### boards.manipulation.copy_path ( path, apertures, macros )
 
 
@@ -271,6 +275,7 @@ Panelize the board specified in *layout*. The *layout* can have several levels, 
 *options* is a table which can be empty, or have any or all of the following options:
 
   - `spacing` determines the gap between boards (default is 2 mm)
+  - `routing_tool_diameter` is the minimum diameter of the routing tool (default is `spacing`)
   - `break_hole_diameter` is the diameter of breaking holes (mouse bites, default is 0.5 mm)
   - `break_tab_width` is the width of the breaking tabs (default is 5 mm)
   - `tab_interval` is the minimum interval between two breaking tabs on long edges (default is 77 mm)
@@ -280,8 +285,11 @@ Panelize the board specified in *layout*. The *layout* can have several levels, 
     - `'inside'` will move the holes completely inside the board outline (offset by one hole radius); this is recommended if you want a clean board outline without the need to file the edge after depanelization
     - `'outside'` will move the holes completely outside the board (offset by one hole radius); this is recommended if you want to file the board edge to have it look like it wasn't panelized
     - a number value can specify any other offset; positive values extend outside the board, negative values inside the board
+  - `routing_mode` specifies how slots between boards are drawn; it can have the following values:
+    - `'stroke'` will use strokes and flashes on the milling layer, with the routing tool or drill diameter as aperture (this is the default)
+    - `'outline'` will draw zero-width outlines on the milling layer; this supports more complex outlines
 
-Note that default values are internally specied in picometers. If your board use a different unit you'll need to override all options.
+Note that default values are internally specified in picometers. If your board use a different unit you'll need to override all options.
 ## 4.6 - boards.drawing module
 
 This module contains several function that let you generate new image data dynamically. You can always manipulate images internal structures directly, but to maintain integrity (the format is rather complex) prefer using functions in this module.

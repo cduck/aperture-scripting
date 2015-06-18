@@ -361,7 +361,7 @@ end
 
 ------------------------------------------------------------------------------
 
----
+--- 
 function _M.offset_path_normal(path, dn)
 	assert(#path >= 2, "flash paths have no normal")
 	-- positive dn to the left, negative to the right
