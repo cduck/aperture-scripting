@@ -241,6 +241,24 @@ assert(boards.save(panel, 'test/rounded/panel2'))
 assert(diff('test/rounded/panel2-expected.oln', 'test/rounded/panel2.oln'))
 assert(diff('test/rounded/panel2-expected.gml', 'test/rounded/panel2.gml'))
 
+local panel = panelization.panelize({ rounded, rounded }, { routing_mode = 'outline' }, false)
+boards.merge_apertures(panel)
+assert(boards.save(panel, 'test/rounded/panelho'))
+assert(diff('test/rounded/panelho-expected.oln', 'test/rounded/panelho.oln'))
+assert(diff('test/rounded/panelho-expected.gml', 'test/rounded/panelho.gml'))
+
+local panel = panelization.panelize({ rounded, rounded }, { routing_mode = 'outline' }, true)
+boards.merge_apertures(panel)
+assert(boards.save(panel, 'test/rounded/panelvo'))
+assert(diff('test/rounded/panelvo-expected.oln', 'test/rounded/panelvo.oln'))
+assert(diff('test/rounded/panelvo-expected.gml', 'test/rounded/panelvo.gml'))
+
+local panel = panelization.panelize({ { rounded, rounded }, { rounded, rounded } }, { routing_mode = 'outline' }, true)
+boards.merge_apertures(panel)
+assert(boards.save(panel, 'test/rounded/panel2o'))
+assert(diff('test/rounded/panel2o-expected.oln', 'test/rounded/panel2o.oln'))
+assert(diff('test/rounded/panel2o-expected.gml', 'test/rounded/panel2o.gml'))
+
 ------------------------------------------------------------------------------
 
 log 'run example panels'

@@ -16,4 +16,10 @@ test/rounded/panelv.gml
 test/rounded/panelv.oln
 test/rounded/panel2.gml
 test/rounded/panel2.oln
+test/rounded/panelho.gml
+test/rounded/panelho.oln
+test/rounded/panelvo.gml
+test/rounded/panelvo.oln
+test/rounded/panel2o.gml
+test/rounded/panel2o.oln
 coverage.txt

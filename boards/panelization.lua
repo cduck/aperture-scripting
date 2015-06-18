@@ -46,7 +46,62 @@ function _M.empty_board(width, height)
 	}
 end
 
-local function cut_tabs(panel, side_a, side_b, position, options, vertical)
+local function generate_tabs(side_a, side_b, options)
+	assert(#side_b % 2 == 0)
+	assert(#side_a % 2 == 0)
+	
+	-- remove A segments too short for a tab
+	local side_a2 = {}
+	for a=1,#side_a,2 do
+		local on = side_a[a]
+		local off = side_a[a+1]
+		if off - on >= options.break_tab_width + options.routing_tool_diameter then
+			table.insert(side_a2, on)
+			table.insert(side_a2, off)
+		end
+	end
+	side_a = side_a2
+	
+	-- remove B segments too short for a tab
+	local side_b2 = {}
+	for b=1,#side_b,2 do
+		local on = side_b[b]
+		local off = side_b[b+1]
+		if off - on >= options.break_tab_width + options.routing_tool_diameter then
+			table.insert(side_b2, on)
+			table.insert(side_b2, off)
+		end
+	end
+	side_b = side_b2
+	
+	-- merge sides into segments where we can put tabs between boards
+	local tabs = {} -- tab centers
+	local a,b = 1,1
+	while a < #side_a and b < #side_b do
+		local a0,a1 = side_a[a],side_a[a+1]
+		local b0,b1 = side_b[b],side_b[b+1]
+		local c0 = math.max(a0, b0)
+		local c1 = math.min(a1, b1)
+		if c1 - c0 >= options.break_tab_width + options.routing_tool_diameter then
+			-- count how many tabs we can fit
+			local n = math.ceil(((c1 - c0) - (options.break_tab_width + options.spacing)) / options.tab_interval)
+			for i=0,n-1 do
+				-- determine tab position
+				local c = (c0 + c1) / 2 + (i - (n-1) / 2) * options.tab_interval
+				table.insert(tabs, c)
+			end
+		end
+		if a1 < b1 then
+			a = a + 2
+		else
+			b = b + 2
+		end
+	end
+	
+	return tabs
+end
+
+local function route_tabs(panel, from, to, tabs, position, options, vertical)
 	-- draw cut lines and break tabs
 	-- see http://blogs.mentor.com/tom-hausherr/blog/2011/06/23/pcb-design-perfection-starts-in-the-cad-library-part-19/
 	
@@ -79,70 +134,24 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 	local spacer = drawing.circle_aperture(options.spacing)
 	local breaker = drawing.circle_aperture(options.break_hole_diameter)
 	
-	assert(#side_b % 2 == 0)
-	assert(#side_a % 2 == 0)
-	
-	-- remember the cut total dimension
-	local from = math.min(side_a[1], side_b[1]) - options.spacing / 2
-	local to = math.max(side_a[#side_a], side_b[#side_b]) + options.spacing / 2
-	
-	-- remove A segments too short for a tab
-	local side_a2 = {}
-	for a=1,#side_a,2 do
-		local on = side_a[a]
-		local off = side_a[a+1]
-		if off - on >= options.break_tab_width + options.spacing then
-			table.insert(side_a2, on)
-			table.insert(side_a2, off)
-		end
-	end
-	
-	-- remove B segments too short for a tab
-	local side_b2 = {}
-	for b=1,#side_b,2 do
-		local on = side_b[b]
-		local off = side_b[b+1]
-		if off - on >= options.break_tab_width + options.spacing then
-			table.insert(side_b2, on)
-			table.insert(side_b2, off)
-		end
-	end
-	
-	-- merge sides into segments where we can put tabs between boards
-	local side = {}
-	local a,b = 1,1
-	while a < #side_a and b < #side_b do
-		local a0,a1 = side_a[a],side_a[a+1]
-		local b0,b1 = side_b[b],side_b[b+1]
-		local c0 = math.max(a0, b0)
-		local c1 = math.min(a1, b1)
-		if c1 - c0 >= options.break_tab_width + options.spacing then
-			table.insert(side, c0)
-			table.insert(side, c1)
-		end
-		if a1 < b1 then
-			a = a + 2
-		else
-			b = b + 2
-		end
-	end
-	
 	-- we may not have anywhere to put tabs
-	if #side == 0 then
+	if #tabs == 0 then
 		-- nowhere to put tabs, just cut (assume outer parts will connect the two subpanels)
-		local z1 = from
-		local z4 = to
+		local a = from
+		local b = to
 		local w = position
-		mill(panel.images.milling, spacer, w, z1, z4)
+		mill(panel.images.milling, spacer, w, a, b)
 		return
 	end
 	
 	-- prepare cut
 	local w = position
 	
+	local route_gap = options.break_tab_width + options.routing_tool_diameter
+	
 	-- cut from edge to first tab-able segment
-	if from < side[1] then
-		mill(panel.images.milling, spacer, w, from, side[1])
+	if from < tabs[1] - route_gap / 2 then
+		mill(panel.images.milling, spacer, w, from, tabs[1] - route_gap / 2)
 	end
 	
 	-- determine the distance between the routing line center and the mouse bites
@@ -162,64 +171,182 @@ local function cut_tabs(panel, side_a, side_b, position, options, vertical)
 		end
 	end
 	
-	-- iterate over merged side
-	for i=1,#side-1 do
-		-- ends of this segment
-		local c0 = side[i]
-		local c1 = side[i+1]
-		-- tabs in odd segments
-		if i % 2 == 1 then
-			-- count how many tabs we can fit
-			local n = math.ceil(((c1 - c0) - (options.break_tab_width + options.spacing)) / options.tab_interval)
-			for i=0,n-1 do
-				-- determine tab position
-				local c = (c0 + c1) / 2 + (i - (n-1) / 2) * options.tab_interval
-				-- ends of the partial segment around this one tab
-				local c0 = math.max(c0, c - options.tab_interval / 2)
-				local c1 = math.min(c1, c + options.tab_interval / 2)
-				-- ends of the two cuts on either side of the tab
-				local z1 = c0
-				local z2 = c - (options.break_tab_width + options.spacing) / 2
-				local z3 = c + (options.break_tab_width + options.spacing) / 2
-				local z4 = c1
-				-- a half-line before the tab and a half-line after
-				mill(panel.images.milling, spacer, w, z1, z2)
-				mill(panel.images.milling, spacer, w, z3, z4)
-				-- small lines on the edge of the tab to ease breaking
-				if options.break_lines_on_soldermask and panel.images.top_soldermask then
-					mill(panel.images.top_soldermask, breaker, w - break_line_distance, z2, z3)
-					if break_line_distance ~= 0 then
-						mill(panel.images.top_soldermask, breaker, w + break_line_distance, z2, z3)
-					end
-				end
-				if options.break_lines_on_soldermask and panel.images.bottom_soldermask then
-					mill(panel.images.bottom_soldermask, breaker, w - break_line_distance, z2, z3)
-					if break_line_distance ~= 0 then
-						mill(panel.images.bottom_soldermask, breaker, w + break_line_distance, z2, z3)
-					end
-				end
-				-- drill holes to make the tabs easy to break
-				local drill_count = math.floor(options.break_tab_width / options.break_hole_diameter / 2)
-				for i=0,drill_count-1 do
-					local z = (i - (drill_count-1) / 2) * options.break_hole_diameter * 2
-					drill(panel.images.milling, breaker, w - break_line_distance, c + z)
-					if break_line_distance ~= 0 then
-						drill(panel.images.milling, breaker, w + break_line_distance, c + z)
-					end
-				end
+	-- route between tabs
+	for i=1,#tabs-1 do
+		local c0,c1 = tabs[i],tabs[i+1]
+		local a = c0 + route_gap / 2
+		local b = c1 - route_gap / 2
+		mill(panel.images.milling, spacer, w, a, b)
+	end
+	
+	-- make tabs easy to break
+	for _,c in ipairs(tabs) do
+		local a = c - route_gap / 2
+		local b = c + route_gap / 2
+		-- small lines on soldermask
+		if options.break_lines_on_soldermask and panel.images.top_soldermask then
+			mill(panel.images.top_soldermask, breaker, w - break_line_distance, a, b)
+			if break_line_distance ~= 0 then
+				mill(panel.images.top_soldermask, breaker, w + break_line_distance, a, b)
 			end
-		else
-			-- just bridge the gap
-			mill(panel.images.milling, spacer, w, c0, c1)
+		end
+		if options.break_lines_on_soldermask and panel.images.bottom_soldermask then
+			mill(panel.images.bottom_soldermask, breaker, w - break_line_distance, a, b)
+			if break_line_distance ~= 0 then
+				mill(panel.images.bottom_soldermask, breaker, w + break_line_distance, a, b)
+			end
+		end
+		-- drill "mouse bites" holes
+		-- :TODO: drill all of route_gap instead of just options.break_tab_width
+		local drill_count = math.floor(options.break_tab_width / options.break_hole_diameter / 2)
+		for i=0,drill_count-1 do
+			local z = (i - (drill_count-1) / 2) * options.break_hole_diameter * 2
+			drill(panel.images.milling, breaker, w - break_line_distance, c + z)
+			if break_line_distance ~= 0 then
+				drill(panel.images.milling, breaker, w + break_line_distance, c + z)
+			end
 		end
 	end
 	
 	-- cut from last tab-able segment to the edge
-	if side[#side] < to then
-		mill(panel.images.milling, spacer, w, side[#side], to)
+	if tabs[#tabs] + route_gap / 2 < to then
+		mill(panel.images.milling, spacer, w, tabs[#tabs] + route_gap / 2, to)
+	end
+end
+
+local function outline_tabs(panel, from, to, tabs, position, options, vertical)
+	-- draw cut lines and break tabs
+	-- see http://blogs.mentor.com/tom-hausherr/blog/2011/06/23/pcb-design-perfection-starts-in-the-cad-library-part-19/
+	
+	local mill,drill
+	if vertical then
+		function mill(image, aperture, w, z1, z2)
+			drawing.draw_path(image, aperture, z1, w, z2, w)
+		end
+		function drill(image, aperture, w, z)
+			drawing.draw_path(image, aperture, z, w)
+		end
+	else
+		function mill(image, aperture, w, z1, z2)
+			drawing.draw_path(image, aperture, w, z1, w, z2)
+		end
+		function drill(image, aperture, w, z)
+			drawing.draw_path(image, aperture, w, z)
+		end
 	end
 	
-	-- :TODO: route corners
+	-- prepare the milling image
+	if not panel.images.milling then
+		panel.images.milling = empty_image()
+	end
+	if #panel.images.milling.layers==0 or panel.images.milling.layers[#panel.images.milling.layers].polarity=='clear' then
+		table.insert(panel.images.milling.layers, { polarity = 'dark' })
+	end
+	
+	-- prepare routing and tab-separation drills
+	local breaker = drawing.circle_aperture(options.break_hole_diameter)
+	
+	-- prepare cut
+	local w = position
+	
+	local route_gap = options.break_tab_width + options.routing_tool_diameter
+	
+	-- determine the distance between the routing line center and the mouse bites
+	local break_line_distance = options.spacing / 2 -- default aligns on board edge
+	do
+		local break_line_offset = options.break_line_offset
+		if break_line_offset==nil or break_line_offset=='none' or break_line_offset=='edge' then
+			-- keep on board edge
+		elseif break_line_offset=='inside' then
+			break_line_distance = break_line_distance + options.break_hole_diameter / 2
+		elseif break_line_offset=='outside' then
+			break_line_distance = break_line_distance - options.break_hole_diameter / 2
+		elseif type(break_line_offset)=='number' then
+			break_line_distance = break_line_distance - break_line_offset
+		else
+			error("unsuppoerted break hole offset option with value "..tostring(break_line_offset).." (a "..type(break_line_offset)..")")
+		end
+	end
+	
+	-- make tabs easy to break
+	for _,c in ipairs(tabs) do
+		local a = c - route_gap / 2
+		local b = c + route_gap / 2
+		-- small lines on soldermask
+		if options.break_lines_on_soldermask and panel.images.top_soldermask then
+			mill(panel.images.top_soldermask, breaker, w - break_line_distance, a, b)
+			if break_line_distance ~= 0 then
+				mill(panel.images.top_soldermask, breaker, w + break_line_distance, a, b)
+			end
+		end
+		if options.break_lines_on_soldermask and panel.images.bottom_soldermask then
+			mill(panel.images.bottom_soldermask, breaker, w - break_line_distance, a, b)
+			if break_line_distance ~= 0 then
+				mill(panel.images.bottom_soldermask, breaker, w + break_line_distance, a, b)
+			end
+		end
+		-- drill "mouse bites" holes
+		-- :TODO: drill all of route_gap instead of just options.break_tab_width
+		local drill_count = math.floor(options.break_tab_width / options.break_hole_diameter / 2)
+		for i=0,drill_count-1 do
+			local z = (i - (drill_count-1) / 2) * options.break_hole_diameter * 2
+			drill(panel.images.milling, breaker, w - break_line_distance, c + z)
+			if break_line_distance ~= 0 then
+				drill(panel.images.milling, breaker, w + break_line_distance, c + z)
+			end
+		end
+	end
+end
+
+local function route_corner(panel, path, from, to, options)
+	local closed = path[1].x == path[#path].x and path[1].y == path[#path].y
+	if closed and from == #path then from = 1 end
+	if closed and to == #path then from = 1 end
+	if from == to then
+		-- :TODO: should we route around the point?
+		return
+	end
+	
+	if not closed then assert(from <= to) end
+	
+	-- prepare the milling image
+	if not panel.images.milling then
+		panel.images.milling = empty_image()
+	end
+	
+	-- prepare routing
+	local tool = drawing.circle_aperture(options.routing_tool_diameter)
+	
+	-- the routing path is the path offset to the right by a tool radius
+	local offset = options.routing_tool_diameter / 2
+	
+	-- extract the part of path we want to offset
+	local corner = {}
+	table.insert(corner, { x = path[from].x, y = path[from].y })
+	for i in coroutine.wrap(function()
+		if to < from then
+			for i=from+1,#path do
+				coroutine.yield(i)
+			end
+			for i=2,to do
+				coroutine.yield(i)
+			end
+		else
+			for i=from+1,to do
+				coroutine.yield(i)
+			end
+		end
+	end) do
+		table.insert(corner, path[i])
+	end
+	
+	-- offset it
+	local route = manipulation.offset_path_normal(corner, -offset)
+	route.aperture = tool
+	
+	-- add it to the milling image
+	local layers = panel.images.milling.layers
+	table.insert(layers[#layers], route)
 end
 
 local function find_sides(outline)
@@ -235,10 +362,9 @@ local function find_sides(outline)
 	local extents = extents.compute_outline_extents(outline)
 	local bottom,right,top,left = extents.bottom,extents.right,extents.top,extents.left
 	
-	-- find all segments on the extents
+	-- find all linear segments on the extents
 	for i=2,#path do
 		local a,b = i-1,i
-		if a==1 then a = #path end
 		if path[b].interpolation=='linear' then
 			local x0,y0,x1,y1 = path[a].x,path[a].y,path[b].x,path[b].y
 			if y0==bottom and y1==bottom then
@@ -254,6 +380,51 @@ local function find_sides(outline)
 	end
 	
 	return sides
+end
+
+local function find_sides_stroke(outline)
+	local sides = find_sides(outline)
+	
+	local sides2 = {}
+	for k,side in pairs(sides) do
+		local side2 = {}
+		sides2[k] = side2
+		-- make sure there's only one edge per side
+		for i=1,#side-1 do
+			assert(side[i][2] == side[i+1][1], "concave board outlines are not supported in 'stroke' routing mode")
+		end
+		-- skip every even segment
+		assert(#side % 2 == 1, "in 'stroke' routing mode sides should have an odd number of segments")
+		for i=1,#side,2 do
+			table.insert(side2, {side[i][1], side[i][2]})
+		end
+	end
+	
+	assert(sides2.bottom[1][1]==1)
+	return sides2
+end
+
+local function find_sides_outline(outline)
+	local sides = find_sides(outline)
+	
+	local sides2 = {}
+	for k,side in pairs(sides) do
+		local side2 = {}
+		sides2[k] = side2
+		-- merge consecutive segments
+		local a = side[1][1]
+		for i=2,#side do
+			if side[i][1] ~= side[i-1][2] then
+				local b = side[i-1][2]
+				table.insert(side2, {a, b})
+				a = side[i][1]
+			end
+		end
+		local b = side[#side][2]
+		table.insert(side2, {a, b})
+	end
+	
+	return sides2
 end
 
 local function build_edge(side)
@@ -286,9 +457,7 @@ local function reverse_table(t)
 end
 
 local function merge_panels(panel_a, panel_b, options, vertical)
-	-- merge_boards doesn't merge outlines
-	local merged = manipulation.merge_boards(panel_a, panel_b)
-	
+	-- get subpanel outlines
 	local outline_a = panel_a.outline
 	local outline_b = panel_b.outline
 	
@@ -303,7 +472,10 @@ local function merge_panels(panel_a, panel_b, options, vertical)
 	end
 	assert(dimensions_match, "subpanel dimensions do no match")
 	
-	-- generate a new outline
+	-- merge the board content (not the outlines)
+	local merged = manipulation.merge_boards(panel_a, panel_b)
+	
+	-- create a new outline
 	merged.outline = {
 		apertures = {},
 		path = {},
@@ -322,111 +494,360 @@ local function merge_panels(panel_a, panel_b, options, vertical)
 		--	assert(outline_a.apertures[type] == aperture)
 		end
 	end
-	-- outline for edge cuts
-	local cutout = drawing.circle_aperture(0)
 	
-	local sides_a = find_sides(outline_a)
-	local sides_b = find_sides(outline_b)
-	if vertical then
-		-- cut tabs
-		local side_a = {}
-		local edge_a = build_edge(sides_a.top)
-		for _,i in ipairs(edge_a) do
-			table.insert(side_a, outline_a.path[i].x)
-		end
-		side_a = reverse_table(side_a)
-		local y_a = outline_a.path[edge_a[1]].y
-		local side_b = {}
-		local edge_b = build_edge(sides_b.bottom)
-		for _,i in ipairs(edge_b) do
-			table.insert(side_b, outline_b.path[i].x)
-		end
-		local y_b = outline_b.path[edge_b[1]].y
-		assert(y_a + options.spacing == y_b)
-		cut_tabs(merged, side_a, side_b, (y_a + y_b) / 2, options, vertical)
+	-- generate new outline and routing/drilling data
+	if options.routing_mode == 'stroke' then
+		-- find edges to put tabs on
+		local sides_a = find_sides_stroke(outline_a)
+		local sides_b = find_sides_stroke(outline_b)
 		
-		-- edge cuts
-		local side = sides_a.top
-		for i=2,#side do
-			if side[i][1] ~= side[i-1][2] then
-				local p0 = outline_a.path[side[i-1][2]]
-				local p1 = outline_a.path[side[i][1]]
-				local cut = {{x=p0.x, y=p0.y}, aperture=cutout}
-				for j=side[i-1][2]+1,side[i][1] do
-					table.insert(cut, outline_a.path[j])
-				end
-				table.insert(cut, {interpolation='linear', x=p1.x, y=p1.y + options.spacing/2})
-				table.insert(cut, {interpolation='linear', x=p0.x, y=p0.y + options.spacing/2})
-				table.insert(cut, {interpolation='linear', x=p0.x, y=p0.y})
-				table.insert(merged.images.milling.layers[#merged.images.milling.layers], cut)
+		-- determine intervals were we can have tabs
+		local positions_a,positions_b = {},{}
+		if vertical then
+			for _,edge in ipairs(sides_a.top) do
+				table.insert(positions_a, 1, outline_a.path[edge[1]].x)
+				table.insert(positions_a, 1, outline_a.path[edge[2]].x)
+			end
+			for _,edge in ipairs(sides_b.bottom) do
+				table.insert(positions_b, outline_b.path[edge[1]].x)
+				table.insert(positions_b, outline_b.path[edge[2]].x)
+			end
+		else
+			for _,edge in ipairs(sides_a.right) do
+				table.insert(positions_a, outline_a.path[edge[1]].y)
+				table.insert(positions_a, outline_a.path[edge[2]].y)
+			end
+			for _,edge in ipairs(sides_b.left) do
+				table.insert(positions_b, 1, outline_b.path[edge[1]].y)
+				table.insert(positions_b, 1, outline_b.path[edge[2]].y)
 			end
 		end
-		local side = sides_b.bottom
-		for i=2,#side do
-			if side[i][1] ~= side[i-1][2] then
-				local p0 = outline_b.path[side[i-1][2]]
-				local p1 = outline_b.path[side[i][1]]
-				local cut = {{x=p0.x, y=p0.y}, aperture=cutout}
-				for j=side[i-1][2]+1,side[i][1] do
-					table.insert(cut, outline_b.path[j])
-				end
-				table.insert(cut, {interpolation='linear', x=p1.x, y=p1.y - options.spacing/2})
-				table.insert(cut, {interpolation='linear', x=p0.x, y=p0.y - options.spacing/2})
-				table.insert(cut, {interpolation='linear', x=p0.x, y=p0.y})
-				table.insert(merged.images.milling.layers[#merged.images.milling.layers], cut)
-			end
+		
+		-- place the tabs
+		local tabs = generate_tabs(positions_a, positions_b, options)
+		local position
+		if vertical then
+			position = outline_a_extents.top + options.spacing / 2
+		else
+			position = outline_a_extents.right + options.spacing / 2
+		end
+		local from = math.min(positions_a[1], positions_b[1])
+		local to = math.max(positions_a[#positions_a], positions_b[#positions_b])
+		
+		-- route the main slots
+		route_tabs(merged, from, to, tabs, position, options, vertical)
+		
+		-- route corners
+		local corners = {}
+		if vertical then
+			table.insert(corners, {outline=outline_a, from=sides_a.right[#sides_a.right][2], to=sides_a.top[1][1]})
+			table.insert(corners, {outline=outline_a, from=sides_a.top[#sides_a.top][2], to=sides_a.left[1][1]})
+			table.insert(corners, {outline=outline_b, from=sides_b.left[#sides_b.left][2], to=sides_b.bottom[1][1]})
+			table.insert(corners, {outline=outline_b, from=sides_b.bottom[#sides_b.bottom][2], to=sides_b.right[1][1]})
+		else
+			table.insert(corners, {outline=outline_a, from=sides_a.bottom[#sides_a.bottom][2], to=sides_a.right[1][1]})
+			table.insert(corners, {outline=outline_a, from=sides_a.right[#sides_a.right][2], to=sides_a.top[1][1]})
+			table.insert(corners, {outline=outline_b, from=sides_b.top[#sides_b.top][2], to=sides_b.left[1][1]})
+			table.insert(corners, {outline=outline_b, from=sides_b.left[#sides_b.left][2], to=sides_b.bottom[1][1]})
+		end
+		for _,corner in ipairs(corners) do
+			route_corner(merged, corner.outline.path, corner.from, corner.to, options)
 		end
 		
 		-- merge outlines
-		for i=1,edge_a[1] do
-			table.insert(merged.outline.path, outline_a.path[i])
+		if vertical then
+			for i=1,sides_a.right[#sides_a.right][2] do
+				table.insert(merged.outline.path, outline_a.path[i])
+			end
+			local pb = outline_b.path[sides_b.right[1][1]]
+			table.insert(merged.outline.path, {interpolation='linear', x=pb.x, y=pb.y})
+			for i=sides_b.right[1][1]+1,sides_b.left[#sides_b.left][2] do
+				table.insert(merged.outline.path, outline_b.path[i])
+			end
+			local pa = outline_a.path[sides_a.left[1][1]]
+			table.insert(merged.outline.path, {interpolation='linear', x=pa.x, y=pa.y})
+			for i=sides_a.left[1][1]+1,#outline_a.path do
+				table.insert(merged.outline.path, outline_a.path[i])
+			end
+		else
+			for i=1,sides_a.bottom[#sides_a.bottom][2] do
+				table.insert(merged.outline.path, outline_a.path[i])
+			end
+			local pb = outline_b.path[1]
+			table.insert(merged.outline.path, {interpolation='linear', x=pb.x, y=pb.y})
+			for i=2,sides_b.top[#sides_b.top][2] do
+				table.insert(merged.outline.path, outline_b.path[i])
+			end
+			local pa = outline_a.path[sides_a.top[1][1]]
+			table.insert(merged.outline.path, {interpolation='linear', x=pa.x, y=pa.y})
+			for i=sides_a.top[1][1]+1,#outline_a.path do
+				table.insert(merged.outline.path, outline_a.path[i])
+			end
 		end
-		for i=edge_b[#edge_b],edge_b[1] do
-			table.insert(merged.outline.path, outline_b.path[i])
+	elseif options.routing_mode == 'outline' then
+		-- find edges to put tabs on
+		local sides_a = find_sides_outline(outline_a)
+		local sides_b = find_sides_outline(outline_b)
+		
+		-- determine intervals were we can have tabs
+		local positions_a,positions_b = {},{}
+		if vertical then
+			for _,edge in ipairs(sides_a.top) do
+				table.insert(positions_a, 1, outline_a.path[edge[1]].x)
+				table.insert(positions_a, 1, outline_a.path[edge[2]].x)
+			end
+			for _,edge in ipairs(sides_b.bottom) do
+				table.insert(positions_b, outline_b.path[edge[1]].x)
+				table.insert(positions_b, outline_b.path[edge[2]].x)
+			end
+		else
+			for _,edge in ipairs(sides_a.right) do
+				table.insert(positions_a, outline_a.path[edge[1]].y)
+				table.insert(positions_a, outline_a.path[edge[2]].y)
+			end
+			for _,edge in ipairs(sides_b.left) do
+				table.insert(positions_b, 1, outline_b.path[edge[1]].y)
+				table.insert(positions_b, 1, outline_b.path[edge[2]].y)
+			end
 		end
-		for i=edge_a[#edge_a],#outline_a.path do
-			table.insert(merged.outline.path, outline_a.path[i])
+		
+		-- place the tabs
+		local tabs = generate_tabs(positions_a, positions_b, options)
+		local position
+		if vertical then
+			position = outline_a_extents.top + options.spacing / 2
+		else
+			position = outline_a_extents.right + options.spacing / 2
+		end
+		local sp = options.spacing / 2 -- half space
+		local tr = options.routing_tool_diameter / 2 -- tool radius
+		
+		-- drill breaking tabs
+		outline_tabs(merged, from, to, tabs, position, options, vertical)
+		
+		-- merge outlines, right up to the outer tabs
+		if vertical then
+			-- a bottom left to a top right
+			for i=1,sides_a.top[1][1] do
+				table.insert(merged.outline.path, outline_a.path[i])
+			end
+			-- right slot
+			local tx = tabs[#tabs] + options.break_tab_width / 2
+			local pa = outline_a.path[sides_a.top[1][1]]
+			local pb = outline_b.path[sides_b.bottom[#sides_b.bottom][2]]
+			table.insert(merged.outline.path, {interpolation='linear', x=tx + tr, y=pa.y})
+			if tr ~= 0 then
+				table.insert(merged.outline.path, {interpolation='circular', direction='clockwise', quadrant='single', cx=tx + tr, cy=pa.y + tr, x=tx, y=pa.y + tr})
+			end
+			if tr < sp then
+				table.insert(merged.outline.path, {interpolation='linear', x=tx, y=pb.y - tr})
+			end
+			if tr ~= 0 then
+				table.insert(merged.outline.path, {interpolation='circular', direction='clockwise', quadrant='single', cx=tx + tr, cy=pb.y - tr, x=tx + tr, y=pb.y})
+			end
+			table.insert(merged.outline.path, {interpolation='linear', x=pb.x, y=pb.y})
+			-- b bottom right to b bottom left
+			for i=sides_b.bottom[#sides_b.bottom][1]+1,#outline_b.path do
+				table.insert(merged.outline.path, outline_b.path[i])
+			end
+			-- left slot
+			local tx = tabs[1] - options.break_tab_width / 2
+			local pb = outline_b.path[#outline_b.path]
+			local pa = outline_a.path[sides_a.top[#sides_a.top][2]]
+			table.insert(merged.outline.path, {interpolation='linear', x=tx - tr, y=pb.y})
+			if tr ~= 0 then
+				table.insert(merged.outline.path, {interpolation='circular', direction='clockwise', quadrant='single', cx=tx - tr, cy=pb.y - tr, x=tx, y=pb.y - tr})
+			end
+			if tr < sp then
+				table.insert(merged.outline.path, {interpolation='linear', x=tx, y=pa.y + tr})
+			end
+			if tr ~= 0 then
+				table.insert(merged.outline.path, {interpolation='circular', direction='clockwise', quadrant='single', cx=tx - tr, cy=pa.y + tr, x=tx - tr, y=pa.y})
+			end
+			table.insert(merged.outline.path, {interpolation='linear', x=pa.x, y=pa.y})
+			-- a top left to a bottom left
+			for i=sides_a.top[#sides_a.top][2]+1,#outline_a.path do
+				table.insert(merged.outline.path, outline_a.path[i])
+			end
+		else
+			-- a bottom left to a left bottom
+			for i=1,sides_a.right[1][1] do
+				table.insert(merged.outline.path, outline_a.path[i])
+			end
+			-- bottom slot
+			local ty = tabs[1] - options.break_tab_width / 2
+			local pa = outline_a.path[sides_a.right[1][1] ]
+			local pb = outline_b.path[sides_b.left[#sides_b.left][2]]
+			table.insert(merged.outline.path, {interpolation='linear', x=pa.x, y=ty - tr})
+			if tr ~= 0 then
+				table.insert(merged.outline.path, {interpolation='circular', direction='clockwise', quadrant='single', cx=pa.x + tr, cy=ty - tr, x=pa.x + tr, y=ty})
+			end
+			if tr < sp then
+				table.insert(merged.outline.path, {interpolation='linear', x=pb.x - tr, y=ty})
+			end
+			if tr ~= 0 then
+				table.insert(merged.outline.path, {interpolation='circular', direction='clockwise', quadrant='single', cx=pb.x - tr, cy=ty - tr, x=pb.x, y=ty - tr})
+			end
+			table.insert(merged.outline.path, {interpolation='linear', x=pb.x, y=pb.y})
+			-- b left bottom to b bottom left
+			for i=sides_b.left[#sides_b.left][2]+1,#outline_b.path do
+				table.insert(merged.outline.path, outline_b.path[i])
+			end
+			-- b bottom left to b left top
+			for i=2,sides_b.left[1][1] do
+				table.insert(merged.outline.path, outline_b.path[i])
+			end
+			-- top slot
+			local ty = tabs[#tabs] + options.break_tab_width / 2
+			local pb = outline_b.path[sides_b.left[1][1]]
+			local pa = outline_a.path[sides_a.right[#sides_a.right][2]]
+			table.insert(merged.outline.path, {interpolation='linear', x=pb.x, y=ty + tr})
+			if tr ~= 0 then
+				table.insert(merged.outline.path, {interpolation='circular', direction='clockwise', quadrant='single', cx=pb.x - tr, cy=ty + tr, x=pb.x - tr, y=ty})
+			end
+			if tr < sp then
+				table.insert(merged.outline.path, {interpolation='linear', x=pa.x + tr, y=ty})
+			end
+			if tr ~= 0 then
+				table.insert(merged.outline.path, {interpolation='circular', direction='clockwise', quadrant='single', cx=pa.x + tr, cy=ty + tr, x=pa.x, y=ty + tr})
+			end
+			table.insert(merged.outline.path, {interpolation='linear', x=pa.x, y=pa.y})
+			-- a right top to a bottom left
+			for i=sides_a.right[#sides_a.right][2]+1,#outline_a.path do
+				table.insert(merged.outline.path, outline_a.path[i])
+			end
+		end
+		
+		if #tabs >= 2 then
+			-- aperture for edge cuts
+			local cutout = drawing.circle_aperture(0)
+			
+			-- prepare the milling image
+			if not merged.images.milling then
+				merged.images.milling = empty_image()
+			end
+			if #merged.images.milling.layers==0 or merged.images.milling.layers[#merged.images.milling.layers].polarity=='clear' then
+				table.insert(merged.images.milling.layers, { polarity = 'dark' })
+			end
+			
+			for i=1,#tabs-1 do
+				local z0 = tabs[i] + options.break_tab_width / 2
+				local z1 = tabs[i+1] - options.break_tab_width / 2
+				if vertical then
+					-- find the old outline segments that fit between the tabs
+					local a0,a1,b0,b1
+					for _,segment in ipairs(sides_a.top) do
+						local ax0 = outline_a.path[segment[1]].x
+						local ax1 = outline_a.path[segment[2]].x
+						if not a0 and z0 <= ax0 and ax0 <= z1 then
+							a0 = segment[1]
+						end
+						if z0 <= ax1 and ax1 <= z1 then
+							a1 = segment[2]
+						end
+					end
+					for _,segment in ipairs(sides_b.bottom) do
+						local bx0 = outline_b.path[segment[1]].x
+						local bx1 = outline_b.path[segment[2]].x
+						if z0 <= bx0 and bx0 <= z1 then
+							b1 = segment[1]
+						end
+						if not b0 and z0 <= bx1 and bx1 <= z1 then
+							b0 = segment[2]
+						end
+					end
+					-- add an internal outline in the milling image
+					local cut = { aperture = cutout }
+					table.insert(cut, { x = z1 - tr, y = outline_a_extents.top })
+					if a0 and a1 then
+						for i=a1,a0 do
+							table.insert(cut, outline_a.path[i])
+						end
+					end
+					table.insert(cut, { interpolation = 'linear', x = z0 + tr, y = outline_a_extents.top })
+					if tr ~= 0 then
+						table.insert(cut, { interpolation = 'circular', direction = 'clockwise', quadrant = 'single', cx = z0 + tr, cy = outline_a_extents.top + tr, x = z0, y = outline_a_extents.top + tr })
+					end
+					if tr < sp then
+						table.insert(cut, { interpolation = 'linear', x = z0, y = outline_b_extents.bottom - tr })
+					end
+					if tr ~= 0 then
+						table.insert(cut, { interpolation = 'circular', direction = 'clockwise', quadrant = 'single', cx = z0 + tr, cy = outline_b_extents.bottom - tr, x = z0 + tr, y = outline_b_extents.bottom })
+					end
+					if b0 and b1 then
+						for i=b0,b1 do
+							table.insert(cut, outline_b.path[i])
+						end
+					end
+					table.insert(cut, { interpolation = 'linear', x = z1 - tr, y = outline_b_extents.bottom })
+					if tr ~= 0 then
+						table.insert(cut, { interpolation = 'circular', direction = 'clockwise', quadrant = 'single', cx = z1 - tr, cy = outline_b_extents.bottom - tr, x = z1, y = outline_b_extents.bottom - tr })
+					end
+					if tr < sp then
+						table.insert(cut, { interpolation = 'linear', x = z1, y = outline_a_extents.top + tr })
+					end
+					if tr ~= 0 then
+						table.insert(cut, { interpolation = 'circular', direction = 'clockwise', quadrant = 'single', cx = z1 - tr, cy = outline_a_extents.top + tr, x = z1 - tr, y = outline_a_extents.top })
+					end
+					table.insert(merged.images.milling.layers[#merged.images.milling.layers], cut)
+				else
+					-- find the old outline segments that fit between the tabs
+					local a0,a1,b0,b1
+					for _,segment in ipairs(sides_a.right) do
+						local ay0 = outline_a.path[segment[1]].y
+						local ay1 = outline_a.path[segment[2]].y
+						if z0 <= ay0 and ay0 <= z1 then
+							a1 = segment[1]
+						end
+						if not a0 and z0 <= ay1 and ay1 <= z1 then
+							a0 = segment[2]
+						end
+					end
+					for _,segment in ipairs(sides_b.left) do
+						local by0 = outline_b.path[segment[1]].y
+						local by1 = outline_b.path[segment[2]].y
+						if not b0 and z0 <= by0 and by0 <= z1 then
+							b0 = segment[1]
+						end
+						if z0 <= by1 and by1 <= z1 then
+							b1 = segment[2]
+						end
+					end
+					-- add an internal outline in the milling image
+					local cut = { aperture = cutout }
+					table.insert(cut, { x = outline_a.path[a0].x, y = z0 + tr })
+					for i=a0,a1 do
+						table.insert(cut, outline_a.path[i])
+					end
+					table.insert(cut, { interpolation = 'linear', x = outline_a.path[a1].x, y = z1 - tr })
+					if tr ~= 0 then
+						table.insert(cut, { interpolation = 'circular', direction = 'clockwise', quadrant = 'single', cx = outline_a.path[a1].x + tr, cy = z1 - tr, x = outline_a.path[a1].x + tr, y = z1 })
+					end
+					if tr < sp then
+						table.insert(cut, { interpolation = 'linear', x = outline_b.path[b0].x - tr, y = z1 })
+					end
+					if tr ~= 0 then
+						table.insert(cut, { interpolation = 'circular', direction = 'clockwise', quadrant = 'single', cx = outline_b.path[b0].x - tr, cy = z1 - tr, x = outline_b.path[b0].x, y = z1 - tr })
+					end
+					for i=b1,b0 do
+						table.insert(cut, outline_b.path[i])
+					end
+					table.insert(cut, { interpolation = 'linear', x = outline_b.path[b1].x, y = z0 + tr })
+					if tr ~= 0 then
+						table.insert(cut, { interpolation = 'circular', direction = 'clockwise', quadrant = 'single', cx = outline_b.path[b1].x - tr, cy = z0 + tr, x = outline_b.path[b1].x - tr, y = z0 })
+					end
+					if tr < sp then
+						table.insert(cut, { interpolation = 'linear', x = outline_a.path[a1].x + tr, y = z0 })
+					end
+					if tr ~= 0 then
+						table.insert(cut, { interpolation = 'circular', direction = 'clockwise', quadrant = 'single', cx = outline_a.path[a1].x + tr, cy = z0 + tr, x = outline_a.path[a1].x, y = z0 + tr })
+					end
+					table.insert(merged.images.milling.layers[#merged.images.milling.layers], cut)
+				end
+			end
 		end
 	else
-		-- cut tabs
-		local side_a = {}
-		local edge_a = build_edge(sides_a.right)
-		for _,i in ipairs(edge_a) do
-			table.insert(side_a, outline_a.path[i].y)
-		end
-		local x_a = outline_a.path[edge_a[1]].x
-		local side_b = {}
-		local edge_b = build_edge(sides_b.left)
-		for _,i in ipairs(edge_b) do
-			table.insert(side_b, outline_b.path[i].y)
-		end
-		side_b = reverse_table(side_b)
-		local x_b = outline_b.path[edge_b[1]].x
-		assert(x_a + options.spacing == x_b)
-		cut_tabs(merged, side_a, side_b, (x_a + x_b) / 2, options, vertical)
-		
-		-- merge outlines
-		assert(#merged.outline.path == 0)
-		for i=1,edge_a[1] do
-			table.insert(merged.outline.path, outline_a.path[i])
-		end
-		for i=edge_b[#edge_b],#outline_b.path do
-			table.insert(merged.outline.path, outline_b.path[i])
-		end
-		for i=2,edge_b[1] do
-			table.insert(merged.outline.path, outline_b.path[i])
-		end
-		for i=edge_a[#edge_a],#outline_a.path do
-			table.insert(merged.outline.path, outline_a.path[i])
-		end
-	end
-	
-	for i,point in ipairs(merged.outline.path) do
-		if i > 1 then
-			if not point.interpolation then
-				merged.outline.path[i] = {x=point.x, y=point.y, interpolation='linear'}
-			end
-		end
+		error("unsupported routing mode "..tostring(options.routing_mode))
 	end
 	
 	return merged
@@ -437,6 +858,7 @@ end
 --- *options* is a table which can be empty, or have any or all of the following options:
 --- 
 ---   - `spacing` determines the gap between boards (default is 2 mm)
+---   - `routing_tool_diameter` is the minimum diameter of the routing tool (default is `spacing`)
 ---   - `break_hole_diameter` is the diameter of breaking holes (mouse bites, default is 0.5 mm)
 ---   - `break_tab_width` is the width of the breaking tabs (default is 5 mm)
 ---   - `tab_interval` is the minimum interval between two breaking tabs on long edges (default is 77 mm)
@@ -446,12 +868,22 @@ end
 ---     - `'inside'` will move the holes completely inside the board outline (offset by one hole radius); this is recommended if you want a clean board outline without the need to file the edge after depanelization
 ---     - `'outside'` will move the holes completely outside the board (offset by one hole radius); this is recommended if you want to file the board edge to have it look like it wasn't panelized
 ---     - a number value can specify any other offset; positive values extend outside the board, negative values inside the board
+---   - `routing_mode` specifies how slots between boards are drawn; it can have the following values:
+---     - `'stroke'` will use strokes and flashes on the milling layer, with the routing tool or drill diameter as aperture (this is the default)
+---     - `'outline'` will draw zero-width outlines on the milling layer; this supports more complex outlines
 --- 
 --- Note that default values are internally specified in picometers. If your board use a different unit you'll need to override all options.
 function _M.panelize(layout, options, vertical)
 	local mm = 1e9
 	if not options.spacing then
 		options.spacing = 2*mm
+	end
+	if not options.routing_tool_diameter then
+		options.routing_tool_diameter = options.spacing
+	end
+	assert(options.routing_tool_diameter <= options.spacing, "option 'routing_tool_diameter' must be smaller than option 'spacing'")
+	if not options.routing_mode then
+		options.routing_mode = 'stroke'
 	end
 	if not options.break_hole_diameter then
 		options.break_hole_diameter = 0.5*mm
