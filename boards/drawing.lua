@@ -33,6 +33,45 @@ function _M.draw_path(image, aperture, ...)
 	table.insert(image.layers[#image.layers], path)
 end
 
+function _M.draw_path_ex(image, aperture, ...)
+	local mode
+	local args = {}
+	local path
+	for i=1,select('#', ...) do
+		local arg = select(i, ...)
+		if arg=='M' or arg=='L' or arg=='A' then
+			assert(#args==0)
+			mode = arg
+		elseif type(arg)=='number' or type(arg)=='boolean' then
+			table.insert(args, arg)
+			if mode=='M' and #args==2 then
+				path = {
+					aperture = aperture,
+					unit = image.unit,
+					{ x = args[1], y = args[2] },
+				}
+				table.insert(image.layers[#image.layers], path)
+				args = {}
+			elseif mode=='L' and #args==2 then
+				table.insert(path, { interpolation = 'linear', x = args[1], y = args[2] })
+				args = {}
+			elseif mode=='A' and #args==6 then
+				local cx,cy,o,q,x,y = table.unpack(args)
+				table.insert(path, {
+					interpolation = 'circular',
+					direction = o and 'clockwise' or 'counterclockwise',
+					quadrant = q and 'single' or 'multi',
+					cx = cx, cy = cy,
+					x = x, y = y,
+				})
+				args = {}
+			end
+		else
+			error("unsupported path argument "..tostring(arg).." ("..type(arg)..")")
+		end
+	end
+end
+
 ------------------------------------------------------------------------------
 
 local success,result = pcall(require, 'freetype')
