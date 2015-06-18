@@ -878,11 +878,7 @@ function _M.rotate_outline_path(path, angle)
 	}
 	assert(not path.aperture)
 	-- rotate points
-	local rpath = {}
-	for i=1,#path-1 do
-		assert(i==1 or path[i].interpolation=='linear')
-		table.insert(rpath, _M.rotate_point(path[i], angle))
-	end
+	local rpath = _M.rotate_path(path, angle)
 	-- find bottom-left point
 	local min = 1
 	for i=2,#rpath do
@@ -891,18 +887,16 @@ function _M.rotate_outline_path(path, angle)
 		end
 	end
 	-- re-order rotated points
-	assert(rpath[#rpath].interpolation=='linear')
-	for i=min,#path-1 do
+	table.insert(copy, {x=rpath[min].x, y=rpath[min].y})
+	for i=min+1,#path do
 		table.insert(copy, _M.copy_point(rpath[i]))
 	end
-	for i=1,min do
+	for i=2,min do
 		table.insert(copy, _M.copy_point(rpath[i]))
 	end
 	for i=2,#copy-1 do
 		assert(copy[i].y > copy[1].y or copy[i].y == copy[1].y and copy[i].x > copy[1].x)
 	end
-	copy[1].interpolation = nil
-	copy[#copy-min+1].interpolation = 'linear'
 	return copy
 end
 
