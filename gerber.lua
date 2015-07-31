@@ -134,7 +134,7 @@ local function load_aperture(data, macros, unit)
 	
 	local shape,macro = gerber_shapes[gerber_shape]
 	local aperture = {
-		name = dcode,
+		name = dcode - 9,
 		shape = shape,
 	}
 	
@@ -201,7 +201,7 @@ local function load_aperture(data, macros, unit)
 end
 
 local function save_aperture(aperture, unit)
-	local name = assert(aperture.save_name)
+	local dcode = assert(aperture.dcode)
 	local gerber_shape,parameters
 	assert(aperture.macro or aperture.shape, "aperture has no shape and no macro")
 	if aperture.macro then
@@ -258,7 +258,7 @@ local function save_aperture(aperture, unit)
 			error("unsupported shape "..tostring(shape))
 		end
 	end
-	return _M.blocks.aperture(name, gerber_shape, parameters)
+	return _M.blocks.aperture(dcode, gerber_shape, parameters)
 end
 
 ------------------------------------------------------------------------------
@@ -656,23 +656,24 @@ function _M.save(image, file_path, verbose)
 	local aperture_names = {}
 	local aperture_conflicts = {}
 	for i,aperture in ipairs(aperture_order) do
-		local name = aperture.name
-		if not name or aperture_names[name] then
+		local dcode = tonumber(aperture.name)
+		if dcode then dcode = dcode + 9 end
+		if not dcode or aperture_names[dcode] then
 			table.insert(aperture_conflicts, aperture)
 		else
-			aperture_names[name] = aperture
-			aperture.save_name = name
+			aperture_names[dcode] = aperture
+			aperture.dcode = dcode
 		end
 	end
 	for _,aperture in ipairs(aperture_conflicts) do
-		for name=10,2^31 do
-			if not aperture_names[name] then
-				aperture_names[name] = aperture
-				aperture.save_name = name
+		for dcode=10,2^31 do
+			if not aperture_names[dcode] then
+				aperture_names[dcode] = aperture
+				aperture.dcode = dcode
 				break
 			end
 		end
-		assert(aperture.save_name, "could not assign a unique name to aperture")
+		assert(aperture.dcode, "could not assign a unique D-code to aperture")
 	end
 	
 	-- assemble a block array
@@ -715,7 +716,7 @@ function _M.save(image, file_path, verbose)
 			if path.aperture then
 				if path.aperture ~= aperture then
 					aperture = path.aperture
-					table.insert(data, _M.blocks.directive{D=aperture.save_name})
+					table.insert(data, _M.blocks.directive{D=aperture.dcode})
 				end
 			else
 				-- start region
@@ -803,7 +804,7 @@ function _M.save(image, file_path, verbose)
 	end
 	-- clear aperture names
 	for _,aperture in ipairs(aperture_order) do
-		aperture.save_name = nil
+		aperture.dcode = nil
 	end
 	
 	return success,err

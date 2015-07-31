@@ -32,12 +32,12 @@ local function load_tool(data, unit)
 end
 
 local function save_tool(aperture, unit)
-	local name = assert(aperture.save_name)
+	local tcode = assert(aperture.tcode)
 	assert(aperture.unit=='pm', "basic apertures must be defined in picometers")
 	assert(aperture.shape == 'circle', "only circle apertures are supported")
 	local scale = scales[unit]
 	local parameters = { 'C', C = aperture.diameter / scale }
-	return _M.blocks.tool(name, parameters)
+	return _M.blocks.tool(tcode, parameters)
 end
 
 ------------------------------------------------------------------------------
@@ -226,23 +226,23 @@ function _M.save(image, file_path)
 	local aperture_names = {}
 	local aperture_conflicts = {}
 	for i,aperture in ipairs(aperture_order) do
-		local name = aperture.name
-		if not name or aperture_names[name] then
+		local tcode = tonumber(aperture.name)
+		if not tcode or aperture_names[tcode] then
 			table.insert(aperture_conflicts, aperture)
 		else
-			aperture_names[name] = aperture
-			aperture.save_name = name
+			aperture_names[tcode] = aperture
+			aperture.tcode = tcode
 		end
 	end
 	for _,aperture in ipairs(aperture_conflicts) do
-		for name=1,99 do -- be conservative here, for now
-			if not aperture_names[name] then
-				aperture_names[name] = aperture
-				aperture.save_name = name
+		for tcode=1,99 do -- be conservative here, for now
+			if not aperture_names[tcode] then
+				aperture_names[tcode] = aperture
+				aperture.tcode = tcode
 				break
 			end
 		end
-		assert(aperture.save_name, "could not assign a unique name to aperture")
+		assert(aperture.tcode, "could not assign a unique tool number to aperture")
 	end
 	
 	-- assemble a block array
@@ -289,7 +289,7 @@ function _M.save(image, file_path)
 		for _,path in ipairs(layer) do
 			if path.aperture ~= tool then
 				tool = path.aperture
-				table.insert(data, _M.blocks.directive{T=tool.save_name})
+				table.insert(data, _M.blocks.directive{T=tool.tcode})
 			end
 			local scale = 1 / scales[unit]
 			local flash = path[1]
@@ -311,7 +311,7 @@ function _M.save(image, file_path)
 	
 	-- clear aperture names
 	for _,aperture in ipairs(aperture_order) do
-		aperture.save_name = nil
+		aperture.tcode = nil
 	end
 	
 	return success,err
