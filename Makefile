@@ -34,12 +34,15 @@ endif
 
 export LUA_PATH=.$(SLASH)?.lua;;
 
-.PHONY:test test-init $(TESTS)
+.PHONY:test test-init $(TESTS) test2
 
-test:test-init $(TESTS)
+test:test-init $(TESTS) test2
 	@$(LUA) -lluacov test-misc.lua >/dev/null
 	@luacov
 	@$(LUA) -e "print((io.open('coverage.txt', 'rb'):read('*all'):gsub('^.*\n(====*\r?\nSummary)', '%1'):gsub('\r?\n$$', '')))"
+
+test2:
+	$(LUA) $@.lua
 
 test-init:
 	@rm -f luacov*

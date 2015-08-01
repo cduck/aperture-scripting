@@ -23,3 +23,5 @@ test/rounded/panelvo.oln
 test/rounded/panel2o.gml
 test/rounded/panel2o.oln
 coverage.txt
+test/excellon/*.out.exc
+test/excellon/*.out.ger

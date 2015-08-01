@@ -128,7 +128,13 @@ local function load_directive(block, format)
 	local data = {}
 	for letter,number in block:gmatch('(%a)([0-9+-]+)') do
 		if letter:match('[XY]') then
-			data[letter] = gerber.load_number(number, assert(format))
+			local i = 1
+			local k = letter
+			while data[k] do
+				i = i + 1
+				k = letter..i
+			end
+			data[k] = gerber.load_number(number, assert(format))
 		elseif number:match('^%d+$') then
 			data[letter] = tonumber(number)
 		else

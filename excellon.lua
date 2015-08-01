@@ -104,6 +104,9 @@ function _M.load(file_path)
 	local tool
 	local x,y = 0,0
 	local format = data.format
+	local route_mode = 'drill'
+	local direction
+	local path
 	for _,header in ipairs(data.headers) do
 		local th = header.type or type(header)
 		if th=='tool' then
@@ -155,6 +158,7 @@ function _M.load(file_path)
 				end
 			end
 		elseif tb=='directive' then
+			-- process mode changes
 			if block.M==72 then
 				assert(default_unit or unit=='in', "excellon files with mixtures of units not supported")
 				unit = 'in'
@@ -164,13 +168,48 @@ function _M.load(file_path)
 				unit = 'mm'
 				default_unit = false
 			elseif block.G==5 then
-				-- drill mode, ignore
+				assert(not path, "G5 command while tool is down")
+				route_mode = 'drill'
+			elseif block.G==0 then
+				route_mode = 'move'
+			elseif block.G==1 then
+				route_mode = 'linear'
+		--	elseif block.G==2 then
+		--		route_mode = 'circular'
+		--		direction = 'clockwise'
+		--	elseif block.G==3 then
+		--		route_mode = 'circular'
+		--		direction = 'counterclockwise'
+			elseif block.G==85 then
+				-- ignore (process below)
 			elseif block.G==90 then
 				-- absolute mode, ignore
+			elseif block.M==15 then
+				path = {aperture=tool, {x=x, y=y}}
+				table.insert(layer, path)
+			elseif block.M==16 or block.M==17 then
+				path = nil
 			elseif block.M==30 then
 				-- end of program, ignore
+			elseif (block.X or block.Y) and block.G==nil and block.M==nil then
+				-- ignore (process below)
+			else
+				error("unsupported directive ("..tostring(block)..")")
+			end
+			-- process data
+			if block.G==85 then
+				assert(block.X and block.Y and block.X2 and block.Y2, "incomplete G85 command")
+				local scale = scales[unit]
+				local x0,y0
+				x0 = block.X * scale
+				y0 = block.Y * scale
+				x = block.X2 * scale
+				y = block.Y2 * scale
+				table.insert(layer, {aperture=tool,
+					{x=x0, y=y0},
+					{x=x, y=y, interpolation='linear'},
+				})
 			elseif block.X or block.Y then
-				-- drill
 				assert(not block.T and not block.M)
 				assert(tool, "no tool selected while drilling")
 				local scale = scales[unit]
@@ -180,9 +219,16 @@ function _M.load(file_path)
 				if block.Y then
 					y = block.Y * scale
 				end
-				table.insert(layer, {aperture=tool, {x=x, y=y}})
-			else
-				error("unsupported directive ("..tostring(block)..")")
+				if route_mode=='drill' then
+					table.insert(layer, {aperture=tool, {x=x, y=y}})
+				elseif route_mode=='move' then
+					assert(not path, "G0 command while tool is down")
+				elseif route_mode=='linear' then
+					assert(path, "G1 command while tool is up")
+					table.insert(path, {x=x, y=y, interpolation='linear'})
+				else
+					error("unsupported route mode "..route_mode)
+				end
 			end
 		elseif tb=='comment' then
 			-- ignore
@@ -210,14 +256,18 @@ function _M.save(image, file_path)
 	local apertures = {}
 	local aperture_order = {}
 	for _,layer in ipairs(image.layers) do
+		assert(layer.polarity=='dark', "layer has "..tostring(layer.polarity).." polarity")
 		for _,path in ipairs(layer) do
-			assert(#path == 1, "path has several points")
 			local aperture = path.aperture
 			assert(aperture, "path has no aperture")
 			if aperture and not apertures[aperture] then
 				assert(aperture.shape == 'circle', "aperture is not a circle")
 				apertures[aperture] = true
 				table.insert(aperture_order, aperture)
+			end
+			for i=2,#path do
+				local interpolation = path[i].interpolation
+				assert(interpolation=='linear', "unsupported interpolation "..tostring(interpolation))
 			end
 		end
 	end
@@ -253,7 +303,19 @@ function _M.save(image, file_path)
 	local unit = image.unit
 	assert(scales[unit])
 	
-	if image.format and image.format.zeroes~='T' then
+	local format = image.format
+	if format and (
+		format.zeroes~='T' or
+		unit=='in' and (format.integer ~= 2 or format.decimal ~= 4) or
+		unit=='mm' and (format.integer ~= 3 or format.decimal ~= 3)
+		)
+	then
+		if unit=='in' and (format.integer ~= 2 or format.decimal ~= 4) or
+			unit=='mm' and (format.integer ~= 3 or format.decimal ~= 3)
+		then
+			local i,d = format.integer,format.decimal
+			table.insert(data.headers, string.format(';FILE_FORMAT=%d:%d', i, d))
+		end
 		local header = {}
 		if unit == 'in' then
 			table.insert(header, 'INCH')
@@ -262,12 +324,12 @@ function _M.save(image, file_path)
 		else
 			error("unsupported unit")
 		end
-		if image.format.zeroes=='T' then
+		if format.zeroes=='T' then
 			table.insert(header, 'LZ')
-		elseif image.format.zeroes=='L' then
+		elseif format.zeroes=='L' then
 			table.insert(header, 'TZ')
 		else
-			error("unsupported zero format "..tostring(image.format.zeroes).." for excellon file")
+			error("unsupported zero format "..tostring(format.zeroes).." for excellon file")
 		end
 		assert(#header >= 1)
 		table.insert(data.headers, table.concat(header, ','))
@@ -285,6 +347,7 @@ function _M.save(image, file_path)
 		table.insert(data.headers, save_tool(aperture, unit))
 	end
 	
+	local route_mode = 'drill'
 	for _,layer in ipairs(image.layers) do
 		for _,path in ipairs(layer) do
 			if path.aperture ~= tool then
@@ -292,17 +355,50 @@ function _M.save(image, file_path)
 				table.insert(data, _M.blocks.directive{T=tool.tcode})
 			end
 			local scale = 1 / scales[unit]
-			local flash = path[1]
-			local px,py = flash.x * scale,flash.y * scale
-			table.insert(data, _M.blocks.directive({
-				D = 3,
-				-- :TODO: check if Excellon allow for modal coordinates
-			--	X = (verbose or px ~= x) and px or nil,
-			--	Y = (verbose or py ~= y) and py or nil,
-				X = px,
-				Y = py,
-			}, image.format))
-			x,y = px,py
+			if #path == 1 then
+				if route_mode~='drill' then
+					route_mode = 'drill'
+					table.insert(data, _M.blocks.directive({ G = 0 }, image.format))
+				end
+				local flash = path[1]
+				local px,py = flash.x * scale,flash.y * scale
+				table.insert(data, _M.blocks.directive({
+					-- :TODO: check if Excellon allow for modal coordinates
+				--	X = (verbose or px ~= x) and px or nil,
+				--	Y = (verbose or py ~= y) and py or nil,
+					X = px,
+					Y = py,
+				}, image.format))
+				x,y = px,py
+			else
+				local point = path[1]
+				local px,py = point.x * scale,point.y * scale
+				if x~=px or y~=py then
+					if route_mode~='move' then
+						route_mode = 'move'
+						table.insert(data, _M.blocks.directive({ G = 0 }, image.format))
+					end
+				end
+				table.insert(data, _M.blocks.directive({ X = px, Y = py }, image.format))
+				x,y = px,py
+				table.insert(data, _M.blocks.directive({ M = 15 }, image.format))
+				for i=2,#path do
+					local point = path[i]
+					if point.interpolation=='linear' then
+						if route_mode~='linear' then
+							route_mode = 'linear'
+							table.insert(data, _M.blocks.directive({ G = 1 }, image.format))
+						end
+						local point = path[i]
+						local px,py = point.x * scale,point.y * scale
+						table.insert(data, _M.blocks.directive({ X = px, Y = py }, image.format))
+						x,y = px,py
+					else
+						error("unsupported interpolation "..tostring(point.interpolation))
+					end
+				end
+				table.insert(data, _M.blocks.directive({ M = 16 }, image.format))
+			end
 		end
 	end
 	table.insert(data, _M.blocks.directive{M=30})
