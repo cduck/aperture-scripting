@@ -491,12 +491,12 @@ local function macro_hash(macro)
 end
 
 local function aperture_hash(aperture)
-	local t = {shape}
+	local t
 	if aperture.macro then
-		table.insert(t, 'macro')
-		table.insert(t, macro_hash(aperture.macro))
+		t = { 'macro', macro_hash(aperture.macro) }
 	elseif aperture.shape then
 		local shape = aperture.shape
+		t = { shape }
 		if shape=='circle' then
 			table.insert(t, aperture.diameter)
 			table.insert(t, aperture.hole_width)
@@ -521,6 +521,7 @@ local function aperture_hash(aperture)
 			table.insert(keys, k)
 		end
 		table.sort(keys)
+		t = { 'device' }
 		for _,k in ipairs(keys) do
 			table.insert(t, k)
 			table.insert(t, aperture.parameters[k])
