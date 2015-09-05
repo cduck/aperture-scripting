@@ -493,7 +493,7 @@ end
 local function aperture_hash(aperture)
 	local t
 	if aperture.macro then
-		t = { 'macro', macro_hash(aperture.macro) }
+		t = { 'macro', macro_hash(aperture.macro), unpack(aperture.parameters or {}) }
 	elseif aperture.shape then
 		local shape = aperture.shape
 		t = { shape }
