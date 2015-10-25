@@ -33,6 +33,7 @@ expect(ger'n', exc'n')
 expect(ger'o', exc'o')
 expect(ger'p', exc'p')
 expect(ger'q', exc'q')
+expect(ger'r', exc'r')
 
 local data = assert(excellon.load("test/excellon/p.exc"))
 assert(excellon.save(data, "test/excellon/p.out.exc"))

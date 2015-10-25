@@ -53,7 +53,7 @@ local ignored_headers = {
 --	DN = true, -- Down Limit Set
 --	DTMDIST = true, -- Maximum Rout Distance Before Toolchange
 --	EXDA = true, -- Extended Drill Area
-	FMAT = true, -- Format 1 or 2
+--	FMAT = true, -- Format 1 or 2
 --	FSB = true, -- Turns the Feed/Speed Buttons off
 --	HPCK = true, -- Home Pulse Check
 --	ICI = true, -- Incremental Input of Part Program Coordinates
@@ -105,6 +105,7 @@ function _M.load(file_path)
 	local x,y = 0,0
 	local format = data.format
 	local route_mode = 'drill'
+	local fmat = 1
 	local direction
 	local path
 	for _,header in ipairs(data.headers) do
@@ -132,6 +133,8 @@ function _M.load(file_path)
 				assert(default_unit or unit=='mm', "excellon files with mixtures of units not supported")
 				unit = 'mm'
 				default_unit = false
+			elseif header.name=='FMAT' then
+				fmat = assert(tonumber(header.parameters[1]), "FMAT parameter is not a number")
 			elseif ignored_headers[header.name] then
 				print("ignored Excellon header "..header.name..(#header.parameters==0 and "" or (" with value "..table.concat(header.parameters, ","))))
 			else
@@ -167,8 +170,8 @@ function _M.load(file_path)
 				assert(default_unit or unit=='mm', "excellon files with mixtures of units not supported")
 				unit = 'mm'
 				default_unit = false
-			elseif block.G==5 then
-				assert(not path, "G5 command while tool is down")
+			elseif block.G==5 or block.G==81 and fmat==1 then
+				assert(not path, "G"..block.G.." command while tool is down")
 				route_mode = 'drill'
 			elseif block.G==0 then
 				route_mode = 'move'
