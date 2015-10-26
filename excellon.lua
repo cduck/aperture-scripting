@@ -192,7 +192,7 @@ function _M.load(file_path)
 				table.insert(layer, path)
 			elseif block.M==16 or block.M==17 then
 				path = nil
-			elseif block.M==30 then
+			elseif block.M==30 or block.M==2 and fmat==1 or block.M==0 and fmat==2 then
 				-- end of program, ignore
 			elseif (block.X or block.Y) and block.G==nil and block.M==nil then
 				-- ignore (process below)
