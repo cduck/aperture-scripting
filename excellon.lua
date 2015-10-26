@@ -92,8 +92,8 @@ local ignored_headers = {
 --	['/'] = true, -- Clear Tool Linking
 }
 
-function _M.load(file_path)
-	local data = _M.blocks.load(file_path)
+function _M.load(file_path, template)
+	local data = _M.blocks.load(file_path, template)
 	
 	-- parse the data blocks
 	local tools = {}

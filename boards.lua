@@ -44,7 +44,7 @@ local function load_image(filepath, format, unit, template)
 	local image
 	if format=='excellon' then
 		local excellon = require 'excellon'
-		image = excellon.load(filepath)
+		image = excellon.load(filepath, template.excellon)
 	elseif format=='bom' then
 		local bom = require 'bom'
 		image = bom.load(filepath, template.bom)

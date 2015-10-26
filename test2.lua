@@ -5,10 +5,10 @@ local excellon = require 'excellon'
 local dump = require 'dump'
 
 
-local function exc(letter)
+local function exc(letter, template)
 --	local data = assert(excellon.load("test/excellon/"..letter..".exc"))
 --	assert(gerber.save(data, "test/excellon/"..letter..".ger"))
-	local data = excellon.load("test/excellon/"..letter..".exc")
+	local data = excellon.load("test/excellon/"..letter..".exc", template)
 	data.file_path = nil
 	return data
 end
@@ -35,6 +35,7 @@ expect(ger'p', exc'p')
 expect(ger'q', exc'q')
 expect(ger'r', exc'r')
 expect(ger's', exc's')
+expect(ger't', exc('t', {zero_mode='trailing'}))
 
 local data = assert(excellon.load("test/excellon/p.exc"))
 assert(excellon.save(data, "test/excellon/p.out.exc"))

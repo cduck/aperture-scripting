@@ -153,7 +153,7 @@ end
 
 ------------------------------------------------------------------------------
 
-function _M.load(filename)
+function _M.load(filename, template)
 	local file = assert(io.open(filename, 'rb'))
 	local content = assert(file:read('*all'))
 	assert(file:close())
@@ -163,6 +163,16 @@ function _M.load(filename)
 	local data = { headers = {}, tools = {} }
 	-- :FIXME: find out how excellon files declare their format
 	data.format = { integer = nil, decimal = nil, zeroes = 'T' } -- default is leading zeroes present (LZ), so 'T' missing
+	if template and template.zero_mode then
+		-- template (and file headers) says what's present, format says what's missing
+		if template.zero_mode=='leading' then
+			data.format.zeroes = 'T'
+		elseif template.zero_mode=='trailing' then
+			data.format.zeroes = 'L'
+		else
+			error("unsupported excellon zero mode in template")
+		end
+	end
 	local header = nil
 	for block in content:gmatch('[^\n]+') do
 		if header then
