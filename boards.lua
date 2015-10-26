@@ -221,15 +221,19 @@ function _M.load(path, options)
 			end
 		end
 	end
-	-- - 2. try option as a filename
+	-- - 2. try option as data
+	if not template and options.template and type(options.template)=='table' then
+		template = options.template
+	end
+	-- - 3. try option as a filename
 	if not template and options.template and lfs.attributes(options.template, 'mode') then
 		template = dofile(options.template)
 	end
-	-- - 3. try option as standard template name
+	-- - 4. try option as standard template name
 	if not template and options.template and templates[options.template] then
 		template = templates[options.template]
 	end
-	-- - 4. use default template
+	-- - 5. use default template
 	if not template then
 		template = templates.default -- :TODO: make that configurable
 	end
