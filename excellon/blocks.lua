@@ -159,7 +159,7 @@ function _M.load(filename)
 	assert(file:close())
 	
 	content = content:gsub('\r', '')
-
+	
 	local data = { headers = {}, tools = {} }
 	-- :FIXME: find out how excellon files declare their format
 	data.format = { integer = nil, decimal = nil, zeroes = 'T' } -- default is leading zeroes present (LZ), so 'T' missing
