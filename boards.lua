@@ -90,7 +90,29 @@ function _M.load_image(filepath, format, options)
 	if not options then options = {} end
 	
 	local unit = options.unit or 'pm'
-	local template = templates.default -- :TODO: make that configurable
+	
+	-- look for a template
+	local template
+	-- - 1. try option as data
+	if not template and options.template and type(options.template)=='table' then
+		template = options.template
+	end
+	-- - 2. try option as a filename
+	if not template and options.template and lfs.attributes(options.template, 'mode') then
+		template = dofile(options.template)
+	end
+	-- - 3. try option as standard template name
+	if not template and options.template and templates[options.template] then
+		template = templates[options.template]
+	end
+	-- - 4. use default template
+	if not template then
+		template = templates.default -- :TODO: make that configurable
+	end
+	
+	if not template then
+		return nil,"no template found"
+	end
 	
 	if not format then
 		local msg
