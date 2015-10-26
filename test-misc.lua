@@ -67,6 +67,13 @@ assert(fs.mkdir('test/simple.offset-1in-0'))
 assert(boards.save(assert(manipulation.offset_board(assert(boards.load("test/simple/simple")), 254e8, 0)), "test/simple.offset-1in-0/simple"))
 assert(diff('test/simple.offset-1in-0.expected', 'test/simple.offset-1in-0'))
 
+log 'merge gerber'
+local a = assert(boards.load_image('test/mergeda.grb'))
+local b = assert(boards.load_image('test/mergedb.grb'))
+local c = assert(manipulation.merge_images(a, b))
+assert(boards.save_image(c, 'test/merged.grb', 'gerber'))
+assert(diff('test/merged.grb.expected', 'test/merged.grb'))
+
 log 'manipulate excellon'
 local a = assert(boards.load_image('test/example.drl'))
 local b = assert(manipulation.offset_image(a, 254e9, 0))
