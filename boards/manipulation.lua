@@ -1646,17 +1646,26 @@ function _M.merge_images(image_a, image_b, apertures, macros)
 	end
 	
 	-- merge layers
-	for i=1,#image_a.layers do
-		local layer_a = image_a.layers[i]
-		local layer_b = image_b.layers[i]
-		if layer_b then
+	local i,ia,ib = 1,1,1
+	while true do
+		local layer_a = image_a.layers[ia]
+		local layer_b = image_b.layers[ib]
+		if layer_a and layer_b and layer_a.polarity == layer_b.polarity then
 			merged.layers[i] = _M.merge_layers(layer_a, layer_b, apertures, macros)
-		else
+			i = i + 1
+			ia = ia + 1
+			ib = ib + 1
+		elseif layer_a then
 			merged.layers[i] = _M.copy_layer(layer_a, apertures, macros)
+			i = i + 1
+			ia = ia + 1
+		elseif layer_b then
+			merged.layers[i] = _M.copy_layer(layer_b, apertures, macros)
+			i = i + 1
+			ib = ib + 1
+		else
+			break
 		end
-	end
-	for i=#image_a.layers+1,#image_b.layers do
-		merged.layers[i] = _M.copy_layer(image_b.layers[i], apertures, macros)
 	end
 	
 	return merged
