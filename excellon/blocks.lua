@@ -126,7 +126,10 @@ end
 
 local function load_directive(block, format)
 	local data = {}
-	for letter,number in block:gmatch('(%a)([0-9+-]+)') do
+	local sdata = {}
+	for letter,number in block:gmatch('(%a)([0-9.+-]+)') do
+		table.insert(sdata, letter)
+		table.insert(sdata, number)
 		if letter:match('[XY]') then
 			local i = 1
 			local k = letter
@@ -141,6 +144,7 @@ local function load_directive(block, format)
 			error("unexpected number '"..number.."' for field '"..letter.."'")
 		end
 	end
+	assert(table.concat(sdata)==block)
 	local directive = _M.directive(data, format)
 --	local short,long = tostring(directive),save_directive(directive, true)
 --	assert(block == short or block == long, "block '"..block.."' has been converted to '"..short.."' or '"..long.."'")

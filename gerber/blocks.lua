@@ -216,18 +216,31 @@ local decimal_shift = 8
 _M.decimal_shift = decimal_shift
 
 local function load_number(s, format)
-	local sign,base = s:match('^([+-]?)(%d+)$')
-	assert(sign and base)
-	local size = format.integer + format.decimal
-	if #base < size then
-		if format.zeroes == 'L' then
-			base = string.rep('0', size - #base) .. base
-		elseif format.zeroes == 'T' then
-			base = base .. string.rep('0', size - #base)
-		elseif format.zeroes == 'D' then
-			error("unexpected number "..s.." in format "..tostring(format))
+	local sign,base,integer,decimal
+	
+	sign,integer,decimal = s:match('^([+-]?)(%d*)%.(%d*)$')
+	if sign and integer and decimal then
+		if #decimal < format.decimal then
+			decimal = decimal .. string.rep('0', format.decimal - #decimal)
+		elseif #decimal > format.decimal then
+			error("numbers with decimal dot and more decimal digits than the format are not yet supported")
+		end
+		base = integer..decimal
+	else
+		sign,base = s:match('^([+-]?)(%d+)$')
+		assert(sign and base)
+		local size = format.integer + format.decimal
+		if #base < size then
+			if format.zeroes == 'L' then
+				base = string.rep('0', size - #base) .. base
+			elseif format.zeroes == 'T' then
+				base = base .. string.rep('0', size - #base)
+			elseif format.zeroes == 'D' then
+				error("unexpected number "..s.." in format "..tostring(format))
+			end
 		end
 	end
+	
 	return (sign=='-' and -1 or 1) * tonumber(base) * 10 ^ (decimal_shift - format.decimal)
 end
 _M.load_number = load_number
