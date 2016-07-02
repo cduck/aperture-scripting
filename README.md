@@ -1,3 +1,5 @@
+This is a fork of [Aperture Scripting](http://piratery.net/aperture-scripting/) by Jérôme Vuarand.
+
 # 1 - About Aperture Scripting
 
 Aperture Scripting is a set of Lua libraries to manipulate Gerber (RS-274X) files and other related vector files. It was designed as a generic framework to let custom scripts manipulate PCB design data, in particular assemble several PCBs into panels. It is also used by my [Gerber Viewer](http://piratery.net/grbv/) application to load PCB data files for visualization.
