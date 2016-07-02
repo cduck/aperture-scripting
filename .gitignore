@@ -1,4 +1,3 @@
-syntax: glob
 test/copy.drl
 test/copy.grb
 test/excellon/*.drl
